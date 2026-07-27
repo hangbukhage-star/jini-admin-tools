@@ -71,6 +71,43 @@
       line-height: 1.7;
     }
 
+    .usage-guide {
+      min-height: 126px;
+      margin: 15px 0 25px;
+      padding: 14px 16px;
+      text-align: left;
+      background: #f8f9ff;
+      border-radius: 12px;
+      color: #555;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .usage-guide-title {
+      display: block;
+      margin-bottom: 7px;
+      color: #364fc7;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .usage-guide code {
+      padding: 2px 5px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      background: #eef2ff;
+      border-radius: 5px;
+    }
+
+    .usage-guide-note {
+      display: block;
+      margin-top: 7px;
+      color: #777;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     .button {
       display: inline-block;
       padding: 13px 24px;
@@ -97,6 +134,24 @@
       padding: 30px 20px;
       text-align: center;
       color: #888;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 45px 20px 30px;
+      }
+
+      header h1 {
+        font-size: 30px;
+      }
+
+      main {
+        margin: 30px auto;
+      }
+
+      .tool-card {
+        padding: 30px 20px;
+      }
     }
   </style>
 </head>
@@ -135,10 +190,17 @@
 
         <h2>학운위 안건 취합기</h2>
 
-        <p>
-          여러 안건과 붙임자료를 정리하여<br>
-          하나의 회의자료로 취합합니다.
-        </p>
+        <div class="usage-guide">
+          <span class="usage-guide-title">📌 사용방법</span>
+
+          1. 압축을 풉니다.<br>
+          2. <code>Jini_Agenda_Merger.exe</code> 실행
+
+          <span class="usage-guide-note">
+            ※ 파일명에 <strong>'붙임'</strong>이 들어간 파일은<br>
+            목차에 들어가지 않습니다.
+          </span>
+        </div>
 
         <a
           class="button download-button"
