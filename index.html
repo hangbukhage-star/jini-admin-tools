@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>지니의 행정도구</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", sans-serif;
+      background: #fffaf3;
+      color: #333;
+    }
+
+    header {
+      padding: 60px 20px 40px;
+      text-align: center;
+      background: linear-gradient(135deg, #fff3be, #ffe8cc);
+    }
+
+    header h1 {
+      margin: 0 0 15px;
+      font-size: 38px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 17px;
+      color: #666;
+    }
+
+    main {
+      width: min(1000px, 92%);
+      margin: 50px auto;
+    }
+
+    .tool-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+    }
+
+    .tool-card {
+      padding: 35px 25px;
+      text-align: center;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .tool-icon {
+      margin-bottom: 15px;
+      font-size: 55px;
+    }
+
+    .tool-card h2 {
+      margin: 10px 0;
+      font-size: 23px;
+    }
+
+    .tool-card p {
+      min-height: 75px;
+      margin: 15px 0 25px;
+      color: #666;
+      line-height: 1.7;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 13px 24px;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      background: #ff922b;
+      border-radius: 12px;
+    }
+
+    .button:hover {
+      background: #f76707;
+    }
+
+    .download-button {
+      background: #4c6ef5;
+    }
+
+    .download-button:hover {
+      background: #364fc7;
+    }
+
+    footer {
+      padding: 30px 20px;
+      text-align: center;
+      color: #888;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🌼 지니의 행정도구</h1>
+    <p>복잡한 행정업무를 쉽고 편리하게 도와드립니다.</p>
+  </header>
+
+  <main>
+    <section class="tool-list">
+
+      <div class="tool-card">
+        <div class="tool-icon">📷</div>
+
+        <h2>공사사진 만들기</h2>
+
+        <p>
+          공사 전·중·후 사진을 넣어<br>
+          사진대장을 만들고 인쇄하거나 PDF로 저장합니다.
+        </p>
+
+        <a
+          class="button"
+          href="./공사사진/index.html"
+          target="_blank"
+        >
+          프로그램 실행
+        </a>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-icon">📚</div>
+
+        <h2>학운위 안건 취합기</h2>
+
+        <p>
+          여러 안건과 붙임자료를 정리하여<br>
+          하나의 회의자료로 취합합니다.
+        </p>
+
+        <a
+          class="button download-button"
+          href="./회의안건취합기/지니의회의안건취합기.zip"
+          download
+        >
+          프로그램 다운로드
+        </a>
+      </div>
+
+    </section>
+  </main>
+
+  <footer>
+    필요한 행정도구가 있다면 게시판에 남겨주세요.
+  </footer>
+
+</body>
+</html>

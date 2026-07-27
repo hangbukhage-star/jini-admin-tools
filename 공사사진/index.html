@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>공사사진대장</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="toolbar no-print">
+    <div>
+      <strong>지니의 공사사진대장</strong>
+      <span>사진 크기를 직접 조절할 수 있습니다.</span>
+    </div>
+    <div class="toolbar-actions">
+      <button id="resetBtn" class="btn light" type="button">초기화</button>
+      <button id="printBtn" class="btn primary" type="button">인쇄 · PDF 저장</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="input-panel no-print">
+      <div class="form-group">
+        <label for="projectName">공사명</label>
+        <input id="projectName" type="text" maxlength="80"
+          placeholder="예: 본관 화장실 환경개선 공사" />
+      </div>
+
+      <div class="size-control">
+        <div class="size-label-row">
+          <label for="photoSize">사진틀 크기</label>
+          <strong id="sizeValue">보통</strong>
+        </div>
+        <input id="photoSize" type="range" min="46" max="68" value="58" step="2" />
+        <div class="range-labels">
+          <span>작게</span>
+          <span>보통</span>
+          <span>크게</span>
+        </div>
+      </div>
+
+      <p class="guide">
+        전·중·후에 사진을 한 장씩 등록하면 인쇄할 때 각 사진이 가로 전체를 사용해
+        A4 세로 한 장에 보기 좋게 배치됩니다. 사진이 2장 이상이면 두 칸으로 자동 배치됩니다.
+      </p>
+    </section>
+
+    <article class="sheet">
+      <header class="sheet-header">
+        <p class="category">공 사 사 진 대 장</p>
+        <h1 id="projectTitle">공사명을 입력하세요</h1>
+      </header>
+
+      <section class="stage">
+        <div class="stage-head">
+          <div class="stage-name"><span>01</span><h2>공사 전</h2></div>
+          <button class="add-btn no-print" type="button" data-add="before">+ 사진 추가</button>
+        </div>
+        <div id="beforeList" class="photo-grid"></div>
+      </section>
+
+      <section class="stage">
+        <div class="stage-head">
+          <div class="stage-name"><span>02</span><h2>공사 중</h2></div>
+          <button class="add-btn no-print" type="button" data-add="during">+ 사진 추가</button>
+        </div>
+        <div id="duringList" class="photo-grid"></div>
+      </section>
+
+      <section class="stage">
+        <div class="stage-head">
+          <div class="stage-name"><span>03</span><h2>공사 후</h2></div>
+          <button class="add-btn no-print" type="button" data-add="after">+ 사진 추가</button>
+        </div>
+        <div id="afterList" class="photo-grid"></div>
+      </section>
+
+      <footer class="sheet-footer">
+        <span>공사 현장 기록</span>
+        <span>JINI ADMIN TOOL</span>
+      </footer>
+    </article>
+  </main>
+
+  <template id="photoTemplate">
+    <div class="photo-item">
+      <div class="photo-top">
+        <span class="photo-title">현장사진</span>
+        <span class="photo-number"></span>
+      </div>
+      <label class="photo-box">
+        <img alt="공사사진 미리보기" />
+        <div class="placeholder">
+          <b>사진 선택</b>
+          <small>클릭 또는 끌어다 놓기</small>
+        </div>
+        <input class="file-input" type="file" accept="image/*" />
+      </label>
+      <button class="remove-btn no-print" type="button">삭제</button>
+    </div>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
