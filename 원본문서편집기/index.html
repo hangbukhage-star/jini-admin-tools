@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="이미지와 PDF를 원본 모양 그대로 편집 가능한 HTML로 변환합니다.">
+  <title>지니의 원본문서 편집기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="app-header no-print">
+    <a class="home-link" href="../index.html" aria-label="지니의 행정도구 홈">🌼</a>
+    <div>
+      <h1>원본문서 편집기</h1>
+      <p>표·사진·배경은 그대로 두고, 글자만 편집 가능하게 바꿉니다.</p>
+    </div>
+    <span class="privacy-badge">🔒 파일은 외부에 저장되지 않아요</span>
+  </header>
+
+  <main>
+    <section id="startPanel" class="start-panel no-print">
+      <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="이미지 또는 PDF 파일 선택">
+        <input
+          id="fileInput"
+          type="file"
+          accept=".pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
+          multiple
+          hidden
+        >
+        <div class="upload-icon">📄</div>
+        <h2>이미지 또는 PDF를 올려주세요</h2>
+        <p>여기로 파일을 끌어놓거나 버튼을 눌러 선택하세요.</p>
+        <button id="chooseButton" class="primary-button" type="button">파일 선택</button>
+        <small>PDF · PNG · JPG · WEBP · BMP · TIFF</small>
+      </div>
+
+      <div id="fileSummary" class="file-summary hidden" aria-live="polite">
+        <div>
+          <strong id="fileCount">0개 파일</strong>
+          <span id="fileNames"></span>
+        </div>
+        <button id="clearFilesButton" class="text-button" type="button">다시 선택</button>
+      </div>
+
+      <div class="setting-row">
+        <label>
+          <span>인식 언어</span>
+          <select id="languageSelect">
+            <option value="kor+eng" selected>한국어 + 영어</option>
+            <option value="kor">한국어</option>
+            <option value="eng">영어</option>
+          </select>
+        </label>
+        <div class="setting-help">
+          첫 실행 때 문자 인식 데이터를 불러오므로 인터넷 연결이 필요합니다.
+        </div>
+      </div>
+      <label class="precision-option">
+        <input id="precisionOcrInput" type="checkbox" checked>
+        <span>
+          <strong>정밀 인식 사용</strong>
+          <small>PDF 원문과 문자 인식을 함께 확인해 누락된 영역을 보완합니다. 조금 더 오래 걸릴 수 있어요.</small>
+        </span>
+      </label>
+
+      <button id="convertButton" class="convert-button" type="button" disabled>
+        편집 문서 만들기
+      </button>
+    </section>
+
+    <section id="progressPanel" class="progress-panel hidden no-print" aria-live="polite">
+      <div class="progress-heading">
+        <strong id="progressTitle">문서를 준비하고 있어요</strong>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <p id="progressMessage">잠시만 기다려주세요.</p>
+    </section>
+
+    <section id="editorPanel" class="editor-panel hidden">
+      <div class="editor-toolbar no-print">
+        <div>
+          <strong>편집 문서</strong>
+          <span id="pageCountLabel">0쪽</span>
+        </div>
+        <div class="toolbar-actions">
+          <button id="newDocumentButton" class="ghost-button" type="button">새 문서</button>
+          <button id="addMissingTextButton" class="ghost-button" type="button">누락 글자 추가</button>
+          <button id="extractTextButton" class="ghost-button" type="button">텍스트만 추출</button>
+          <button id="downloadHtmlButton" class="blue-button" type="button">HTML 저장</button>
+          <button id="printButton" class="primary-button" type="button">PDF로 저장 · 인쇄</button>
+        </div>
+      </div>
+
+      <div class="editor-tip no-print">
+        <span>💡</span>
+        본문은 가까운 여러 줄을 함께 편집하고, 표 안의 글자는 한 칸씩 수정합니다. 원하는 글자만 드래그해 서식을 바꿀 수 있습니다.
+      </div>
+
+      <div id="pages" class="pages" aria-label="편집할 문서 페이지"></div>
+    </section>
+  </main>
+
+  <section id="lineEditor" class="line-editor hidden no-print" aria-label="선택한 문장 또는 표 칸 편집">
+    <div class="line-editor-heading">
+      <strong>선택한 문장 또는 표 칸 수정</strong>
+      <span>원본 화면은 적용 전까지 바뀌지 않습니다.</span>
+    </div>
+    <div class="format-toolbar" aria-label="선택 글자 서식">
+      <label>
+        <span>글꼴</span>
+        <select id="fontFamilySelect">
+          <option value="">원본 글꼴</option>
+          <option value="Nanum Gothic">나눔고딕</option>
+          <option value="Malgun Gothic">맑은 고딕</option>
+          <option value="Noto Sans KR">Noto Sans KR</option>
+          <option value="Nanum Myeongjo">나눔명조</option>
+          <option value="Batang">바탕</option>
+          <option value="Dotum">돋움</option>
+          <option value="Arial">Arial</option>
+        </select>
+      </label>
+      <label>
+        <span>크기 (pt)</span>
+        <span class="font-size-control">
+          <button id="fontSizeDownButton" type="button" aria-label="글자 크기 1pt 줄이기">−</button>
+          <input
+            id="fontSizeInput"
+            class="font-size-input"
+            type="number"
+            min="6"
+            max="72"
+            step="0.5"
+            value="10.5"
+            inputmode="decimal"
+          >
+          <button id="fontSizeApplyButton" type="button">적용</button>
+          <button id="fontSizeUpButton" type="button" aria-label="글자 크기 1pt 늘리기">+</button>
+        </span>
+        <small id="originalSizeHint">원본 10.5pt</small>
+      </label>
+      <button id="fontBoldButton" class="format-button" type="button">굵게</button>
+      <label class="color-control">
+        <span>색상</span>
+        <input id="fontColorInput" type="color" value="#111111">
+      </label>
+      <button id="clearFormatButton" class="format-button" type="button">원본 서식</button>
+    </div>
+    <div
+      id="lineEditorInput"
+      class="line-editor-input"
+      contenteditable="true"
+      role="textbox"
+      aria-multiline="true"
+      aria-label="문장 내용"
+    ></div>
+    <p id="formatApplyStatus" class="format-help" aria-live="polite">
+      한 줄 또는 여러 줄에서 원하는 글자만 드래그한 다음 서식을 선택하세요.
+    </p>
+    <div class="line-editor-actions">
+      <button id="lineEditorCancel" class="ghost-button" type="button">취소</button>
+      <button id="lineEditorReset" class="ghost-button" type="button">원문으로 되돌리기</button>
+      <button id="lineEditorApply" class="blue-button" type="button">수정 적용</button>
+    </div>
+  </section>
+
+  <div id="errorToast" class="error-toast hidden no-print" role="alert"></div>
+
+  <script src="./app.js?v=20260729-ocr-color"></script>
+</body>
+</html>
