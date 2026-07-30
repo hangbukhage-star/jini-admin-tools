@@ -6,7 +6,7 @@
   <title>공사사진대장</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="overview-on">
   <header class="toolbar no-print">
     <div>
       <strong>🌼 지니의 공사사진대장</strong>
@@ -19,37 +19,108 @@
   </header>
 
   <main class="workspace">
-    <section class="input-panel no-print">
-      <div class="form-group">
-        <label for="projectName">공사명</label>
-        <input id="projectName" type="text" maxlength="80"
-          placeholder="예: 본관 화장실 환경개선 공사" />
+    <aside class="input-panel no-print">
+      <div class="panel-title">
+        <h2>문서 정보</h2>
+        <p>공사사진대장에 표시할 내용을 입력하세요.</p>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-copy">
+          <strong>공사 개요 포함</strong>
+          <small>문서 상단에 공사 정보를 표로 넣습니다.</small>
+        </div>
+        <label class="switch">
+          <input id="overviewToggle" type="checkbox" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="always-fields">
+        <div class="form-group">
+          <label for="projectName">공사명 <span class="required">*</span></label>
+          <input id="projectName" type="text" maxlength="80"
+            placeholder="예: 본관 화장실 환경개선 공사" />
+        </div>
+      </div>
+
+      <div id="overviewFields" class="overview-fields">
+        <div class="form-group">
+          <label>공사 기간</label>
+          <div class="two-fields">
+            <input id="startDate" type="date" aria-label="공사 시작일" />
+            <input id="endDate" type="date" aria-label="공사 종료일" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="projectPlace">공사 장소</label>
+          <input id="projectPlace" type="text" maxlength="100"
+            placeholder="예: 본관 1층 남·여 화장실" />
+        </div>
+
+        <div class="form-group">
+          <label for="contractor">시공 업체</label>
+          <input id="contractor" type="text" maxlength="100"
+            placeholder="예: 지니종합건설" />
+        </div>
+
+        <div class="form-group">
+          <label for="projectDetails">공사 내역</label>
+          <textarea id="projectDetails" maxlength="500"
+            placeholder="예: 노후 타일 및 위생도기 철거·교체"></textarea>
+        </div>
+
+        <p class="field-guide">
+          개요를 끄면 기간·장소·업체·내역과 개요 표가 숨겨집니다.
+        </p>
       </div>
 
       <div class="size-control">
         <div class="size-label-row">
-          <label for="photoSize">사진틀 크기</label>
+          <label for="photoSize">사진 크기</label>
           <strong id="sizeValue">보통</strong>
         </div>
-        <input id="photoSize" type="range" min="46" max="68" value="58" step="2" />
+        <input id="photoSize" type="range" min="34" max="62" value="46" step="2" />
         <div class="range-labels">
           <span>작게</span>
           <span>보통</span>
           <span>크게</span>
         </div>
+        <p id="printRule" class="print-rule">
+          개요 포함: 내용이 길면 다음 페이지로 이어지며 전·중·후 단계는 잘리지 않습니다.
+        </p>
       </div>
-
-      <p class="guide">
-        전·중·후에 사진을 한 장씩 등록하면 인쇄할 때 각 사진이 가로 전체를 사용해
-        A4 세로 한 장에 보기 좋게 배치됩니다. 사진이 2장 이상이면 두 칸으로 자동 배치됩니다.
-      </p>
-    </section>
+    </aside>
 
     <article class="sheet">
       <header class="sheet-header">
         <p class="category">공 사 사 진 대 장</p>
         <h1 id="projectTitle">공사명을 입력하세요</h1>
       </header>
+
+      <section id="overviewPreview" class="overview">
+        <div class="overview-title">
+          <span>00</span>
+          <h2>공사 개요</h2>
+        </div>
+        <table>
+          <tr>
+            <th>공사 기간</th>
+            <td id="periodPreview">-</td>
+            <th>공사 장소</th>
+            <td id="placePreview">-</td>
+          </tr>
+          <tr>
+            <th>시공 업체</th>
+            <td id="contractorPreview" colspan="3">-</td>
+          </tr>
+          <tr>
+            <th>공사 내역</th>
+            <td id="detailsPreview" class="details-cell" colspan="3">-</td>
+          </tr>
+        </table>
+      </section>
 
       <section class="stage">
         <div class="stage-head">

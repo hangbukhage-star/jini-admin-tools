@@ -4,6 +4,19 @@ const projectTitle = document.getElementById("projectTitle");
 const template = document.getElementById("photoTemplate");
 const photoSize = document.getElementById("photoSize");
 const sizeValue = document.getElementById("sizeValue");
+const overviewToggle = document.getElementById("overviewToggle");
+const overviewFields = document.getElementById("overviewFields");
+const overviewPreview = document.getElementById("overviewPreview");
+const startDate = document.getElementById("startDate");
+const endDate = document.getElementById("endDate");
+const projectPlace = document.getElementById("projectPlace");
+const contractor = document.getElementById("contractor");
+const projectDetails = document.getElementById("projectDetails");
+const periodPreview = document.getElementById("periodPreview");
+const placePreview = document.getElementById("placePreview");
+const contractorPreview = document.getElementById("contractorPreview");
+const detailsPreview = document.getElementById("detailsPreview");
+const printRule = document.getElementById("printRule");
 
 function updateProjectTitle() {
   projectTitle.textContent = projectName.value.trim() || "공사명을 입력하세요";
@@ -11,15 +24,47 @@ function updateProjectTitle() {
 
 function sizeName(value) {
   const n = Number(value);
-  if (n <= 50) return "작게";
-  if (n <= 60) return "보통";
+  if (n <= 40) return "작게";
+  if (n < 54) return "보통";
   return "크게";
 }
 
 function updatePhotoSize() {
-  const value = photoSize.value;
-  document.documentElement.style.setProperty("--photo-height", `${value}mm`);
+  const value = Number(photoSize.value);
+  document.documentElement.style.setProperty(
+    "--photo-screen-height",
+    `${Math.round(value * 2.6)}px`
+  );
+  document.documentElement.style.setProperty("--photo-print-height", `${value}mm`);
   sizeValue.textContent = `${sizeName(value)} · ${value}mm`;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  return `${value.slice(0, 4)}. ${value.slice(5, 7)}. ${value.slice(8, 10)}.`;
+}
+
+function updateOverviewData() {
+  const start = formatDate(startDate.value);
+  const end = formatDate(endDate.value);
+
+  periodPreview.textContent =
+    start || end ? `${start || "-"} ~ ${end || "-"}` : "-";
+  placePreview.textContent = projectPlace.value.trim() || "-";
+  contractorPreview.textContent = contractor.value.trim() || "-";
+  detailsPreview.textContent = projectDetails.value.trim() || "-";
+}
+
+function updateOverviewMode() {
+  const enabled = overviewToggle.checked;
+
+  overviewFields.hidden = !enabled;
+  overviewPreview.hidden = !enabled;
+  document.body.classList.toggle("overview-on", enabled);
+  document.body.classList.toggle("overview-off", !enabled);
+  printRule.textContent = enabled
+    ? "개요 포함: 내용이 길면 다음 페이지로 이어지며 전·중·후 단계는 잘리지 않습니다."
+    : "개요 없음: 전·중·후 사진을 A4 한 장에 맞춰 인쇄합니다.";
 }
 
 function validImage(file) {
@@ -111,6 +156,8 @@ function addPhoto(stage) {
 }
 
 function preparePrint() {
+  let totalRows = 0;
+
   stages.forEach((stage) => {
     const list = document.getElementById(`${stage}List`);
     const items = [...list.querySelectorAll(".photo-item")];
@@ -127,7 +174,20 @@ function preparePrint() {
     });
 
     list.classList.toggle("single-filled", filled.length === 1);
+    totalRows += Math.ceil((filled.length || items.length) / 2);
   });
+
+  if (!overviewToggle.checked) {
+    const selectedSize = Number(photoSize.value);
+    const fittedSize = Math.max(
+      12,
+      Math.min(selectedSize, Math.floor(200 / Math.max(totalRows, 1)))
+    );
+    document.documentElement.style.setProperty(
+      "--photo-print-height",
+      `${fittedSize}mm`
+    );
+  }
 }
 
 function cleanupAfterPrint() {
@@ -138,18 +198,36 @@ function cleanupAfterPrint() {
   document.querySelectorAll(".photo-grid").forEach((grid) => {
     grid.classList.remove("single-filled");
   });
+
+  document.documentElement.style.setProperty(
+    "--photo-print-height",
+    `${photoSize.value}mm`
+  );
 }
 
 function resetAll() {
   const hasData =
     projectName.value.trim() ||
+    startDate.value ||
+    endDate.value ||
+    projectPlace.value.trim() ||
+    contractor.value.trim() ||
+    projectDetails.value.trim() ||
     document.querySelector(".photo-box.has-image");
 
-  if (hasData && !confirm("공사명과 사진을 모두 지울까요?")) return;
+  if (hasData && !confirm("입력 내용과 사진을 모두 지울까요?")) return;
 
   projectName.value = "";
-  photoSize.value = "58";
+  startDate.value = "";
+  endDate.value = "";
+  projectPlace.value = "";
+  contractor.value = "";
+  projectDetails.value = "";
+  overviewToggle.checked = true;
+  photoSize.value = "46";
   updateProjectTitle();
+  updateOverviewData();
+  updateOverviewMode();
   updatePhotoSize();
 
   stages.forEach((stage) => {
@@ -162,6 +240,10 @@ function resetAll() {
 
 projectName.addEventListener("input", updateProjectTitle);
 photoSize.addEventListener("input", updatePhotoSize);
+overviewToggle.addEventListener("change", updateOverviewMode);
+[startDate, endDate, projectPlace, contractor, projectDetails].forEach((field) => {
+  field.addEventListener("input", updateOverviewData);
+});
 
 document.querySelectorAll("[data-add]").forEach((button) => {
   button.addEventListener("click", () => addPhoto(button.dataset.add));
@@ -184,4 +266,6 @@ stages.forEach((stage) => {
 });
 
 updateProjectTitle();
+updateOverviewData();
+updateOverviewMode();
 updatePhotoSize();
