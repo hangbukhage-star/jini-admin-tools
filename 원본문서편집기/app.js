@@ -18,7 +18,6 @@ const elements = {
   fileNames: document.querySelector("#fileNames"),
   clearFilesButton: document.querySelector("#clearFilesButton"),
   languageSelect: document.querySelector("#languageSelect"),
-  precisionOcrInput: document.querySelector("#precisionOcrInput"),
   convertButton: document.querySelector("#convertButton"),
   progressPanel: document.querySelector("#progressPanel"),
   progressTitle: document.querySelector("#progressTitle"),
@@ -38,15 +37,6 @@ const elements = {
   lineEditorCancel: document.querySelector("#lineEditorCancel"),
   lineEditorReset: document.querySelector("#lineEditorReset"),
   lineEditorApply: document.querySelector("#lineEditorApply"),
-  fontFamilySelect: document.querySelector("#fontFamilySelect"),
-  fontSizeInput: document.querySelector("#fontSizeInput"),
-  fontSizeDownButton: document.querySelector("#fontSizeDownButton"),
-  fontSizeApplyButton: document.querySelector("#fontSizeApplyButton"),
-  fontSizeUpButton: document.querySelector("#fontSizeUpButton"),
-  originalSizeHint: document.querySelector("#originalSizeHint"),
-  fontBoldButton: document.querySelector("#fontBoldButton"),
-  fontColorInput: document.querySelector("#fontColorInput"),
-  clearFormatButton: document.querySelector("#clearFormatButton"),
   formatApplyStatus: document.querySelector("#formatApplyStatus"),
   errorToast: document.querySelector("#errorToast"),
 };
@@ -102,57 +92,6 @@ elements.lineEditorInput.addEventListener("keydown", (event) => {
     applyEditedLine();
   }
 });
-for (const eventName of ["mouseup", "keyup", "input", "focus"]) {
-  elements.lineEditorInput.addEventListener(eventName, rememberEditorSelection);
-}
-elements.fontFamilySelect.addEventListener("change", () => {
-  const family = elements.fontFamilySelect.value;
-  if (family) {
-    applyStyleToEditorSelection(
-      "fontFamily",
-      family,
-      { fontFamily: family },
-      `${family} 글꼴`,
-    );
-  }
-  elements.fontFamilySelect.value = "";
-});
-elements.fontSizeInput.addEventListener("change", applyNumericFontSize);
-elements.fontSizeInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    applyNumericFontSize();
-  }
-});
-for (const button of [
-  elements.fontSizeDownButton,
-  elements.fontSizeApplyButton,
-  elements.fontSizeUpButton,
-]) {
-  button.addEventListener("mousedown", (event) => event.preventDefault());
-}
-elements.fontSizeDownButton.addEventListener("click", () => adjustFontSize(-1));
-elements.fontSizeApplyButton.addEventListener("click", applyNumericFontSize);
-elements.fontSizeUpButton.addEventListener("click", () => adjustFontSize(1));
-elements.fontBoldButton.addEventListener("mousedown", (event) => event.preventDefault());
-elements.fontBoldButton.addEventListener("click", () =>
-  applyStyleToEditorSelection(
-    "fontWeight",
-    "700",
-    { fontWeight: "700" },
-    "굵게",
-  ),
-);
-elements.fontColorInput.addEventListener("change", () =>
-  applyStyleToEditorSelection(
-    "color",
-    elements.fontColorInput.value,
-    { fontColor: elements.fontColorInput.value },
-    `${elements.fontColorInput.value} 색상`,
-  ),
-);
-elements.clearFormatButton.addEventListener("mousedown", (event) => event.preventDefault());
-elements.clearFormatButton.addEventListener("click", clearEditorSelectionFormat);
 window.addEventListener("resize", () => {
   document.querySelectorAll(".editable-word.modified").forEach(fitLineText);
 });
@@ -419,6 +358,19 @@ function createManualEditable(page, rect) {
     .map((item) => Number(item.dataset.cqwPerPt))
     .filter((value) => Number.isFinite(value) && value > 0);
   const cqwPerPt = medianNumber(ratios, 0.16);
+  const rectCenterX = rect.left + rect.width / 2;
+  const rectCenterY = rect.top + rect.height / 2;
+  const nearestEditable = [...page.querySelectorAll(".editable-word")]
+    .map((item) => {
+      const centerX = Number.parseFloat(item.style.left) + Number.parseFloat(item.style.width) / 2;
+      const centerY = Number.parseFloat(item.style.top) + Number.parseFloat(item.style.height) / 2;
+      return {
+        item,
+        distance: Math.hypot(centerX - rectCenterX, centerY - rectCenterY),
+      };
+    })
+    .sort((left, right) => left.distance - right.distance)[0]?.item;
+  const nearbySizePt = Number(nearestEditable?.dataset.fontSizePt) || 10.5;
   editable.className = "editable-word manual-text-region";
   editable.tabIndex = 0;
   editable.setAttribute("role", "button");
@@ -427,21 +379,34 @@ function createManualEditable(page, rect) {
   editable.dataset.original = "";
   editable.dataset.tableCell = "true";
   editable.dataset.manual = "true";
-  editable.dataset.fontSizePt = "10.5";
+  editable.dataset.fontSizePt = String(nearbySizePt);
   editable.dataset.cqwPerPt = String(cqwPerPt);
   editable.style.left = `${rect.left}%`;
   editable.style.top = `${rect.top}%`;
   editable.style.width = `${rect.width}%`;
   editable.style.height = `${rect.height}%`;
-  editable.style.setProperty("--word-size", `${10.5 * cqwPerPt}cqw`);
-  editable.style.setProperty("--word-background", "rgb(255,255,255)");
-  editable.style.setProperty("--word-color", "rgb(20,20,20)");
+  editable.style.setProperty("--word-size", `${nearbySizePt * cqwPerPt}cqw`);
+  editable.style.setProperty(
+    "--word-background",
+    nearestEditable?.style.getPropertyValue("--word-background") || "rgb(255,255,255)",
+  );
+  editable.style.setProperty(
+    "--word-color",
+    nearestEditable?.style.getPropertyValue("--word-color") || "rgb(20,20,20)",
+  );
   editable.style.setProperty(
     "--word-family",
-    '"Malgun Gothic","Apple SD Gothic Neo",sans-serif',
+    nearestEditable?.style.getPropertyValue("--word-family")
+      || '"Malgun Gothic","Apple SD Gothic Neo",sans-serif',
   );
-  editable.style.setProperty("--word-weight", "400");
-  editable.style.setProperty("--word-style", "normal");
+  editable.style.setProperty(
+    "--word-weight",
+    nearestEditable?.style.getPropertyValue("--word-weight") || "400",
+  );
+  editable.style.setProperty(
+    "--word-style",
+    nearestEditable?.style.getPropertyValue("--word-style") || "normal",
+  );
   const lineText = document.createElement("span");
   lineText.className = "line-text";
   editable.append(lineText);
@@ -476,9 +441,10 @@ async function convertDocuments() {
       }
     }
     totalPages = pageSources.length;
-    const preciseRecognition = Boolean(elements.precisionOcrInput?.checked);
-    const requiresOcr = preciseRecognition
-      || pageSources.some((source) => !hasUsableNativeText(source.nativeWords));
+    const selectedLanguage = elements.languageSelect.value;
+    const requiresOcr = pageSources.some(
+      (source) => !hasUsableNativeText(source.nativeWords, selectedLanguage),
+    );
     if (requiresOcr) {
       ocrWorker = await createOcrWorker();
       await ocrWorker.setParameters({
@@ -497,8 +463,8 @@ async function convertDocuments() {
         `${source.label}의 글자를 찾고 있어요.`,
       );
       let words;
-      const hasNativeText = hasUsableNativeText(source.nativeWords);
-      if (hasNativeText && !preciseRecognition) {
+      const hasNativeText = hasUsableNativeText(source.nativeWords, selectedLanguage);
+      if (hasNativeText) {
         words = source.nativeWords;
         updateProgress(
           7 + ((completedPages + 0.9) / totalPages) * 88,
@@ -506,12 +472,8 @@ async function convertDocuments() {
           "PDF 원문 글자를 정확한 위치에 배치하고 있어요.",
         );
       } else {
-        const ocrCanvas = createOcrInputCanvas(source.canvas);
-        const result = await ocrWorker.recognize(ocrCanvas, {}, { tsv: true });
-        const ocrWords = parseTsv(result.data.tsv, source.canvas);
-        words = hasNativeText
-          ? mergeNativeAndOcrWords(source.nativeWords, ocrWords)
-          : ocrWords;
+        const ocrWords = await recognizeBestPageText(source.canvas, selectedLanguage);
+        words = ocrWords;
       }
       const pageElement = createEditablePage(source, words, index);
       elements.pages.append(pageElement);
@@ -712,9 +674,75 @@ function createOcrInputCanvas(sourceCanvas) {
   return enhancedCanvas;
 }
 
-function hasUsableNativeText(words) {
+async function recognizeBestPageText(sourceCanvas, language) {
+  const candidates = [];
+  await ocrWorker.setParameters({
+    tessedit_pageseg_mode: tesseractApi.PSM.AUTO,
+  });
+  const originalResult = await ocrWorker.recognize(
+    sourceCanvas,
+    {},
+    { tsv: true },
+  );
+  candidates.push(parseTsv(originalResult.data.tsv, sourceCanvas));
+
+  const enhancedCanvas = createOcrInputCanvas(sourceCanvas);
+  if (enhancedCanvas !== sourceCanvas) {
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: tesseractApi.PSM.SINGLE_BLOCK,
+    });
+    const blockResult = await ocrWorker.recognize(
+      enhancedCanvas,
+      {},
+      { tsv: true },
+    );
+    candidates.push(parseTsv(blockResult.data.tsv, sourceCanvas));
+
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: tesseractApi.PSM.SPARSE_TEXT,
+    });
+    const enhancedResult = await ocrWorker.recognize(
+      enhancedCanvas,
+      {},
+      { tsv: true },
+    );
+    candidates.push(parseTsv(enhancedResult.data.tsv, sourceCanvas));
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: tesseractApi.PSM.AUTO,
+    });
+  }
+
+  return candidates.sort(
+    (left, right) =>
+      scoreRecognition(right, language) - scoreRecognition(left, language),
+  )[0] || [];
+}
+
+function scoreRecognition(words, language) {
+  if (!words?.length) return -Infinity;
+  const text = words.map((word) => word.text).join(" ");
+  const meaningful = text.match(/[A-Za-z0-9가-힣]/g)?.length || 0;
+  const hangul = text.match(/[가-힣]/g)?.length || 0;
+  const confidence =
+    words.reduce((sum, word) => sum + Math.max(0, word.confidence || 0), 0)
+    / words.length;
+  const koreanBonus = language.startsWith("kor") || language.startsWith("ko")
+    ? (hangul / Math.max(1, meaningful)) * 45
+    : 0;
+  return confidence + koreanBonus + Math.min(20, meaningful / 8);
+}
+
+function hasUsableNativeText(words, language = "") {
   if (!Array.isArray(words) || words.length < 3) return false;
-  return words.reduce((total, word) => total + word.text.replace(/\s/g, "").length, 0) >= 20;
+  const text = words.map((word) => word.text).join("");
+  const meaningful = text.match(/[A-Za-z0-9가-힣]/g)?.length || 0;
+  if (meaningful < 20 || /�/.test(text)) return false;
+  if (language.startsWith("kor") || language.startsWith("ko")) {
+    const hangul = text.match(/[가-힣]/g)?.length || 0;
+    const suspicious = text.match(/[^\sA-Za-z0-9가-힣.,·:;!?()[\]{}%+\-_/]/g)?.length || 0;
+    if (hangul < 3 && suspicious > meaningful * 0.08) return false;
+  }
+  return true;
 }
 
 function parseTsv(tsv, canvas) {
@@ -1095,30 +1123,52 @@ function sampleColors(context, word, canvasWidth, canvasHeight) {
   const right = Math.min(canvasWidth, Math.ceil(word.x + word.width + padding));
   const bottom = Math.min(canvasHeight, Math.ceil(word.y + word.height + padding));
   const image = context.getImageData(x, y, Math.max(1, right - x), Math.max(1, bottom - y));
-  const lightPixels = [];
-  const darkPixels = [];
+  const sampledColors = [];
+  const colorBuckets = new Map();
   for (let offset = 0; offset < image.data.length; offset += 16) {
     const r = image.data[offset];
     const g = image.data[offset + 1];
     const b = image.data[offset + 2];
-    const luminance = r * 0.299 + g * 0.587 + b * 0.114;
-    (luminance > 145 ? lightPixels : darkPixels).push([r, g, b]);
+    const color = [r, g, b];
+    sampledColors.push(color);
+    const key = `${Math.round(r / 16)},${Math.round(g / 16)},${Math.round(b / 16)}`;
+    const bucket = colorBuckets.get(key) || { colors: [], count: 0 };
+    bucket.colors.push(color);
+    bucket.count += 1;
+    colorBuckets.set(key, bucket);
   }
+  const backgroundBucket = [...colorBuckets.values()].sort(
+    (left, right) => right.count - left.count,
+  )[0];
+  const backgroundRgb = medianRgb(backgroundBucket?.colors || [], [255, 255, 255]);
+  const contrastedPixels = sampledColors
+    .map((color) => ({
+      color,
+      distance: colorDistance(color, backgroundRgb),
+    }))
+    .filter((entry) => entry.distance >= 28)
+    .sort((left, right) => right.distance - left.distance);
+  const strongestCount = Math.max(
+    1,
+    Math.min(contrastedPixels.length, Math.ceil(sampledColors.length * 0.22)),
+  );
+  const foregroundPixels = contrastedPixels
+    .slice(0, strongestCount)
+    .map((entry) => entry.color);
+  const foregroundRgb = medianRgb(
+    foregroundPixels,
+    relativeLuminance(backgroundRgb) > 145 ? [20, 20, 20] : [245, 245, 245],
+  );
+  const inkRatio = contrastedPixels.length / Math.max(1, sampledColors.length);
   return {
-    background: medianColor(lightPixels, [255, 255, 255]),
-    foreground: medianColor(darkPixels, [20, 20, 20]),
-    fontWeight: estimateRasterFontWeight(
-      darkPixels.length,
-      lightPixels.length,
-      word.text.length,
-    ),
+    background: rgbCss(backgroundRgb),
+    foreground: rgbCss(foregroundRgb),
+    fontWeight: estimateRasterFontWeight(inkRatio, word.text.length),
     rect: { x, y, right, bottom },
   };
 }
 
-function estimateRasterFontWeight(darkPixelCount, lightPixelCount, textLength) {
-  const sampledPixelCount = Math.max(1, darkPixelCount + lightPixelCount);
-  const inkRatio = darkPixelCount / sampledPixelCount;
+function estimateRasterFontWeight(inkRatio, textLength) {
   const adjustedRatio = inkRatio * Math.max(1, Math.min(2.2, textLength / 4));
   if (adjustedRatio > 0.34) return 700;
   if (adjustedRatio > 0.25) return 600;
@@ -1126,13 +1176,28 @@ function estimateRasterFontWeight(darkPixelCount, lightPixelCount, textLength) {
   return 400;
 }
 
-function medianColor(colors, fallback) {
-  if (!colors.length) return `rgb(${fallback.join(",")})`;
+function medianRgb(colors, fallback) {
+  if (!colors.length) return fallback;
   const channels = [0, 1, 2].map((channel) => {
     const values = colors.map((color) => color[channel]).sort((a, b) => a - b);
     return values[Math.floor(values.length / 2)];
   });
-  return `rgb(${channels.join(",")})`;
+  return channels;
+}
+
+function relativeLuminance(color) {
+  return color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.114;
+}
+
+function colorDistance(left, right) {
+  const red = left[0] - right[0];
+  const green = left[1] - right[1];
+  const blue = left[2] - right[2];
+  return Math.sqrt(red * red * 0.3 + green * green * 0.59 + blue * blue * 0.11);
+}
+
+function rgbCss(color) {
+  return `rgb(${color.map((channel) => Math.round(channel)).join(",")})`;
 }
 
 function createEditablePage(source, words, index) {
@@ -1290,16 +1355,7 @@ function selectedEditorLines(range = editorSelectionRange) {
 }
 
 function updateOriginalSizeHint(range = editorSelectionRange) {
-  const lines = selectedEditorLines(range);
-  if (!lines.length) return;
-  const sizes = [...new Set(lines.map((line) => Number(line.dataset.fontSizePt)))]
-    .filter(Number.isFinite)
-    .sort((left, right) => right - left);
-  if (!sizes.length) return;
-  elements.fontSizeInput.value = String(sizes[0]);
-  elements.originalSizeHint.textContent = sizes.length === 1
-    ? `원본 ${sizes[0]}pt`
-    : `원본 ${sizes.map((size) => `${size}pt`).join(" · ")}`;
+  return range;
 }
 
 function rememberEditorSelection() {
@@ -1325,167 +1381,12 @@ function selectAllEditorText() {
   updateOriginalSizeHint(range);
 }
 
-function selectedTextSegments(range) {
-  const walker = document.createTreeWalker(
-    elements.lineEditorInput,
-    NodeFilter.SHOW_TEXT,
-  );
-  const segments = [];
-  let textNode = walker.nextNode();
-  while (textNode) {
-    if (
-      textNode.textContent
-      && textNode.parentElement?.closest(".editor-source-line")
-      && range.intersectsNode(textNode)
-    ) {
-      const start = textNode === range.startContainer ? range.startOffset : 0;
-      const end = textNode === range.endContainer
-        ? range.endOffset
-        : textNode.textContent.length;
-      if (end > start) segments.push({ textNode, start, end });
-    }
-    textNode = walker.nextNode();
-  }
-  return segments;
-}
-
-function applyStylesToEditorSelection(styleBuilder, dataBuilder = null) {
-  if (!editorSelectionRange || editorSelectionRange.collapsed) {
-    showError("편집창에서 서식을 바꿀 글자를 먼저 드래그해 선택해 주세요.");
-    return false;
-  }
-  const range = editorSelectionRange.cloneRange();
-  const segments = selectedTextSegments(range);
-  if (!segments.length) {
-    showError("선택한 부분에 서식을 적용하지 못했습니다. 글자를 다시 선택해 주세요.");
-    return false;
-  }
-  const wrappers = [];
-  for (let index = segments.length - 1; index >= 0; index -= 1) {
-    const segment = segments[index];
-    const sourceLine = segment.textNode.parentElement.closest(".editor-source-line");
-    const part = document.createRange();
-    part.setStart(segment.textNode, segment.start);
-    part.setEnd(segment.textNode, segment.end);
-    const wrapper = document.createElement("span");
-    const styles = typeof styleBuilder === "function"
-      ? styleBuilder(sourceLine, segment.textNode)
-      : styleBuilder;
-    Object.assign(wrapper.style, styles);
-    const data = typeof dataBuilder === "function"
-      ? dataBuilder(sourceLine, segment.textNode)
-      : dataBuilder;
-    if (data) Object.assign(wrapper.dataset, data);
-    wrapper.append(part.extractContents());
-    part.insertNode(wrapper);
-    wrappers.unshift(wrapper);
-  }
-  const selection = window.getSelection();
-  const updatedRange = document.createRange();
-  updatedRange.setStartBefore(wrappers[0]);
-  updatedRange.setEndAfter(wrappers[wrappers.length - 1]);
-  selection.removeAllRanges();
-  selection.addRange(updatedRange);
-  editorSelectionRange = updatedRange.cloneRange();
-  return true;
-}
-
-function applyStyleToEditorSelection(property, value, data = null, label = "서식") {
-  if (applyStylesToEditorSelection({ [property]: value }, data)) {
-    showFormatStatus(label);
-  }
-}
-
-function applyNumericFontSize() {
-  const fontSizePt = Number(elements.fontSizeInput.value);
-  if (!Number.isFinite(fontSizePt) || fontSizePt < 6 || fontSizePt > 72) {
-    showError("글자 크기는 6pt에서 72pt 사이로 입력해 주세요.");
-    return;
-  }
-  const applied = applyStylesToEditorSelection(
-    { fontSize: `${fontSizePt}pt` },
-    { fontSizePt: String(fontSizePt) },
-  );
-  if (applied) showFormatStatus(`${fontSizePt}pt 크기`);
-}
-
-function adjustFontSize(delta) {
-  const current = Number(elements.fontSizeInput.value) || 10.5;
-  const next = Math.max(6, Math.min(72, Math.round((current + delta) * 2) / 2));
-  elements.fontSizeInput.value = String(next);
-  applyNumericFontSize();
-}
-
-function clearEditorSelectionFormat() {
-  applyStylesToEditorSelection({
-    fontFamily: "var(--word-family, inherit)",
-    fontSize: "var(--word-size, inherit)",
-    fontWeight: "var(--word-weight, inherit)",
-    fontStyle: "var(--word-style, inherit)",
-    color: "var(--word-color, inherit)",
-  });
-}
-
-function sanitizeEditorHtml(editor, targetEditable) {
-  const output = document.createElement("div");
-  const allowedStyles = [
-    "fontFamily",
-    "fontSize",
-    "fontWeight",
-    "fontStyle",
-    "color",
-  ];
-  const copyNode = (node, parent) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      parent.append(document.createTextNode(node.textContent));
-      return;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
-    if (node.tagName === "BR") {
-      parent.append(document.createTextNode(" "));
-      return;
-    }
-    const wrapper = document.createElement("span");
-    let hasStyle = false;
-    for (const property of allowedStyles) {
-      const dataValue = {
-        fontFamily: node.dataset?.fontFamily,
-        fontWeight: node.dataset?.fontWeight,
-        color: node.dataset?.fontColor,
-      }[property];
-      let value = dataValue || node.style?.[property] || "";
-      if (!value || /url\s*\(|expression|[<>]/i.test(value)) continue;
-      if (property === "fontSize" && node.dataset?.fontSizePt) {
-        const fontSizePt = Number(node.dataset.fontSizePt);
-        const cqwPerPt = Number(targetEditable.dataset.cqwPerPt);
-        if (Number.isFinite(fontSizePt) && Number.isFinite(cqwPerPt) && cqwPerPt > 0) {
-          value = `${fontSizePt * cqwPerPt}cqw`;
-        }
-      }
-      const cssProperty = property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-      wrapper.style.setProperty(cssProperty, value, "important");
-      hasStyle = true;
-    }
-    for (const key of ["fontFamily", "fontSizePt", "fontWeight", "fontColor"]) {
-      if (node.dataset?.[key]) wrapper.dataset[key] = node.dataset[key];
-    }
-    const target = hasStyle ? wrapper : parent;
-    for (const child of node.childNodes) copyNode(child, target);
-    if (hasStyle && wrapper.textContent) parent.append(wrapper);
-    if (/^(DIV|P|LI)$/.test(node.tagName)) {
-      parent.append(document.createTextNode(" "));
-    }
-  };
-  for (const child of editor.childNodes) copyNode(child, output);
-  return output.innerHTML;
-}
-
 function openLineEditor(editable) {
   activeEditable = editable;
   activeEditables = collectEditingGroup(editable);
   if (elements.formatApplyStatus) {
     elements.formatApplyStatus.textContent =
-      "한 줄 또는 여러 줄에서 원하는 글자만 드래그한 다음 서식을 선택하세요.";
+      "글자 내용만 수정하세요. 원본 서식은 자동으로 유지됩니다.";
     elements.formatApplyStatus.classList.remove("applied");
   }
   elements.lineEditorInput.replaceChildren();
@@ -1517,16 +1418,7 @@ function openLineEditor(editable) {
     sourceLine.style.fontWeight = "var(--word-weight)";
     sourceLine.style.fontStyle = "var(--word-style)";
     sourceLine.style.color = "var(--word-color)";
-    sourceLine.innerHTML = getLineText(target)?.innerHTML || "";
-    const cqwPerPt = Number(target.dataset.cqwPerPt);
-    sourceLine.querySelectorAll("[style]").forEach((element) => {
-      const fontSize = element.style.fontSize;
-      if (fontSize.endsWith("cqw") && Number.isFinite(cqwPerPt) && cqwPerPt) {
-        const fontSizePt = Number.parseFloat(fontSize) / cqwPerPt;
-        element.style.setProperty("font-size", `${fontSizePt}pt`, "important");
-        element.dataset.fontSizePt = String(fontSizePt);
-      }
-    });
+    sourceLine.textContent = getLineText(target)?.textContent || "";
     elements.lineEditorInput.append(sourceLine);
   }
   elements.lineEditor.classList.remove("hidden");
@@ -1557,16 +1449,16 @@ function applyEditedLine() {
     if (!editable) continue;
     const lineText = getLineText(editable);
     if (!lineText) continue;
-    const appliedHtml = sanitizeEditorHtml(sourceLine, editable);
-    lineText.innerHTML = appliedHtml;
-    editable.dataset.appliedHtml = appliedHtml;
+    const appliedText = sourceLine.innerText.replace(/\r?\n/g, " ").trim();
+    lineText.textContent = appliedText;
+    editable.dataset.appliedHtml = "";
     syncModifiedLine(editable);
     fitLineText(editable);
     appliedCount += 1;
   }
   closeLineEditor();
   if (appliedCount) {
-    showSuccess(`${appliedCount}개 줄에 글꼴·글자 크기 서식이 적용되었습니다.`);
+    showSuccess(`${appliedCount}개 줄을 원본 서식에 맞춰 수정했습니다.`);
   }
 }
 
@@ -1585,20 +1477,13 @@ function resetEditedLine() {
 function syncModifiedLine(editable) {
   const current = getLineText(editable)?.textContent.trim() || "";
   const original = (editable.dataset.original || "").trim();
-  const hasFormatting = Boolean(getLineText(editable)?.querySelector("[style]"));
-  editable.classList.toggle("modified", current !== original || hasFormatting);
+  editable.classList.toggle("modified", current !== original);
 }
 
 function fitLineText(editable) {
   const lineText = getLineText(editable);
   if (!lineText) return;
   lineText.style.transform = "scaleX(1)";
-  const hasUserFormatting = Boolean(
-    lineText.querySelector(
-      "[data-font-family],[data-font-size-pt],[data-font-weight],[data-font-color]",
-    ),
-  );
-  if (hasUserFormatting) return;
   window.requestAnimationFrame(() => {
     const availableWidth = Math.max(1, editable.clientWidth);
     const naturalWidth = Math.max(1, lineText.scrollWidth);
@@ -1704,15 +1589,6 @@ let activeLines = [];
 let savedRange = null;
 const panel = document.querySelector('#standaloneLineEditor');
 const input = document.querySelector('#standaloneLineInput');
-const family = document.querySelector('#standaloneFontFamily');
-const size = document.querySelector('#standaloneFontSize');
-const sizeHint = document.querySelector('#standaloneSizeHint');
-const sizeDown = document.querySelector('#standaloneSizeDown');
-const sizeApply = document.querySelector('#standaloneSizeApply');
-const sizeUp = document.querySelector('#standaloneSizeUp');
-const bold = document.querySelector('#standaloneBold');
-const color = document.querySelector('#standaloneColor');
-const clearFormat = document.querySelector('#standaloneClearFormat');
 const lineText = el => el && el.querySelector('.line-text');
 
 function fit(el) {
@@ -1760,13 +1636,7 @@ function editorLines(range = savedRange) {
 }
 
 function updateSize(range = savedRange) {
-  const sizes = [...new Set(editorLines(range).map(line => +line.dataset.fontSizePt))]
-    .filter(Number.isFinite).sort((a, b) => b - a);
-  if (!sizes.length) return;
-  size.value = String(sizes[0]);
-  sizeHint.textContent = sizes.length === 1
-    ? '원본 ' + sizes[0] + 'pt'
-    : '원본 ' + sizes.map(value => value + 'pt').join(' · ');
+  return range;
 }
 
 function remember() {
@@ -1902,7 +1772,7 @@ function openLine(el) {
     row.style.fontWeight = 'var(--word-weight)';
     row.style.fontStyle = 'var(--word-style)';
     row.style.color = 'var(--word-color)';
-    row.innerHTML = lineText(target)?.innerHTML || '';
+    row.textContent = lineText(target)?.textContent || '';
     const ratio = +target.dataset.cqwPerPt;
     row.querySelectorAll('[style]').forEach(node => {
       if (node.style.fontSize.endsWith('cqw') && ratio) {
@@ -1927,15 +1797,14 @@ function closeLine() {
 function sync(el) {
   const text = lineText(el);
   el.classList.toggle('modified',
-    (text?.textContent.trim() || '') !== (el.dataset.original || '').trim() ||
-    !!text?.querySelector('[style]'));
+    (text?.textContent.trim() || '') !== (el.dataset.original || '').trim());
 }
 
 function applyLine() {
   for (const row of input.querySelectorAll('.editor-source-line')) {
     const el = activeLines.find(item => item.dataset.editId === row.dataset.editId);
     if (!el) continue;
-    lineText(el).innerHTML = sanitize(row, el);
+    lineText(el).textContent = row.innerText.replace(/\\r?\\n/g, ' ').trim();
     sync(el);
     fit(el);
   }
@@ -1964,58 +1833,6 @@ document.querySelectorAll('.editable-word').forEach(el => {
   });
   if (el.classList.contains('modified')) fit(el);
 });
-for (const eventName of ['mouseup', 'keyup', 'input', 'focus']) input.addEventListener(eventName, remember);
-family.addEventListener('change', () => {
-  if (family.value) {
-    applyStyles(
-      { fontFamily: family.value },
-      { fontFamily: family.value }
-    );
-  }
-  family.value = '';
-});
-function applyStandaloneSize() {
-  const pt = +size.value;
-  if (pt >= 6 && pt <= 72) {
-    applyStyles(
-      { fontSize: pt + 'pt' },
-      { fontSizePt: String(pt) }
-    );
-  }
-}
-function adjustStandaloneSize(delta) {
-  const next = Math.max(6, Math.min(72, Math.round(((+size.value || 10.5) + delta) * 2) / 2));
-  size.value = String(next);
-  applyStandaloneSize();
-}
-size.addEventListener('change', applyStandaloneSize);
-size.addEventListener('keydown', event => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    applyStandaloneSize();
-  }
-});
-[sizeDown, sizeApply, sizeUp].forEach(button =>
-  button.addEventListener('mousedown', event => event.preventDefault())
-);
-sizeDown.addEventListener('click', () => adjustStandaloneSize(-1));
-sizeApply.addEventListener('click', applyStandaloneSize);
-sizeUp.addEventListener('click', () => adjustStandaloneSize(1));
-bold.addEventListener('mousedown', event => event.preventDefault());
-bold.addEventListener('click', () =>
-  applyStyles({ fontWeight: '700' }, { fontWeight: '700' })
-);
-color.addEventListener('change', () =>
-  applyStyles({ color: color.value }, { fontColor: color.value })
-);
-clearFormat.addEventListener('mousedown', event => event.preventDefault());
-clearFormat.addEventListener('click', () => applyStyles({
-  fontFamily: 'var(--word-family, inherit)',
-  fontSize: 'var(--word-size, inherit)',
-  fontWeight: 'var(--word-weight, inherit)',
-  fontStyle: 'var(--word-style, inherit)',
-  color: 'var(--word-color, inherit)'
-}));
 input.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     event.preventDefault();
@@ -2036,7 +1853,7 @@ function saveHtml(){closeLine();const html='<!DOCTYPE html>\\\\n'+document.docum
 <html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet"><style>${editorStyles}</style></head>
 <body><div class="toolbar no-print"><button class="secondary" onclick="saveText()">텍스트만 추출</button><button class="blue" onclick="saveHtml()">수정된 HTML 저장</button><button onclick="window.print()">PDF로 저장 · 인쇄</button></div>
 <div class="help no-print">문장 줄을 클릭한 뒤 아래 편집창에서 수정하세요. 원본은 적용 전까지 그대로 유지됩니다.</div><main class="pages">${pagesHtml}</main>
-<section id="standaloneLineEditor" class="line-editor hidden no-print"><strong>선택한 문장 또는 표 칸 수정</strong><div class="format-toolbar"><label>글꼴<select id="standaloneFontFamily"><option value="">원본 글꼴</option><option value="Nanum Gothic">나눔고딕</option><option value="Malgun Gothic">맑은 고딕</option><option value="Noto Sans KR">Noto Sans KR</option><option value="Nanum Myeongjo">나눔명조</option><option value="Batang">바탕</option><option value="Dotum">돋움</option><option value="Arial">Arial</option></select></label><label>크기 (pt)<input id="standaloneFontSize" type="number" min="6" max="72" step=".5" value="10.5"><small id="standaloneSizeHint">원본 10.5pt</small></label><button id="standaloneSizeDown" type="button" aria-label="글자 크기 줄이기">−</button><button id="standaloneSizeApply" type="button">크기 적용</button><button id="standaloneSizeUp" type="button" aria-label="글자 크기 늘리기">+</button><button id="standaloneBold" type="button">굵게</button><label>색상<input id="standaloneColor" type="color" value="#111111"></label><button id="standaloneClearFormat" type="button">원본 서식</button></div><div id="standaloneLineInput" class="line-editor-input" contenteditable="true" role="textbox" aria-multiline="true"></div><p class="format-help">한 줄 또는 여러 줄에서 원하는 글자만 드래그한 다음 서식을 선택하세요.</p><div class="line-editor-actions"><button class="secondary" type="button" onclick="closeLine()">취소</button><button class="secondary" type="button" onclick="resetLine()">원문으로 되돌리기</button><button class="blue" type="button" onclick="applyLine()">수정 적용</button></div></section>
+<section id="standaloneLineEditor" class="line-editor hidden no-print"><strong>선택한 문장 또는 표 칸 수정</strong><div id="standaloneLineInput" class="line-editor-input" contenteditable="true" role="textbox" aria-multiline="true"></div><p class="format-help">글자 내용만 수정하세요. 원본 서식은 자동으로 유지됩니다.</p><div class="line-editor-actions"><button class="secondary" type="button" onclick="closeLine()">취소</button><button class="secondary" type="button" onclick="resetLine()">원문으로 되돌리기</button><button class="blue" type="button" onclick="applyLine()">수정 적용</button></div></section>
 <script>${script}<\/script></body></html>`;
 }
 
