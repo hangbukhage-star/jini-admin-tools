@@ -6,6 +6,10 @@
   --line: #cbd4de;
   --soft: #f3f5f7;
   --danger: #b42318;
+  --brand: #ee7946;
+  --brand-dark: #dc6534;
+  --cream: #fffaf3;
+  --peach: #fff0e5;
   --photo-height: 58mm;
 }
 
@@ -15,7 +19,7 @@ html, body { margin: 0; min-height: 100%; }
 body {
   font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
   color: var(--ink);
-  background: #edf1f5;
+  background: var(--cream);
 }
 
 button, input { font: inherit; }
@@ -28,67 +32,92 @@ button, input { font: inherit; }
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  padding: 16px 28px;
-  color: white;
-  background: var(--navy);
-  box-shadow: 0 5px 16px rgba(24,59,99,.18);
+  padding: 18px max(28px, calc((100% - 1000px) / 2));
+  color: #332b27;
+  background: linear-gradient(135deg, #fff3be, #ffe8cc);
+  border-bottom: 1px solid #ffdab5;
+  box-shadow: 0 6px 20px rgba(183, 112, 55, .1);
 }
 
-.toolbar strong { display: block; font-size: 21px; }
-.toolbar span { display: block; margin-top: 4px; color: #dbe7f2; font-size: 13px; }
+.toolbar strong { display: block; font-size: 22px; }
+.toolbar span { display: block; margin-top: 5px; color: #70645d; font-size: 13px; }
 .toolbar-actions { display: flex; gap: 8px; }
 
 .btn {
-  border: 0;
-  border-radius: 7px;
-  padding: 10px 15px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 11px 16px;
   cursor: pointer;
   font-weight: 800;
+  transition: transform .2s, background .2s, box-shadow .2s;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
 }
 
 .btn.light {
-  color: white;
-  background: rgba(255,255,255,.13);
-  border: 1px solid rgba(255,255,255,.25);
+  color: #695b52;
+  background: rgba(255,255,255,.7);
+  border-color: rgba(185, 133, 94, .25);
 }
 
-.btn.primary { color: var(--navy); background: white; }
+.btn.light:hover { background: white; }
+
+.btn.primary {
+  color: white;
+  background: var(--brand);
+  box-shadow: 0 7px 16px rgba(238, 121, 70, .2);
+}
+
+.btn.primary:hover { background: var(--brand-dark); }
+
+.btn:focus-visible,
+.add-btn:focus-visible,
+.remove-btn:focus-visible {
+  outline: 3px solid rgba(238, 121, 70, .25);
+  outline-offset: 3px;
+}
 
 .workspace {
-  width: min(930px, calc(100% - 28px));
-  margin: 24px auto 40px;
+  width: min(1000px, calc(100% - 32px));
+  margin: 32px auto 48px;
 }
 
 .input-panel {
   display: grid;
   grid-template-columns: 1fr 310px;
-  gap: 22px;
-  margin-bottom: 16px;
-  padding: 18px 20px;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 25px 26px;
   background: white;
-  border: 1px solid #d9e0e7;
-  border-radius: 10px;
+  border: 1px solid #f3dfd2;
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(93, 66, 48, .07);
 }
 
 .form-group label,
 .size-control label {
   display: block;
   margin-bottom: 7px;
-  color: var(--navy);
+  color: #413731;
   font-weight: 800;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px 13px;
-  border: 1px solid #bcc7d2;
-  border-radius: 7px;
+  padding: 13px 14px;
+  color: #413731;
+  background: #fffdfa;
+  border: 1px solid #ddcfc6;
+  border-radius: 12px;
   outline: none;
 }
 
 .form-group input:focus {
-  border-color: var(--navy2);
-  box-shadow: 0 0 0 3px rgba(45,93,142,.1);
+  background: white;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(238,121,70,.1);
 }
 
 .size-label-row {
@@ -98,13 +127,13 @@ button, input { font: inherit; }
 }
 
 .size-label-row strong {
-  color: var(--navy2);
+  color: var(--brand-dark);
   font-size: 14px;
 }
 
 #photoSize {
   width: 100%;
-  accent-color: var(--navy2);
+  accent-color: var(--brand);
 }
 
 .range-labels {
@@ -117,10 +146,11 @@ button, input { font: inherit; }
 .guide {
   grid-column: 1 / -1;
   margin: 0;
-  padding: 10px 12px;
-  color: #526175;
-  background: #f4f7fa;
-  border-left: 4px solid var(--navy2);
+  padding: 12px 14px;
+  color: #695b52;
+  background: #fff7f1;
+  border-left: 4px solid var(--brand);
+  border-radius: 0 10px 10px 0;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -131,8 +161,9 @@ button, input { font: inherit; }
   margin: 0 auto;
   padding: 10mm 12mm 8mm;
   background: white;
-  border: 1px solid #cfd6de;
-  box-shadow: 0 12px 28px rgba(31,41,55,.12);
+  border: 1px solid #e1d8d1;
+  border-radius: 4px;
+  box-shadow: 0 15px 38px rgba(84, 61, 45, .12);
 }
 
 .sheet-header {
@@ -198,13 +229,15 @@ button, input { font: inherit; }
   margin-bottom: 1.5mm;
   padding: 6px 10px;
   color: white;
-  background: var(--navy2);
+  background: var(--brand);
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
 }
+
+.add-btn:hover { background: var(--brand-dark); }
 
 .photo-grid {
   display: grid;
@@ -248,10 +281,15 @@ button, input { font: inherit; }
   width: 100%;
   height: var(--photo-height);
   overflow: hidden;
-  background: var(--soft);
-  border: 1px solid #aeb9c5;
+  background: #fffaf6;
+  border: 1px dashed #d7bba9;
   cursor: pointer;
   transition: height .15s ease;
+}
+
+.photo-box:hover {
+  background: #fff5ed;
+  border-color: var(--brand);
 }
 
 .photo-box img {
@@ -272,10 +310,10 @@ button, input { font: inherit; }
   place-content: center;
   gap: 4px;
   text-align: center;
-  color: #6c7988;
+  color: #8c776a;
 }
 
-.placeholder b { color: var(--navy); font-size: 14px; }
+.placeholder b { color: var(--brand-dark); font-size: 14px; }
 .placeholder small { font-size: 11px; }
 .file-input { display: none; }
 
@@ -286,7 +324,7 @@ button, input { font: inherit; }
   color: var(--danger);
   background: #fff1f0;
   border: 0;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 11px;
   font-weight: 800;
@@ -308,6 +346,7 @@ button, input { font: inherit; }
     position: static;
     flex-direction: column;
     align-items: stretch;
+    padding: 20px;
   }
 
   .toolbar-actions button { flex: 1; }
@@ -322,6 +361,7 @@ button, input { font: inherit; }
     width: 100%;
     min-height: auto;
     padding: 20px;
+    overflow: hidden;
   }
 
   .photo-grid { grid-template-columns: 1fr; }
@@ -356,6 +396,7 @@ button, input { font: inherit; }
     margin: 0 auto;
     padding: 5mm 8mm 4mm;
     border: 0;
+    border-radius: 0;
     box-shadow: none;
   }
 
@@ -407,6 +448,8 @@ button, input { font: inherit; }
 
   .photo-box {
     height: var(--photo-height);
+    background: var(--soft);
+    border: 1px solid #aeb9c5;
   }
 
   .sheet-footer {

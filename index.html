@@ -40,6 +40,97 @@
       margin: 50px auto;
     }
 
+    .community-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      padding: 30px 34px;
+      background: linear-gradient(135deg, #fff4ec 0%, #fffaf5 55%, #ffe7d8 100%);
+      border: 1px solid #ffd8c2;
+      border-radius: 22px;
+      box-shadow: 0 10px 30px rgba(224, 108, 54, 0.1);
+    }
+
+    .community-card::after {
+      position: absolute;
+      right: -36px;
+      bottom: -58px;
+      width: 170px;
+      height: 170px;
+      background: rgba(255, 146, 92, 0.12);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .community-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .community-icon {
+      display: grid;
+      flex: 0 0 64px;
+      width: 64px;
+      height: 64px;
+      place-items: center;
+      background: white;
+      border: 1px solid #ffe0cf;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(224, 108, 54, 0.1);
+      font-size: 34px;
+    }
+
+    .community-label {
+      display: inline-block;
+      margin-bottom: 7px;
+      color: #e76835;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.08em;
+    }
+
+    .community-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .community-card p {
+      margin: 0;
+      color: #6f625c;
+      line-height: 1.65;
+    }
+
+    .community-button {
+      position: relative;
+      z-index: 1;
+      flex: 0 0 auto;
+      padding: 14px 22px;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      background: #ee7946;
+      border-radius: 12px;
+      box-shadow: 0 8px 18px rgba(238, 121, 70, 0.22);
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .community-button:hover {
+      background: #dc6534;
+      transform: translateY(-2px);
+    }
+
+    .community-button:focus-visible {
+      outline: 3px solid rgba(238, 121, 70, 0.32);
+      outline-offset: 3px;
+    }
+
     .tool-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -47,6 +138,8 @@
     }
 
     .tool-card {
+      position: relative;
+      overflow: hidden;
       padding: 35px 25px;
       text-align: center;
       background: white;
@@ -130,6 +223,37 @@
       background: #364fc7;
     }
 
+    .file-diet-card {
+      border: 1px solid #dcebdc;
+      background: linear-gradient(180deg, #fbfff9 0%, #ffffff 34%);
+    }
+
+    .file-diet-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #69b578, #ffb35c);
+      content: "";
+    }
+
+    .file-diet-card .usage-guide {
+      background: #f2f9f2;
+    }
+
+    .file-diet-card .usage-guide-title {
+      color: #2f7d45;
+    }
+
+    .file-diet-button {
+      background: #2f7d45;
+    }
+
+    .file-diet-button:hover {
+      background: #256638;
+    }
+
     footer {
       padding: 30px 20px;
       text-align: center;
@@ -149,6 +273,37 @@
         margin: 30px auto;
       }
 
+      .community-card,
+      .community-content {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .community-card {
+        gap: 22px;
+        padding: 26px 22px;
+      }
+
+      .community-content {
+        gap: 14px;
+      }
+
+      .community-icon {
+        width: 56px;
+        height: 56px;
+        flex-basis: 56px;
+        border-radius: 17px;
+        font-size: 30px;
+      }
+
+      .community-card h2 {
+        font-size: 22px;
+      }
+
+      .community-button {
+        align-self: flex-start;
+      }
+
       .tool-card {
         padding: 30px 20px;
       }
@@ -164,6 +319,30 @@
   </header>
 
   <main>
+    <section class="community-card" aria-labelledby="community-title">
+      <div class="community-content">
+        <div class="community-icon" aria-hidden="true">💬</div>
+
+        <div>
+          <span class="community-label">JINI COMMUNITY</span>
+          <h2 id="community-title">지니의 생각나눔터</h2>
+          <p>
+            행정도구에 대한 아이디어, 질문, 사용 후기와 불편한 점을<br>
+            함께 나누고 더 편리한 도구를 만들어가는 공간입니다.
+          </p>
+        </div>
+      </div>
+
+      <a
+        class="community-button"
+        href="https://text-organizer--hangbukhage.replit.app"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        생각 나누러 가기 →
+      </a>
+    </section>
+
     <section class="tool-list">
 
       <div class="tool-card">
@@ -232,6 +411,32 @@
         <a
           class="button"
           href="./원본문서편집기/index.html"
+          target="_blank"
+        >
+          프로그램 실행
+        </a>
+      </div>
+
+      <div class="tool-card file-diet-card">
+        <div class="tool-icon">🗜️</div>
+
+        <h2>파일용량줄이기</h2>
+
+        <div class="usage-guide">
+          <span class="usage-guide-title">📌 무거운 파일을 가볍게</span>
+
+          PDF·엑셀·HWPX·이미지를<br>
+          원래 형식 그대로 가볍게 줄입니다.
+
+          <span class="usage-guide-note">
+            ※ 파일은 외부 서버로 전송되지 않습니다.<br>
+            ※ 선명하게·균형 있게·아주 작게 선택
+          </span>
+        </div>
+
+        <a
+          class="button file-diet-button"
+          href="./파일용량줄이기/index.html"
           target="_blank"
         >
           프로그램 실행
