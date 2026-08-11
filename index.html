@@ -254,6 +254,37 @@
       background: #256638;
     }
 
+    .work-plan-card {
+      border: 1px solid #cfe7e3;
+      background: linear-gradient(180deg, #f5fffd 0%, #ffffff 34%);
+    }
+
+    .work-plan-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #2e6f68, #58b7aa);
+      content: "";
+    }
+
+    .work-plan-card .usage-guide {
+      background: #f0f9f7;
+    }
+
+    .work-plan-card .usage-guide-title {
+      color: #2e6f68;
+    }
+
+    .work-plan-button {
+      background: #2e6f68;
+    }
+
+    .work-plan-button:hover {
+      background: #245b55;
+    }
+
     footer {
       padding: 30px 20px;
       text-align: center;
@@ -439,6 +470,60 @@
           class="button file-diet-button"
           href="./파일용량줄이기/index.html"
           target="_blank"
+        >
+          프로그램 실행
+        </a>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-icon">✍️</div>
+
+        <h2>공문서 다듬기</h2>
+
+        <div class="usage-guide">
+          <span class="usage-guide-title">📌 대충 써도 공문서답게</span>
+
+          메모처럼 적은 내용을<br>
+          단정한 공문서 초안으로 정리합니다.
+
+          <span class="usage-guide-note">
+            ※ 협조 요청·결과 보고·시행 안내<br>
+            ※ 업무 계획·민원 회신 5가지 양식
+          </span>
+        </div>
+
+        <a
+          class="button"
+          href="./공문서다듬기/index.html"
+          target="_blank"
+        >
+          프로그램 실행
+        </a>
+      </div>
+
+      <div class="tool-card work-plan-card">
+        <div class="tool-icon">🗓️</div>
+
+        <h2>교육공무직 근무계획표</h2>
+
+        <div class="usage-guide">
+          <span class="usage-guide-title">📌 연간 근무·유급일수 자동 계산</span>
+
+          방학·근무일정을 입력하면<br>
+          근무계획서와 유급일수를 자동 작성합니다.
+
+          <span class="usage-guide-note">
+            ※ 토·일·공휴일 유급 여부 자동판정<br>
+            ※ 근로자별 엑셀 저장 및 인쇄 지원<br>
+            ※ 입력 자료는 내 컴퓨터에만 저장
+          </span>
+        </div>
+
+        <a
+          class="button work-plan-button"
+          href="./교육공무직근무계획표/index.html"
+          target="_blank"
+          rel="noopener"
         >
           프로그램 실행
         </a>

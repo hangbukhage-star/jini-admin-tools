@@ -1,0 +1,1924 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>교육공무직원 연간 근무계획</title>
+  <style>
+:root {
+  --ink: #17324d;
+  --ink-soft: #456277;
+  --teal: #24746e;
+  --teal-dark: #165a55;
+  --mint: #e5f5f1;
+  --paper: #ffffff;
+  --canvas: #f3f6f7;
+  --line: #d8e1e5;
+  --paid: #dff4e8;
+  --paid-ink: #17623f;
+  --unpaid: #f7e7e7;
+  --unpaid-ink: #934040;
+  --holiday: #fff1c9;
+  --holiday-ink: #815b00;
+  --work: #dcecf8;
+  --work-ink: #225d82;
+  --absent: #f4d9e5;
+  --shadow: 0 12px 30px rgba(23, 50, 77, .08);
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1100px; background: var(--canvas); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #fff; padding: 9px 11px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(36,116,110,.12); }
+label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+h1, h2, p { margin: 0; }
+h1 { font-size: 25px; letter-spacing: -.03em; }
+h2 { font-size: 18px; letter-spacing: -.02em; }
+.eyebrow, .section-kicker { display: block; margin-bottom: 5px; color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.hidden { display: none !important; }
+
+.app-header { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; color: white; background: linear-gradient(115deg, #17324d, #205365 65%, #24746e); box-shadow: var(--shadow); position: sticky; top: 0; z-index: 30; }
+.app-header .eyebrow { color: #8fdbd4; }
+.header-actions { display: flex; align-items: center; gap: 9px; }
+.year-field { display: flex; align-items: center; gap: 8px; color: white; font-size: 13px; }
+.year-field input { width: 90px; padding: 8px; color: var(--ink); }
+.save-status { font-size: 12px; color: #b8dedb; white-space: nowrap; }
+.app-shell { display: grid; grid-template-columns: 236px minmax(0,1fr); min-height: calc(100vh - 82px); }
+.sidebar { background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: calc(100vh - 82px); position: sticky; top: 82px; height: calc(100vh - 82px); }
+.sidebar-title { padding: 20px 18px 13px; display: flex; align-items: center; justify-content: space-between; }
+.sidebar-title-actions { display: flex; align-items: center; gap: 6px; }
+.worker-list { flex: 1; padding: 4px 10px; overflow: auto; }
+.worker-item { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 11px; background: transparent; text-align: left; padding: 10px; margin-bottom: 4px; }
+.worker-item:hover { background: #f2f7f7; }
+.worker-item.active { background: var(--mint); color: var(--teal-dark); }
+.avatar { flex: 0 0 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #e6edf1; font-size: 14px; font-weight: 800; }
+.worker-item.active .avatar { color: white; background: var(--teal); }
+.worker-meta { min-width: 0; }
+.worker-meta strong, .worker-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worker-meta strong { font-size: 13px; }
+.worker-meta span { margin-top: 3px; font-size: 11px; color: #718692; }
+.sidebar-footer { display: grid; gap: 7px; padding: 14px; border-top: 1px solid var(--line); }
+
+.workspace { min-width: 0; padding: 20px 24px 60px; }
+.tabs { position: sticky; top: 94px; z-index: 25; display: inline-flex; gap: 3px; padding: 4px; margin-bottom: 17px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 5px 14px rgba(23,50,77,.12); }
+.tab { border: 0; border-radius: 8px; background: transparent; padding: 9px 16px; font-size: 13px; font-weight: 700; color: #617986; }
+.tab.active { color: white; background: var(--ink); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 15px; box-shadow: var(--shadow); padding: 19px; }
+.card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.two-column { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(460px, .95fr); gap: 16px; align-items: start; }
+.settings-columns { grid-template-columns: 1fr 1fr; }
+.workflow-card { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: linear-gradient(120deg, #f8fcfb, #e8f5f2); }
+.workflow-card .help-text { margin: 7px 0 0; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+.form-grid .full { grid-column: 1 / -1; }
+.standalone { margin-bottom: 14px; }
+.help-text { margin: -5px 0 14px; color: #6c818c; font-size: 12px; line-height: 1.6; }
+
+.button { appearance: none; border: 1px solid transparent; border-radius: 9px; padding: 9px 13px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.button.primary { color: white; background: var(--teal); }
+.button.primary:hover { background: var(--teal-dark); }
+.button.secondary { color: var(--teal-dark); background: var(--mint); border-color: #cde7e2; }
+.button.ghost { color: inherit; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); }
+.card .button.ghost { color: var(--ink); background: #fff; border-color: var(--line); }
+.button.small { padding: 7px 10px; color: var(--teal-dark); background: var(--mint); }
+.button.danger-text { padding: 5px; color: #a14a4a; background: transparent; }
+.button.wide { width: 100%; }
+.button-row { display: flex; align-items: center; gap: 8px; }
+.icon-button { border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 34px; height: 34px; font-size: 21px; line-height: 1; color: var(--teal); }
+.file-button { position: relative; overflow: hidden; cursor: pointer; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.summary-card { min-height: 112px; padding: 17px; border-radius: 14px; border: 1px solid var(--line); background: white; box-shadow: var(--shadow); }
+.summary-card.accent { color: white; border-color: transparent; background: linear-gradient(135deg, var(--teal), #3a8c83); }
+.summary-card span { display: block; font-size: 12px; color: #68808c; }
+.summary-card.accent span { color: #d6efed; }
+.summary-card strong { display: block; margin: 12px 0 3px; font-size: 28px; letter-spacing: -.04em; }
+.summary-card small { font-size: 11px; color: #80929b; }
+.summary-card.accent small { color: #d6efed; }
+
+.table-scroll { overflow: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { padding: 9px 6px; color: #56707e; border-bottom: 2px solid var(--ink); background: #f5f8f9; white-space: nowrap; }
+.data-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #e5ebee; }
+.data-table td:last-child { font-weight: 800; color: var(--teal-dark); }
+.data-table button { border: 0; border-bottom: 1px dotted currentColor; padding: 0; color: inherit; background: transparent; font-weight: inherit; }
+
+.validation-panel { margin-bottom: 14px; border: 1px solid #e6a3a3; border-radius: 12px; padding: 13px 15px; color: #7f1d1d; background: #fff5f5; font-size: 12px; line-height: 1.6; }
+.validation-panel p { margin: 3px 0 9px; color: #9f3b3b; }
+.validation-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.validation-list button { border: 1px solid #efb0b0; border-radius: 8px; padding: 7px 10px; color: #8f2525; background: #fff; font-weight: 800; }
+.validation-list button:hover, .validation-list button:focus { border-color: #c83e3e; background: #ffe8e8; outline: none; }
+.validation-error-field { border-color: #d33f49 !important; background: #fff0f1 !important; box-shadow: 0 0 0 3px rgba(211,63,73,.14) !important; }
+.sticky-tools { position: sticky; top: 153px; z-index: 20; margin-bottom: 15px; padding: 14px 17px; }
+.calendar-tools { display: grid; grid-template-columns: minmax(260px,1fr) 190px 250px 150px; gap: 12px; align-items: end; }
+.calendar-tools h2 { font-size: 16px; }
+.calendar-undo { min-height: 36px; }
+.button:disabled { opacity: .45; cursor: not-allowed; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; color: #425b69; font-size: 10px; }
+.legend-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 9px; border: 0; border-radius: 6px; font-weight: 800; }
+.legend-chip.type-work { color: #1d4ed8; background: #dbeafe; }
+.legend-chip.type-extra-work { color: #6d28d9; background: #ede9fe; }
+.legend-chip.type-paid-assumed { color: #15803d; background: #dcfce7; }
+.legend-chip.type-absent { color: #be123c; background: #ffe4e6; }
+.legend-chip.type-unpaid { color: #475569; background: #e2e8f0; }
+.legend-chip.type-paid-holiday { color: #a16207; background: #fef3c7; }
+.legend-chip.type-unpaid-holiday { color: #7c2d12; background: #e2e8f0; }
+.legend-chip.type-auto-weekend { color: #0f766e; background: #ccfbf1; }
+.calendar-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; }
+.month-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; box-shadow: 0 6px 18px rgba(23,50,77,.05); }
+.month-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.month-heading strong { font-size: 16px; }
+.month-heading span { font-size: 11px; color: #71848f; }
+.week-head, .month-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.week-head div { padding: 7px 3px; text-align: center; color: #7c8e97; font-size: 10px; font-weight: 800; background: #f7f9fa; }
+.week-head div:first-child { color: #c14e4e; }.week-head div:last-child { color: #3672a1; }
+.day-cell { position: relative; min-height: 58px; padding: 5px; border: 0; border-top: 1px solid #edf1f3; border-right: 1px solid #edf1f3; background: white; text-align: left; vertical-align: top; }
+.day-cell:nth-child(7n) { border-right: 0; }
+.day-cell.empty { background: #fafbfb; }
+.day-cell:not(.empty):hover { z-index: 1; outline: 2px solid var(--teal); outline-offset: -2px; }
+.day-number { font-size: 11px; font-weight: 800; }
+.day-cell.sunday .day-number { color: #c24b4b; }.day-cell.saturday .day-number { color: #34729f; }
+.day-cell.paid { background: #fff; }
+.day-cell.unpaid { background: #e2e8f0; }
+.day-cell.has-work { background: #dbeafe; box-shadow: none; }
+.day-cell.has-absence { background: #ffe4e6; box-shadow: none; }
+.day-cell.is-holiday { box-shadow: none; }
+.day-cell.is-holiday.paid { background: #fef3c7; }
+.day-cell.is-holiday.unpaid { background: #e2e8f0; }
+.day-cell.is-holiday .day-number::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 3px; border-radius: 50%; background: #d69e00; vertical-align: 2px; }
+.day-cell.type-work { background: #dbeafe; box-shadow: none; }
+.day-cell.type-extra-work { background: #ede9fe; box-shadow: none; }
+.day-cell.type-paid-assumed { background: #dcfce7; box-shadow: none; }
+.day-cell.type-absent { background: #ffe4e6; box-shadow: none; }
+.day-cell.type-unpaid { background: #e2e8f0; box-shadow: none; }
+.day-cell.type-auto-weekend { background: #ccfbf1; box-shadow: none; }
+.day-label { display: block; margin-top: 4px; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--ink-soft); background: transparent; }
+.day-label.primary { color: var(--paid-ink); font-weight: 800; }
+.day-cell.unpaid .day-label.primary { color: var(--unpaid-ink); }
+.day-cell.has-work .day-label.primary { color: var(--work-ink); }
+.day-cell.has-absence .day-label.primary { color: #9e3862; }
+.day-cell.type-work .day-label.primary { color: #1d4ed8; }
+.day-cell.type-extra-work .day-label.primary { color: #6d28d9; }
+.day-cell.type-paid-assumed .day-label.primary { color: #15803d; }
+.day-cell.type-absent .day-label.primary { color: #be123c; }
+.day-cell.type-unpaid .day-label.primary { color: #475569; }
+.day-cell.type-auto-weekend .day-label.primary { color: #0f766e; }
+
+.stack-list { display: grid; gap: 10px; }
+.stack-item { border: 1px solid var(--line); border-radius: 11px; padding: 12px; background: #fbfcfc; }
+.stack-item-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 9px; }
+.stack-item-grid .wide { grid-column: 1 / -1; }
+.stack-item-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.compact .stack-item { display: grid; grid-template-columns: 135px 1fr 90px 34px; gap: 8px; align-items: end; padding: 9px; }
+.empty-state { padding: 22px; border: 1px dashed #cdd8dd; border-radius: 11px; text-align: center; color: #758993; font-size: 12px; }
+
+.document-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.document-preview { display: grid; gap: 18px; }
+.preview-page, .print-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm 11mm; color: #172d3e; background: white; box-shadow: 0 10px 35px rgba(23,50,77,.16); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.preview-page { transform-origin: top center; }
+.doc-title { padding-bottom: 8px; border-bottom: 3px solid var(--ink); text-align: center; }
+.doc-title h2 { font-size: 22px; }
+.doc-title p { margin-top: 5px; font-size: 12px; color: #607480; }
+.doc-section { margin-top: 11px; }
+.doc-section h3 { margin: 0 0 6px; font-size: 13px; }
+.doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
+.doc-table th, .doc-table td { border: 1px solid #61727d; padding: 4px 3px; text-align: center; vertical-align: middle; word-break: keep-all; }
+.doc-table th { color: #17324d; background: #e9f0f3; }
+.doc-table .total { font-weight: 800; background: #ffe2a8; }
+.doc-table .left { text-align: left; }
+.mini-calendar-wrap { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
+.mini-month { border: 1px solid #bcc9cf; }
+.mini-month strong { display: block; padding: 3px; text-align: center; background: #eef3f5; font-size: 9px; }
+.mini-days { display: grid; grid-template-columns: repeat(7,1fr); }
+.mini-days span { min-height: 16px; display: grid; place-items: center; border-top: 1px solid #edf1f3; font-size: 7px; }
+.mini-days span.type-work { color: #1d4ed8; background: #dbeafe; }
+.mini-days span.type-extra-work { color: #6d28d9; background: #ede9fe; }
+.mini-days span.type-paid-assumed { color: #15803d; background: #dcfce7; }
+.mini-days span.type-absent { color: #be123c; background: #ffe4e6; }
+.mini-days span.type-unpaid, .mini-days span.type-unpaid-holiday { color: #475569; background: #e2e8f0; }
+.mini-days span.type-paid-holiday { color: #a16207; background: #fef3c7; }
+.mini-days span.type-auto-weekend { color: #0f766e; background: #ccfbf1; }
+.mini-days span[class*="type-"] { font-weight: 800; }
+.doc-color-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin: 5px 0 6px; font-size: 7px; }
+.doc-color-legend span { padding: 2px 4px; border-radius: 2px; }
+.doc-color-legend .type-work { color: #1d4ed8; background: #dbeafe; }
+.doc-color-legend .type-extra-work { color: #6d28d9; background: #ede9fe; }
+.doc-color-legend .type-paid-assumed { color: #15803d; background: #dcfce7; }
+.doc-color-legend .type-absent { color: #be123c; background: #ffe4e6; }
+.doc-color-legend .type-unpaid { color: #475569; background: #e2e8f0; }
+.doc-color-legend .type-paid-holiday { color: #a16207; background: #fef3c7; }
+.doc-color-legend .type-auto-weekend { color: #0f766e; background: #ccfbf1; }
+.signature-line { height: 36px; text-align: right; padding: 14px 20px 0; }
+
+.decision-dialog { width: min(680px, 90vw); border: 0; border-radius: 16px; padding: 0; box-shadow: 0 22px 80px rgba(18,42,60,.3); }
+.decision-dialog::backdrop { background: rgba(12,31,44,.45); }
+.dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+#dialogBody { padding: 18px 20px 22px; }
+.worker-import-body { padding: 16px 20px 22px; }
+.worker-import-body > p { margin: 0 0 6px; color: #5d7380; font-size: 12px; line-height: 1.5; }
+.worker-import-list { display: grid; gap: 8px; margin-top: 15px; }
+.worker-import-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px; background: #f8fbfb; }
+.worker-import-item strong, .worker-import-item span { display: block; }
+.worker-import-item span { margin-top: 3px; color: #6b808c; font-size: 11px; }
+.schedule-replace-body { padding: 20px; }
+.schedule-replace-body p { color: var(--ink-soft); font-size: 13px; line-height: 1.7; white-space: pre-line; }
+.schedule-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+.schedule-choice.year-choice { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.schedule-choice .button { min-height: 42px; }
+.decision-result { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.decision-badge { padding: 8px 13px; border-radius: 999px; font-weight: 800; }
+.decision-badge.paid { color: var(--paid-ink); background: var(--paid); }.decision-badge.unpaid { color: var(--unpaid-ink); background: var(--unpaid); }
+.reason-list { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
+.detail-box { margin-top: 12px; padding: 12px; border-radius: 10px; background: #f4f7f8; font-size: 12px; line-height: 1.7; }
+
+.print-overlay { position: fixed; inset: 0; z-index: 100; overflow: auto; background: #dce2e5; }
+.print-toolbar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; padding: 11px 20px; color: white; background: #17324d; box-shadow: 0 5px 15px rgba(0,0,0,.18); }
+.print-toolbar > div:first-child { display: grid; gap: 2px; }
+.print-toolbar span { font-size: 11px; color: #b8c9d2; }
+.print-pages { padding: 24px; }
+.print-page { margin-bottom: 20px; page-break-after: always; }
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: 200; opacity: 0; pointer-events: none; transform: translateY(10px); padding: 11px 15px; border-radius: 9px; color: white; background: #17324d; box-shadow: var(--shadow); font-size: 12px; transition: .2s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+@page { size: A4 portrait; margin: 0; }
+@media print {
+  body { min-width: 0; background: white; }
+  body > *:not(#printOverlay) { display: none !important; }
+  #printOverlay { position: static; display: block !important; overflow: visible; background: white; }
+  .no-print { display: none !important; }
+  .print-pages { padding: 0; }
+  .print-page { width: 210mm; min-height: 297mm; margin: 0; padding: 10mm; box-shadow: none; break-after: page; page-break-after: always; }
+  .print-page:last-child { break-after: auto; page-break-after: auto; }
+}
+
+@media (max-width: 1350px) {
+  .summary-grid { grid-template-columns: repeat(3,1fr); }
+  .calendar-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 620px) {
+  .schedule-choice.year-choice { grid-template-columns: 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">전북특별자치도교육청 기준 · 오프라인 전용</p>
+      <h1>교육공무직원 연간 근무계획</h1>
+    </div>
+    <div class="header-actions">
+      <label class="year-field">학년도 <input id="academicYear" type="number" min="2020" max="2040" step="1" value="2026"></label>
+      <button class="button ghost" data-action="apply-year">학년도 적용</button>
+      <span id="saveStatus" class="save-status">자동 저장됨</span>
+      <button class="button ghost" data-action="export-json" title="학년도·근로자·방학·달력 입력 전체를 백업합니다.">전체자료 백업(JSON)</button>
+      <label class="button ghost file-button" title="백업한 전체자료를 다시 복원합니다.">백업 복원(JSON)<input id="jsonImport" type="file" accept="application/json,.json"></label>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-title">
+        <div><span class="section-kicker">근로자</span><strong id="workerCount">0명</strong></div>
+        <div class="sidebar-title-actions">
+          <button class="button small" data-action="open-worker-import" title="기존 근로자 내역 불러오기">불러오기</button>
+          <button class="icon-button" data-action="add-worker" title="빈 근로자 추가">＋</button>
+        </div>
+      </div>
+      <div id="workerList" class="worker-list"></div>
+      <div class="sidebar-footer">
+        <button class="button secondary wide" data-action="excel-current">선택 근로자 최종 엑셀</button>
+        <button class="button secondary wide" data-action="excel-all">전체 근로자 최종 엑셀</button>
+        <button class="button primary wide" data-action="print-current">선택 문서 미리보기</button>
+        <button class="button primary wide" data-action="print-all">전체 문서 미리보기</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <nav class="tabs" aria-label="화면 선택">
+        <button class="tab active" data-tab="overview">요약·인적사항</button>
+        <button class="tab" data-tab="settings">방학·공휴일</button>
+        <button class="tab" data-tab="calendar">달력 입력</button>
+        <button class="tab" data-tab="documents">산출표·계획서</button>
+      </nav>
+
+      <section id="validationPanel" class="validation-panel hidden"></section>
+
+      <section class="tab-panel active" data-panel="overview">
+        <div id="summaryCards" class="summary-grid"></div>
+        <div class="two-column">
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">인적사항</span><h2>선택 근로자 정보</h2></div><button class="button danger-text" data-action="delete-worker">근로자 삭제</button></div>
+            <form id="workerForm" class="form-grid">
+              <label>소속 기관<input name="organization" autocomplete="organization"></label>
+              <label>직종<input name="job"></label>
+              <label>성명<input name="name" required></label>
+              <label>현 근무처 근무일자<input name="currentWorkDate" type="date"></label>
+              <label>1일 소정노동시간<input name="dailyHours" type="number" min="1" max="24" step="0.5"></label>
+              <label class="full">기타사항<textarea name="notes" rows="2"></textarea></label>
+              <label class="full">문서 제목(선택)<input name="documentTitle"></label>
+              <label class="full">문서 비고<textarea name="documentNote" rows="2"></textarea></label>
+            </form>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">월별 합계</span><h2>유급일수 계산 결과</h2></div></div>
+            <div class="table-scroll"><table class="data-table"><thead><tr><th>월</th><th>근무</th><th>일요일</th><th>토요일</th><th>공휴일</th><th>기타</th><th>계</th></tr></thead><tbody id="monthlySummary"></tbody></table></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="calendar">
+        <article class="card sticky-tools">
+          <div class="calendar-tools">
+            <div><span class="section-kicker">날짜 직접 지정</span><h2>처리 종류를 고른 뒤 날짜를 누르세요</h2></div>
+            <label>처리 종류<select id="calendarMode"><option value="work">방학 중 근무일</option><option value="extraWork">행사·추가 근무</option><option value="paidAssumed">유급·출근 간주</option><option value="absent">결근</option><option value="unpaid">무급·비근무</option><option value="restore">자동판정 복원</option><option value="inspect">판정 내용 보기</option></select></label>
+            <label class="reason-field">사유<input id="calendarReason" placeholder="예: 방학 중 급식, 학교 행사"></label>
+            <button id="undoCalendarButton" class="button secondary calendar-undo" data-action="undo-calendar" disabled>마지막 입력 되돌리기</button>
+          </div>
+          <div class="legend" aria-label="달력 색상표">
+            <span class="legend-chip type-work">방학 중 근무</span>
+            <span class="legend-chip type-extra-work">추가 근무</span>
+            <span class="legend-chip type-paid-assumed">유급·출근 간주</span>
+            <span class="legend-chip type-absent">결근</span>
+            <span class="legend-chip type-unpaid">무급·비근무</span>
+            <span class="legend-chip type-paid-holiday">유급 공휴일</span>
+            <span class="legend-chip type-unpaid-holiday">무급 공휴일</span>
+            <span class="legend-chip type-auto-weekend">자동 유급 주휴·토</span>
+          </div>
+        </article>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </section>
+
+      <section class="tab-panel" data-panel="settings">
+        <div class="two-column settings-columns">
+          <article class="card workflow-card">
+            <div>
+              <span class="section-kicker">권장 입력 순서</span>
+              <h2>방학기간과 공휴일을 먼저 입력하세요</h2>
+              <p class="help-text">입력한 방학기간·공휴일·학교 일정을 반영해 근로자별 달력을 다시 계산합니다.</p>
+            </div>
+            <button class="button primary" data-action="go-calendar">입력 반영된 달력 보기</button>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">공통 설정</span><h2>기관·방학기간</h2></div><button class="button small" data-action="add-vacation">방학 추가</button></div>
+            <label class="standalone">기관 기본명<input id="organization" placeholder="학교 또는 기관명"></label>
+            <div id="vacationList" class="stack-list"></div>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">개인별 설정</span><h2>방학 중 근무기간</h2></div><button class="button small" data-action="add-work-range">근무기간 추가</button></div>
+            <p class="help-text">범위 안의 월~금요일을 소정노동 예정일로 만듭니다. 공휴일과 주말은 달력에서 별도로 지정하세요.</p>
+            <div id="workRangeList" class="stack-list"></div>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">공휴일 수정</span><h2>임시공휴일·선거일</h2></div><button class="button small" data-action="add-holiday">추가</button></div>
+            <p class="help-text">법정·음력 공휴일은 자동 생성됩니다. 변경되는 임시공휴일과 선거일만 관리하세요.</p>
+            <div id="holidayList" class="stack-list compact"></div>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="section-kicker">학교 일정</span><h2>행사·휴업일 메모</h2></div><button class="button small" data-action="add-event">추가</button></div>
+            <p class="help-text">학교 일정은 급여 판정을 자동 변경하지 않습니다. 필요하면 근로자 달력에서 유급·무급을 지정하세요.</p>
+            <div id="eventList" class="stack-list compact"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="documents">
+        <article class="card document-toolbar">
+          <div><span class="section-kicker">공유 계산 결과</span><h2>근무일수 산출표·연간 근로계획서</h2></div>
+          <div class="button-row"><button class="button secondary" data-action="excel-current">엑셀 내보내기</button><button class="button primary" data-action="print-current">인쇄/PDF 미리보기</button></div>
+        </article>
+        <div id="documentPreview" class="document-preview"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="decisionDialog" class="decision-dialog">
+    <div class="dialog-heading"><div><span class="section-kicker">날짜별 판정</span><h2 id="dialogTitle"></h2></div><button class="icon-button" data-action="close-dialog">×</button></div>
+    <div id="dialogBody"></div>
+  </dialog>
+
+  <dialog id="workerImportDialog" class="decision-dialog">
+    <div class="dialog-heading"><div><span class="section-kicker">근로자 추가</span><h2>기존 근로자 내역 불러오기</h2></div><button class="icon-button" data-action="close-worker-import">×</button></div>
+    <div class="worker-import-body">
+      <p><strong>복사:</strong> 소속·직종·근무일자·노동시간·기타사항·문서설정·방학 중 근무기간</p>
+      <p><strong>복사하지 않음:</strong> 성명·달력 수동입력</p>
+      <div id="workerImportList" class="worker-import-list"></div>
+    </div>
+  </dialog>
+
+  <dialog id="scheduleReplaceDialog" class="decision-dialog">
+    <div class="dialog-heading"><div><span class="section-kicker">일정 중복 확인</span><h2>새 일정으로 다시 계산할까요?</h2></div></div>
+    <div class="schedule-replace-body">
+      <p id="scheduleReplaceMessage"></p>
+      <div class="schedule-choice">
+        <button class="button primary" data-action="replace-schedule-manual">수동입력 삭제 후 새 일정 반영</button>
+        <button class="button secondary" data-action="keep-schedule-manual">수동입력 유지</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="academicYearChangeDialog" class="decision-dialog">
+    <div class="dialog-heading"><div><span class="section-kicker">학년도 변경</span><h2>기존 일정 날짜를 어떻게 처리할까요?</h2></div><button class="icon-button" data-action="year-change-cancel">×</button></div>
+    <div class="schedule-replace-body">
+      <p id="academicYearChangeMessage"></p>
+      <div class="schedule-choice year-choice">
+        <button class="button primary" data-action="year-change-shift">새 학년도로 날짜 이동</button>
+        <button class="button secondary" data-action="year-change-keep">기존 날짜 유지</button>
+        <button class="button danger-text" data-action="year-change-clear">일정 초기화</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="printOverlay" class="print-overlay hidden">
+    <div class="print-toolbar no-print"><div><strong>인쇄/PDF 미리보기</strong><span id="printPageInfo"></span></div><div class="button-row"><button class="button ghost" data-action="close-print">닫기</button><button class="button primary" data-action="do-print">인쇄 / PDF 저장</button></div></div>
+    <div id="printPages" class="print-pages"></div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script>
+(function (root) {
+  'use strict';
+
+  const DAY = 86400000;
+
+  function dateUTC(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12));
+  }
+
+  function iso(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function addDays(value, amount) {
+    const d = typeof value === 'string' ? dateUTC(value) : new Date(value.getTime());
+    d.setUTCDate(d.getUTCDate() + amount);
+    return iso(d);
+  }
+
+  function weekday(value) {
+    return dateUTC(value).getUTCDay();
+  }
+
+  function findLunarDate(year, month, day) {
+    const formatter = new Intl.DateTimeFormat('en-u-ca-chinese', {
+      year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'Asia/Seoul'
+    });
+    const start = new Date(Date.UTC(year, 0, 1, 12));
+    const end = new Date(Date.UTC(year, 11, 31, 12));
+    for (let t = start.getTime(); t <= end.getTime(); t += DAY) {
+      const d = new Date(t);
+      const parts = Object.fromEntries(formatter.formatToParts(d).map(p => [p.type, p.value]));
+      if (Number(parts.relatedYear || parts.year) === year && Number(parts.month) === month && Number(parts.day) === day) {
+        return iso(d);
+      }
+    }
+    throw new Error(`${year}년 음력 ${month}월 ${day}일을 변환하지 못했습니다.`);
+  }
+
+  function put(map, date, name, options) {
+    if (!map[date]) map[date] = { date, names: [], isHoliday: true, special: false, source: '자동' };
+    if (!map[date].names.includes(name)) map[date].names.push(name);
+    if (options && options.special) map[date].special = true;
+    if (options && options.source) map[date].source = options.source;
+  }
+
+  function nextNonHoliday(map, start) {
+    let cursor = addDays(start, 1);
+    while (map[cursor] || weekday(cursor) === 0) cursor = addDays(cursor, 1);
+    return cursor;
+  }
+
+  function buildYear(year) {
+    const map = {};
+    put(map, `${year}-01-01`, '신정');
+    put(map, `${year}-03-01`, '삼일절');
+    put(map, `${year}-05-01`, '노동절');
+    put(map, `${year}-05-05`, '어린이날');
+    put(map, `${year}-06-06`, '현충일');
+    if (year >= 2026) put(map, `${year}-07-17`, '제헌절');
+    put(map, `${year}-08-15`, '광복절', { special: true });
+    put(map, `${year}-10-03`, '개천절');
+    put(map, `${year}-10-09`, '한글날');
+    put(map, `${year}-12-25`, '성탄절');
+
+    const seollal = findLunarDate(year, 1, 1);
+    const seollalDates = [addDays(seollal, -1), seollal, addDays(seollal, 1)];
+    ['설날 전날', '설날', '설날 다음 날'].forEach((name, i) => put(map, seollalDates[i], name, { special: true }));
+
+    const buddha = findLunarDate(year, 4, 8);
+    put(map, buddha, '부처님오신날');
+
+    const chuseok = findLunarDate(year, 8, 15);
+    const chuseokDates = [addDays(chuseok, -1), chuseok, addDays(chuseok, 1)];
+    ['추석 전날', '추석', '추석 다음 날'].forEach((name, i) => put(map, chuseokDates[i], name));
+
+    const substituteSingles = [
+      [`${year}-03-01`, '삼일절'],
+      [`${year}-05-05`, '어린이날'],
+      [buddha, '부처님오신날'],
+      ...(year >= 2026 ? [[`${year}-07-17`, '제헌절']] : []),
+      [`${year}-08-15`, '광복절'],
+      [`${year}-10-03`, '개천절'],
+      [`${year}-10-09`, '한글날'],
+      [`${year}-12-25`, '성탄절']
+    ];
+    for (const [date, name] of substituteSingles) {
+      const day = weekday(date);
+      const overlapsOther = map[date] && map[date].names.length > 1;
+      if (day === 0 || day === 6 || overlapsOther) {
+        const substitute = nextNonHoliday(map, date);
+        put(map, substitute, `${name} 대체공휴일`);
+      }
+    }
+
+    for (const [dates, name] of [[seollalDates, '설날'], [chuseokDates, '추석']]) {
+      const needsSubstitute = dates.some(d => weekday(d) === 0 || (map[d] && map[d].names.length > 1));
+      if (needsSubstitute) {
+        let cursor = dates[dates.length - 1];
+        const substitute = nextNonHoliday(map, cursor);
+        put(map, substitute, `${name} 대체공휴일`);
+      }
+    }
+
+    // 중앙선거관리위원회가 공고한 임기만료 선거일. 이후 선거·임시공휴일은 화면에서 추가한다.
+    if (year === 2026) put(map, '2026-06-03', '제9회 전국동시지방선거');
+
+    return map;
+  }
+
+  function buildAcademicHolidays(academicYear, customHolidays) {
+    const combined = Object.assign({}, buildYear(academicYear), buildYear(academicYear + 1));
+    for (const item of customHolidays || []) {
+      if (!item || !item.date || !item.name) continue;
+      if (item.deleted) {
+        delete combined[item.date];
+      } else {
+        put(combined, item.date, item.name, { special: !!item.special, source: '사용자' });
+      }
+    }
+    const start = `${academicYear}-03-01`;
+    const end = `${academicYear + 1}-02-${new Date(Date.UTC(academicYear + 1, 2, 0)).getUTCDate()}`;
+    return Object.fromEntries(Object.entries(combined).filter(([date]) => date >= start && date <= end));
+  }
+
+  const api = { buildYear, buildAcademicHolidays, findLunarDate, addDays, weekday, dateUTC, iso };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.WorkPlanHolidays = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+  </script>
+  <script>
+(function (root) {
+  'use strict';
+
+  const H = root.WorkPlanHolidays || (typeof require !== 'undefined' ? require('./holidays.js') : null);
+  const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+  function eachDate(start, end) {
+    const result = [];
+    for (let cursor = start; cursor <= end; cursor = H.addDays(cursor, 1)) result.push(cursor);
+    return result;
+  }
+
+  function academicBounds(year) {
+    const last = new Date(Date.UTC(year + 1, 2, 0)).getUTCDate();
+    return { start: `${year}-03-01`, end: `${year + 1}-02-${String(last).padStart(2, '0')}` };
+  }
+
+  function monthKey(date) {
+    return date.slice(0, 7);
+  }
+
+  function defaultState(year) {
+    const id = 'worker-1';
+    return {
+      version: 1,
+      academicYear: Number(year) || 2026,
+      organization: '',
+      customHolidays: [],
+      schoolEvents: [],
+      vacations: [],
+      selectedWorkerId: id,
+      workers: [{
+        id, organization: '', job: '', name: '근로자 1', currentWorkDate: '', dailyHours: 8,
+        notes: '', documentTitle: '', documentNote: '', workRanges: [], overrides: {}
+      }]
+    };
+  }
+
+  function normalizeState(input) {
+    const normalizedYear = Number(input && input.academicYear) || 2026;
+    const base = defaultState(normalizedYear);
+    const state = Object.assign(base, input || {});
+    state.academicYear = normalizedYear;
+    state.customHolidays = Array.isArray(state.customHolidays) ? state.customHolidays : [];
+    state.schoolEvents = Array.isArray(state.schoolEvents) ? state.schoolEvents : [];
+    state.vacations = Array.isArray(state.vacations) ? state.vacations : [];
+    state.workers = Array.isArray(state.workers) && state.workers.length ? state.workers : base.workers;
+    state.workers = state.workers.map((w, i) => Object.assign({
+      id: `worker-${i + 1}`, organization: state.organization || '', job: '', name: `근로자 ${i + 1}`,
+      currentWorkDate: '', dailyHours: 8, notes: '', documentTitle: '', documentNote: '', workRanges: [], overrides: {}
+    }, w, { workRanges: Array.isArray(w.workRanges) ? w.workRanges : [], overrides: w.overrides || {} }));
+    if (!state.workers.some(w => w.id === state.selectedWorkerId)) state.selectedWorkerId = state.workers[0].id;
+    return state;
+  }
+
+  function vacationFor(date, vacations) {
+    return (vacations || []).find(v => v.start && v.end && date >= v.start && date <= v.end) || null;
+  }
+
+  function rangesFor(date, worker, vacationId) {
+    return (worker.workRanges || []).filter(r => (!r.vacationId || r.vacationId === vacationId) && r.start && r.end && date >= r.start && date <= r.end);
+  }
+
+  function baseRecords(state, worker, holidays) {
+    const bounds = academicBounds(state.academicYear);
+    const records = {};
+    for (const date of eachDate(bounds.start, bounds.end)) {
+      const dow = H.weekday(date);
+      const holiday = holidays[date] || null;
+      const vacation = vacationFor(date, state.vacations);
+      const override = worker.overrides[date] || null;
+      const rangeMatches = vacation ? rangesFor(date, worker, vacation.id) : [];
+      const rangePlanned = !!vacation && dow >= 1 && dow <= 5 && !holiday && rangeMatches.length > 0;
+      const directPlanned = !!override && ['work', 'extraWork', 'absent'].includes(override.type);
+      let planned = vacation ? (rangePlanned || directPlanned) : (dow >= 1 && dow <= 5 && !holiday);
+      let actualWork = vacation ? (rangePlanned || ['work', 'extraWork'].includes(override && override.type)) : planned;
+      if (override && ['absent', 'unpaid'].includes(override.type)) actualWork = false;
+      // '비근무'는 결근이 아니라 소정노동일 자체에서 제외하는 입력이다.
+      if (override && override.type === 'unpaid') planned = false;
+      if (override && ['work', 'extraWork'].includes(override.type)) actualWork = true;
+      const paidAssumed = !!override && override.type === 'paidAssumed';
+      const absent = !!override && override.type === 'absent';
+      const forcedUnpaid = !!override && override.type === 'unpaid';
+      records[date] = {
+        date, dow, dayName: DAY_NAMES[dow], month: monthKey(date), vacationId: vacation ? vacation.id : '',
+        vacationName: vacation ? vacation.name : '', inVacation: !!vacation, holiday,
+        schoolEvents: (state.schoolEvents || []).filter(e => e.date === date), override,
+        planned, actualWork, paidAssumed, absent, forcedUnpaid, dailyHours: Number(worker.dailyHours) || 8,
+        weekendQualified: false, weekendType: '', workWeekStart: '', holidayPaid: false,
+        paid: false, result: '무급', allocation: '', reasons: [], details: {}
+      };
+      if (rangeMatches.length) records[date].reasons.push(`방학 근무기간: ${rangeMatches.map(r => r.reason || '근무').join(', ')}`);
+      if (override && override.reason) records[date].reasons.push(`사용자 입력: ${override.reason}`);
+    }
+    return records;
+  }
+
+  function mondayOf(date) {
+    const dow = H.weekday(date);
+    return H.addDays(date, dow === 0 ? -6 : 1 - dow);
+  }
+
+  function evaluateTermWeekends(records) {
+    const weeks = {};
+    Object.values(records).filter(r => !r.inVacation).forEach(r => {
+      const start = mondayOf(r.date);
+      if (!weeks[start]) weeks[start] = [];
+      weeks[start].push(r);
+    });
+    for (const [start, termRecords] of Object.entries(weeks)) {
+      // 학기 마지막 주의 토·일이 방학에 들어가더라도 같은 월~일 노동주로 이어서 판정한다.
+      const weekRecords = eachDate(start, H.addDays(start, 6)).map(date => records[date]).filter(Boolean);
+      // 한 노동주 안에서 방학이 끝나거나 시작하면 학기일과 방학일을 나누지 않고 합산한다.
+      // 예: 방학 근무 월~목 + 개학일 금요일 근무라면 그 주 토·일은 전체 근무를 기준으로 판정한다.
+      const mixedWeek = weekRecords.some(r => r.inVacation) && weekRecords.some(r => !r.inVacation);
+      const basisRecords = mixedWeek ? weekRecords : termRecords;
+      const scheduled = basisRecords.filter(r => r.planned);
+      const allPresent = scheduled.every(r => r.actualWork || r.paidAssumed);
+      const creditDates = basisRecords.filter(r => r.actualWork || r.paidAssumed || (!r.inVacation && !!r.holiday) || r.holidayPaid);
+      const hours = creditDates.length * (basisRecords[0] ? basisRecords[0].dailyHours : 8);
+      const threshold = (basisRecords[0] ? basisRecords[0].dailyHours : 8) * 2;
+      const qualified = allPresent && hours >= threshold;
+      // 방학 종료 뒤 토·일만 남은 빈 학기 주는 앞선 방학 노동주의 판정을 막지 않는다.
+      if (!scheduled.length && !creditDates.length) continue;
+      for (const r of weekRecords.filter(r => r.dow === 0 || r.dow === 6)) {
+        r.weekendQualified = qualified;
+        r.weekendType = r.dow === 0 ? '일요일 주휴' : '토요휴일';
+        r.workWeekStart = start;
+        r.details.week = { start, end: H.addDays(start, 6), creditDates: creditDates.map(x => x.date), hours, threshold, allPresent };
+        r.reasons.push(`학기 중 ${r.weekendType}: ${hours}/${threshold}시간, 소정노동일 ${allPresent ? '개근' : '미개근'}`);
+      }
+    }
+  }
+
+  function buildVacationWeeks(records, vacation) {
+    const within = Object.values(records).filter(r => r.vacationId === vacation.id);
+    const candidates = within.filter(r => r.actualWork || r.paidAssumed || (r.holiday && r.holiday.special && r.dow >= 1 && r.dow <= 5));
+    candidates.sort((a, b) => a.date.localeCompare(b.date));
+    const weeks = [];
+    let index = 0;
+    while (index < candidates.length) {
+      const start = candidates[index].date;
+      const end = H.addDays(start, 6);
+      weeks.push({ start, end });
+      index += 1;
+      while (index < candidates.length && candidates[index].date <= end) index += 1;
+    }
+    return weeks;
+  }
+
+  function evaluateVacationHolidays(records, vacations) {
+    function adjacentWeekday(date, direction, vacation) {
+      let cursor = H.addDays(date, direction);
+      while (records[cursor]) {
+        const candidate = records[cursor];
+        // 방학 종료 뒤의 개학일은 직후 노동일로 끌어오지 않는다.
+        if (direction > 0 && candidate.vacationId !== vacation.id) return null;
+        // 주말과 연속 공휴일만 건너뛰고 가장 가까운 평일의 실제 출근 여부를 본다.
+        if (candidate.dow >= 1 && candidate.dow <= 5 && !candidate.holiday) return candidate;
+        cursor = H.addDays(cursor, direction);
+      }
+      return null;
+    }
+
+    for (const vacation of vacations || []) {
+      const within = Object.values(records).filter(r => r.vacationId === vacation.id).sort((a, b) => a.date.localeCompare(b.date));
+      for (const r of within.filter(r => r.holiday)) {
+        if (r.holiday.special) {
+          r.holidayPaid = true;
+          r.reasons.push(`${r.holiday.names.join(', ')}: 노동 예정과 관계없는 특별 유급휴일`);
+          r.details.holiday = { rule: '특별 유급휴일', previous: null, next: null };
+          continue;
+        }
+        const previous = adjacentWeekday(r.date, -1, vacation);
+        const next = adjacentWeekday(r.date, 1, vacation);
+        const paid = !!previous && !!next && previous.actualWork && next.actualWork;
+        r.holidayPaid = paid;
+        r.details.holiday = {
+          rule: '방학 중 일반·대체공휴일의 직전·직후 평일 실제 출근(주말·연속 공휴일 제외)',
+          previous: previous ? { date: previous.date, worked: previous.actualWork } : null,
+          next: next ? { date: next.date, worked: next.actualWork } : null
+        };
+        const prevText = previous ? `${previous.date} ${previous.actualWork ? '출근' : '미출근'}` : '없음';
+        const nextText = next ? `${next.date} ${next.actualWork ? '출근' : '미출근'}` : '없음';
+        r.reasons.push(`${r.holiday.names.join(', ')}: 직전 ${prevText}, 직후 ${nextText} → ${paid ? '유급' : '무급'}`);
+      }
+    }
+  }
+
+  function evaluateVacationWeekends(records, vacations) {
+    for (const vacation of vacations || []) {
+      const weeks = buildVacationWeeks(records, vacation);
+      for (const week of weeks) {
+        // 방학이 금요일에 끝나더라도 그 노동주의 토·일은 같은 7일 노동주로 이어서 판정한다.
+        const weekRecords = eachDate(week.start, week.end).map(d => records[d]).filter(Boolean);
+        const dates = weekRecords.filter(r => r.vacationId === vacation.id);
+        const scheduled = dates.filter(r => r.planned);
+        const allPresent = scheduled.every(r => r.actualWork || r.paidAssumed);
+        const creditDates = dates.filter(r => r.actualWork || r.paidAssumed || (r.holiday && r.holiday.special));
+        const dailyHours = dates[0] ? dates[0].dailyHours : 8;
+        const hours = creditDates.length * dailyHours;
+        const threshold = dailyHours * 2;
+        const qualified = allPresent && hours >= threshold;
+        for (const r of weekRecords.filter(r => (r.dow === 0 || r.dow === 6) && !r.workWeekStart)) {
+          r.weekendQualified = qualified;
+          r.weekendType = r.dow === 0 ? '일요일 주휴' : '토요휴일';
+          r.workWeekStart = week.start;
+          r.details.week = { start: week.start, end: week.end, creditDates: creditDates.map(x => x.date), hours, threshold, allPresent };
+          r.reasons.push(`방학 노동주 ${week.start}~${week.end} ${r.weekendType}: ${hours}/${threshold}시간, 소정노동일 ${allPresent ? '개근' : '미개근'}`);
+        }
+      }
+    }
+  }
+
+  function resolve(records) {
+    for (const r of Object.values(records)) {
+      if (r.actualWork) r.reasons.push('실제 노동일');
+      if (r.paidAssumed) r.reasons.push('사용자가 유급·출근 간주로 지정');
+      if (r.absent) r.reasons.push('소정노동일 결근');
+      if (r.forcedUnpaid) r.reasons.push('사용자가 무급·비근무로 지정');
+      if (r.holiday && !r.inVacation) {
+        r.holidayPaid = true;
+        r.reasons.push(`학기 중 공휴일: ${r.holiday.names.join(', ')} 유급`);
+      }
+      let paid = r.actualWork || r.paidAssumed || r.holidayPaid || r.weekendQualified;
+      if (r.forcedUnpaid) paid = false;
+      r.paid = !!paid;
+      r.result = r.paid ? '유급' : '무급';
+
+      // 출력 표의 합산 열은 서로 겹치지 않도록 한 날짜를 한 열에만 배정한다.
+      if (r.paid) {
+        if (r.actualWork) r.allocation = 'work';
+        else if (r.holidayPaid) r.allocation = 'holiday';
+        else if (r.dow === 0) r.allocation = 'sunday';
+        else if (r.dow === 6) r.allocation = 'saturday';
+        else r.allocation = 'otherPaid';
+      } else if (r.holiday) r.allocation = 'unpaidHoliday';
+      else if (r.dow === 0) r.allocation = 'unpaidSunday';
+      else if (r.dow === 6) r.allocation = 'unpaidSaturday';
+      else if (r.absent) r.allocation = 'absence';
+      else r.allocation = 'unpaid';
+      if (!r.reasons.length) r.reasons.push(r.inVacation ? '방학 중 노동·유급 조건 없음' : '소정노동일이 아닌 날');
+    }
+  }
+
+  function summarize(records, academicYear) {
+    const months = [];
+    for (let offset = 0; offset < 12; offset++) {
+      const monthIndex = 2 + offset;
+      const year = academicYear + Math.floor(monthIndex / 12);
+      const month = (monthIndex % 12) + 1;
+      const key = `${year}-${String(month).padStart(2, '0')}`;
+      const list = Object.values(records).filter(r => r.month === key);
+      const count = allocation => list.filter(r => r.allocation === allocation).length;
+      months.push({
+        key, year, month, records: list,
+        actualWork: count('work'), paidSunday: count('sunday'), paidSaturday: count('saturday'),
+        paidHoliday: count('holiday'), otherPaid: count('otherPaid'),
+        unpaidSunday: count('unpaidSunday'), unpaidSaturday: count('unpaidSaturday'),
+        unpaidHoliday: count('unpaidHoliday'), absence: list.filter(r => r.absent).length,
+        paidTotal: list.filter(r => r.paid).length
+      });
+    }
+    return { months, annualPaid: Object.values(records).filter(r => r.paid).length };
+  }
+
+  function overrideDatesInRange(workers, start, end) {
+    if (!start || !end || start > end) return [];
+    const dates = [];
+    for (const worker of workers || []) {
+      for (const date of Object.keys(worker.overrides || {})) {
+        if (date >= start && date <= end) dates.push({ workerId: worker.id, workerName: worker.name || '', date });
+      }
+    }
+    return dates.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function clearOverridesInRange(workers, start, end) {
+    const matches = overrideDatesInRange(workers, start, end);
+    for (const match of matches) {
+      const worker = (workers || []).find(item => item.id === match.workerId);
+      if (worker && worker.overrides) delete worker.overrides[match.date];
+    }
+    return matches;
+  }
+
+  function shiftIsoYear(date, delta) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date || '';
+    const [year, month, day] = date.split('-').map(Number);
+    const targetYear = year + delta;
+    const lastDay = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+    return `${targetYear}-${String(month).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
+  }
+
+  function shiftScheduleDates(state, delta) {
+    const shift = value => shiftIsoYear(value, delta);
+    for (const vacation of state.vacations || []) {
+      vacation.start = shift(vacation.start);
+      vacation.end = shift(vacation.end);
+    }
+    for (const holiday of state.customHolidays || []) holiday.date = shift(holiday.date);
+    for (const event of state.schoolEvents || []) event.date = shift(event.date);
+    for (const worker of state.workers || []) {
+      for (const range of worker.workRanges || []) {
+        range.start = shift(range.start);
+        range.end = shift(range.end);
+      }
+      const shiftedOverrides = {};
+      for (const [date, override] of Object.entries(worker.overrides || {})) shiftedOverrides[shift(date)] = override;
+      worker.overrides = shiftedOverrides;
+    }
+    return state;
+  }
+
+  function clearScheduleDates(state) {
+    for (const vacation of state.vacations || []) {
+      vacation.start = '';
+      vacation.end = '';
+    }
+    state.customHolidays = [];
+    state.schoolEvents = [];
+    for (const worker of state.workers || []) {
+      worker.workRanges = [];
+      worker.overrides = {};
+    }
+    return state;
+  }
+
+  function calculate(stateInput, workerId) {
+    const state = normalizeState(JSON.parse(JSON.stringify(stateInput || {})));
+    const worker = state.workers.find(w => w.id === (workerId || state.selectedWorkerId)) || state.workers[0];
+    const holidays = H.buildAcademicHolidays(state.academicYear, state.customHolidays);
+    const records = baseRecords(state, worker, holidays);
+    evaluateVacationHolidays(records, state.vacations);
+    evaluateTermWeekends(records);
+    evaluateVacationWeekends(records, state.vacations);
+    resolve(records);
+    const summary = summarize(records, state.academicYear);
+    const termPaid = Object.values(records).filter(r => !r.inVacation && r.paid).length;
+    const vacationPaid = Object.values(records).filter(r => r.inVacation && r.paid).length;
+    return { state, worker, holidays, records, months: summary.months, annualPaid: summary.annualPaid, termPaid, vacationPaid };
+  }
+
+  function calculateAll(stateInput) {
+    const state = normalizeState(stateInput || {});
+    return state.workers.map(w => calculate(state, w.id));
+  }
+
+  const api = {
+    DAY_NAMES, defaultState, normalizeState, academicBounds, eachDate, calculate, calculateAll,
+    buildVacationWeeks, summarize, overrideDatesInRange, clearOverridesInRange,
+    shiftIsoYear, shiftScheduleDates, clearScheduleDates
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.WorkPlanEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+  </script>
+  <script>
+(function (root) {
+  'use strict';
+
+  const encoder = new TextEncoder();
+  const CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function crc32(bytes) {
+    let crc = 0xffffffff;
+    for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function u16(n) { return new Uint8Array([n & 255, (n >>> 8) & 255]); }
+  function u32(n) { return new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]); }
+  function concat(parts) {
+    const length = parts.reduce((sum, p) => sum + p.length, 0);
+    const output = new Uint8Array(length);
+    let offset = 0;
+    for (const part of parts) { output.set(part, offset); offset += part.length; }
+    return output;
+  }
+
+  function zipStore(files) {
+    const local = [];
+    const central = [];
+    let offset = 0;
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    for (const file of files) {
+      const name = encoder.encode(file.name);
+      const data = typeof file.data === 'string' ? encoder.encode(file.data) : file.data;
+      const crc = crc32(data);
+      const header = concat([
+        u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(dosTime), u16(dosDate), u32(crc),
+        u32(data.length), u32(data.length), u16(name.length), u16(0), name
+      ]);
+      local.push(header, data);
+      const centralHeader = concat([
+        u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(dosTime), u16(dosDate),
+        u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0),
+        u16(0), u32(0), u32(offset), name
+      ]);
+      central.push(centralHeader);
+      offset += header.length + data.length;
+    }
+    const centralBytes = concat(central);
+    const end = concat([
+      u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(centralBytes.length), u32(offset), u16(0)
+    ]);
+    return concat([...local, centralBytes, end]);
+  }
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function colName(index) {
+    let name = '';
+    for (let n = index + 1; n; n = Math.floor((n - 1) / 26)) name = String.fromCharCode(65 + ((n - 1) % 26)) + name;
+    return name;
+  }
+
+  function sheetXml(sheet) {
+    const rows = sheet.rows || [];
+    const rowXml = rows.map((row, rIndex) => {
+      const cells = row.map((value, cIndex) => {
+        const ref = `${colName(cIndex)}${rIndex + 1}`;
+        const style = (sheet.styles && sheet.styles[rIndex] && sheet.styles[rIndex][cIndex]) || 0;
+        if (value === null || value === undefined || value === '') return `<c r="${ref}" s="${style}"/>`;
+        if (typeof value === 'number' && Number.isFinite(value)) return `<c r="${ref}" s="${style}"><v>${value}</v></c>`;
+        return `<c r="${ref}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${esc(value)}</t></is></c>`;
+      }).join('');
+      const height = sheet.rowHeights && sheet.rowHeights[rIndex];
+      return `<row r="${rIndex + 1}"${height ? ` ht="${height}" customHeight="1"` : ''}>${cells}</row>`;
+    }).join('');
+    const maxCols = rows.reduce((max, r) => Math.max(max, r.length), 1);
+    const maxRows = Math.max(rows.length, 1);
+    const cols = (sheet.widths || []).map((width, i) => `<col min="${i + 1}" max="${i + 1}" width="${width}" customWidth="1"/>`).join('');
+    const merges = (sheet.merges || []).map(ref => `<mergeCell ref="${ref}"/>`).join('');
+    const freezeRows = Number(sheet.freezeRows) || 0;
+    const sheetView = freezeRows
+      ? `<sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="${freezeRows}" topLeftCell="A${freezeRows + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+      : '<sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>';
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:${colName(maxCols - 1)}${maxRows}"/>
+  ${sheetView}
+  <cols>${cols}</cols><sheetData>${rowXml}</sheetData>
+  ${sheet.autoFilter ? `<autoFilter ref="${sheet.autoFilter}"/>` : ''}
+  ${merges ? `<mergeCells count="${sheet.merges.length}">${merges}</mergeCells>` : ''}
+  <pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>
+  <pageSetup paperSize="9" orientation="${sheet.landscape ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>
+</worksheet>`;
+  }
+
+  function safeSheetName(name, used) {
+    let base = String(name || '근로자').replace(/[\\/*?:\[\]]/g, '_').slice(0, 31) || '시트';
+    let candidate = base;
+    let n = 2;
+    while (used.has(candidate)) candidate = `${base.slice(0, 27)}_${n++}`;
+    used.add(candidate);
+    return candidate;
+  }
+
+  function styleMatrix(rows, headerRows, titleRows, totalRows) {
+    return rows.map((row, i) => row.map(() => titleRows.includes(i) ? 1 : headerRows.includes(i) ? 2 : totalRows.includes(i) ? 6 : 0));
+  }
+
+  function workerListSheet(state, results) {
+    const rows = [
+      [`${state.academicYear}학년도 교육공무직원 목록`],
+      ['소속 기관', '직종', '성명', '현 근무처 근무일자', '1일 소정노동시간', '학기 중 유급일수', '방학 중 유급일수', '연간 유급일수', '기타사항']
+    ];
+    for (const result of results) rows.push([
+      result.worker.organization || state.organization, result.worker.job, result.worker.name, result.worker.currentWorkDate,
+      result.worker.dailyHours, result.termPaid, result.vacationPaid, result.annualPaid, result.worker.notes
+    ]);
+    return { name: '전체 근로자 목록', rows, styles: styleMatrix(rows, [1], [0], []), widths: [24, 16, 14, 18, 16, 16, 16, 16, 30], merges: ['A1:I1'], freezeRows: 2, autoFilter: `A2:I${rows.length}` };
+  }
+
+  function calculationSheet(result, state, name) {
+    const rows = [
+      [`${state.academicYear}학년도 ${result.worker.job || '교육공무직원'} 근무일수 산출표`],
+      ['월', '근무일', '주차(유급 일요일)', '토요휴일', '국경일 등', '기타 유급', '월별 계', '국·공휴일 내역', '행사 등 내역']
+    ];
+    for (const m of result.months) {
+      const holidayText = m.records.filter(r => r.holiday).map(r => `${Number(r.date.slice(5, 7))}.${Number(r.date.slice(8))}. ${r.holiday.names.join(', ')}`).join('\n');
+      const summerVacationDetails = (state.vacations || []).filter(v =>
+        /^(여름|하계)방학/.test((v.name || '').replace(/\s+/g, '')) && m.records.some(r => r.vacationId === v.id)
+      ).flatMap(v => {
+        const workDates = m.records
+          .filter(r => r.vacationId === v.id && r.actualWork)
+          .map(r => `${Number(r.date.slice(5, 7))}.${Number(r.date.slice(8))}.`);
+        return [
+          `${v.name} 기간: ${v.start.replace(/-/g, '.')}~${v.end.replace(/-/g, '.')}`,
+          `${v.name} 근무일: ${workDates.join(', ') || '없음'}`
+        ];
+      });
+      const eventText = [...new Set([...summerVacationDetails, ...m.records.flatMap(r => {
+        const events = r.schoolEvents.map(e => `${Number(r.date.slice(5, 7))}.${Number(r.date.slice(8))}. ${e.name}`);
+        if (r.override && ['work', 'extraWork'].includes(r.override.type)) {
+          events.push(`${Number(r.date.slice(5, 7))}.${Number(r.date.slice(8))}. ${(r.override.reason || '').trim() || '방학 중 근무'}`);
+        }
+        return events;
+      })])].join('\n');
+      rows.push([`${m.month}월`, m.actualWork, m.paidSunday, m.paidSaturday, m.paidHoliday, m.otherPaid, m.paidTotal, holidayText, eventText]);
+    }
+    rows.push(['연간 합계', ...['actualWork', 'paidSunday', 'paidSaturday', 'paidHoliday', 'otherPaid', 'paidTotal'].map(key => result.months.reduce((s, m) => s + m[key], 0)), '', '']);
+    return { name, rows, styles: styleMatrix(rows, [1], [0], [rows.length - 1]), widths: [10, 11, 17, 13, 13, 12, 12, 32, 32], merges: ['A1:I1'], freezeRows: 2, landscape: true };
+  }
+
+  function planSheet(result, state, name) {
+    const w = result.worker;
+    const rows = [
+      [`${state.academicYear}학년도 교육공무직원 연간 근로계획서`],
+      ['방학 중 비상시 근무 직종', w.job || ''],
+      ['소속', w.organization || state.organization, '직종', w.job, '성명', w.name],
+      ['현 근무처 근무일자', w.currentWorkDate, '1일 소정노동시간', w.dailyHours, '기타사항', w.notes],
+      ['구분', '월', '근로일수', '근로일자', '학기 중 유급 토요일', '방학 중 유급 토요일', '유급 주휴일', '유급휴일', '월 계', '비고'],
+      ['학기 중', '', result.termPaid, '', '', '', '', '', result.termPaid, '계(A)']
+    ];
+    for (const m of result.months.filter(m => m.records.some(r => r.inVacation))) {
+      const inVacation = m.records.filter(r => r.inVacation);
+      rows.push([
+        '방학 중', `${m.month}월`, inVacation.filter(r => r.actualWork).length,
+        inVacation.filter(r => r.actualWork).map(r => Number(r.date.slice(8))).join(', '),
+        0, inVacation.filter(r => r.allocation === 'saturday').length,
+        inVacation.filter(r => r.allocation === 'sunday').length,
+        inVacation.filter(r => r.allocation === 'holiday').length,
+        inVacation.filter(r => r.paid).length,
+        [...new Set(inVacation.filter(r => r.inVacation).map(r => r.vacationName).filter(Boolean))].join(', ')
+      ]);
+    }
+    rows.push(['방학 계(B)', '', result.vacationPaid, '', '', '', '', '', result.vacationPaid, '']);
+    rows.push(['합계(A+B)', '', result.annualPaid, '', '', '', '', '', result.annualPaid, '']);
+    rows.push(['방학기간', ...state.vacations.map(v => `${v.name}: ${v.start}~${v.end}`).join(' / ').split('|')]);
+    const vacationWorkDates = result.months.map(m => {
+      const days = m.records.filter(r => r.inVacation && r.actualWork).map(r => `${Number(r.date.slice(8))}일`);
+      return days.length ? `${m.month}월: ${days.join(', ')}` : '';
+    }).filter(Boolean).join(' / ') || '없음';
+    rows.push(['방학 중 근로일자', vacationWorkDates]);
+    rows.push(['참고사항', w.documentNote || '']);
+    rows.push(['근로자 서명', `${w.name}  (서명:                         )`]);
+    const finalRow = rows.length;
+    return {
+      name, rows, styles: styleMatrix(rows, [4], [0], [rows.length - 6, rows.length - 5]),
+      widths: [18, 14, 12, 30, 16, 17, 14, 14, 12, 28],
+      merges: ['A1:J1', `B${finalRow - 3}:J${finalRow - 3}`, `B${finalRow - 2}:J${finalRow - 2}`, `B${finalRow - 1}:J${finalRow - 1}`, `B${finalRow}:J${finalRow}`],
+      rowHeights: Object.assign([], { [finalRow - 4]: 34, [finalRow - 3]: 60, [finalRow - 2]: 30, [finalRow - 1]: 30 }),
+      freezeRows: 5, landscape: true
+    };
+  }
+
+  function decisionsSheet(result, name) {
+    const rows = [[
+      '날짜', '요일', '구분', '방학 명칭', '실제 근무', '출근 간주', '결근', '공휴일 명칭',
+      '일요일 주휴 유급', '토요일 유급', '최종 판정', '판정 이유'
+    ]];
+    for (const r of Object.values(result.records)) rows.push([
+      r.date, r.dayName, r.inVacation ? '방학 중' : '학기 중', r.vacationName,
+      r.actualWork ? '예' : '', r.paidAssumed ? '예' : '', r.absent ? '예' : '',
+      r.holiday ? r.holiday.names.join(', ') : '', r.dow === 0 && r.weekendQualified ? '예' : '',
+      r.dow === 6 && r.weekendQualified ? '예' : '', r.result, r.reasons.join(' / ')
+    ]);
+    const styles = rows.map((row, i) => row.map((_, j) => i === 0 ? 2 : (j === 10 ? (row[j] === '유급' ? 4 : 5) : (j === 0 ? 7 : 0))));
+    return { name, rows, styles, widths: [13, 7, 11, 14, 11, 11, 9, 24, 18, 14, 11, 70], freezeRows: 1, autoFilter: `A1:L${rows.length}`, landscape: true };
+  }
+
+  function eventsSheet(state, results) {
+    const holidayMap = results[0] ? results[0].holidays : {};
+    const rows = [['날짜', '구분', '명칭', '특별 유급휴일', '출처/비고']];
+    Object.values(holidayMap).sort((a, b) => a.date.localeCompare(b.date)).forEach(h => rows.push([h.date, '공휴일', h.names.join(', '), h.special ? '예' : '', h.source]));
+    (state.schoolEvents || []).sort((a, b) => a.date.localeCompare(b.date)).forEach(e => rows.push([e.date, '학교 일정', e.name, '', e.note || '']));
+    return { name: '공휴일 및 학교 행사', rows, styles: styleMatrix(rows, [0], [], []), widths: [14, 14, 34, 18, 38], freezeRows: 1, autoFilter: `A1:E${rows.length}` };
+  }
+
+  function buildSheets(state, workerIds) {
+    const E = root.WorkPlanEngine || (typeof require !== 'undefined' ? require('./engine.js') : null);
+    const ids = workerIds && workerIds.length ? workerIds : state.workers.map(w => w.id);
+    const results = ids.map(id => E.calculate(state, id));
+    const used = new Set();
+    const sheets = [];
+    for (const result of results) {
+      const label = result.worker.name || '근로자';
+      sheets.push(calculationSheet(result, state, safeSheetName(`${label}_산출표`, used)));
+      sheets.push(planSheet(result, state, safeSheetName(`${label}_근무계획`, used)));
+    }
+    return sheets;
+  }
+
+  function buildXlsxBytes(state, workerIds) {
+    const sheets = buildSheets(state, workerIds);
+    const sheetEntries = sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('');
+    const relEntries = sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('');
+    const overrides = sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
+    const files = [
+      { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${overrides}</Types>` },
+      { name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${sheetEntries}</sheets></workbook>` },
+      { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relEntries}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', data: `<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="10"/><name val="맑은 고딕"/></font><font><b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/></font><font><b/><sz val="10"/><name val="맑은 고딕"/></font></fonts><fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF17324D"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2E6F68"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDDF4E8"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFCE7E7"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFE2A8"/></patternFill></fill></fills><borders count="2"><border/><border><left style="thin"><color rgb="FFD9E0E6"/></left><right style="thin"><color rgb="FFD9E0E6"/></right><top style="thin"><color rgb="FFD9E0E6"/></top><bottom style="thin"><color rgb="FFD9E0E6"/></bottom></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0"/><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0"/><xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0"/><xf numFmtId="0" fontId="3" fillId="6" borderId="1" xfId="0"/><xf numFmtId="14" fontId="0" fillId="0" borderId="1" xfId="0"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` }
+    ];
+    sheets.forEach((sheet, i) => files.push({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(sheet) }));
+    return zipStore(files);
+  }
+
+  function download(state, workerIds, filename) {
+    const bytes = buildXlsxBytes(state, workerIds);
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename || `${state.academicYear}학년도_연간근무계획.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+  }
+
+  const api = { buildXlsxBytes, buildSheets, download };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.WorkPlanXlsx = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+  </script>
+  <script>
+(function () {
+  'use strict';
+
+  const E = window.WorkPlanEngine;
+  const X = window.WorkPlanXlsx;
+  const STORAGE_KEY = 'jini-work-plan-v1';
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+  const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  let state = loadState();
+  let result = null;
+  let toastTimer = null;
+  let pendingScheduleReplacement = null;
+  let pendingAcademicYear = null;
+  const calendarUndoByWorker = new Map();
+  const calendarToggleByWorker = new Map();
+  let visibleValidationIssues = [];
+
+  function initialState() {
+    const value = E.defaultState(2026);
+    value.vacations = [
+      { id: uid('vac'), name: '여름방학', start: '', end: '', reason: '', note: '' },
+      { id: uid('vac'), name: '겨울방학', start: '', end: '', reason: '', note: '' },
+      { id: uid('vac'), name: '봄방학', start: '', end: '', reason: '', note: '' }
+    ];
+    return value;
+  }
+
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? E.normalizeState(JSON.parse(saved)) : initialState();
+    } catch (error) {
+      console.warn(error);
+      return initialState();
+    }
+  }
+
+  function currentWorker() {
+    return state.workers.find(w => w.id === state.selectedWorkerId) || state.workers[0];
+  }
+
+  function applyOrganizationToAll(value) {
+    state.organization = value;
+    for (const worker of state.workers) worker.organization = value;
+  }
+
+  function saveState(message) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    $('#saveStatus').textContent = message || '자동 저장됨';
+    setTimeout(() => { $('#saveStatus').textContent = '자동 저장됨'; }, 900);
+  }
+
+  function commit(options) {
+    saveState('저장 중…');
+    result = E.calculate(state, state.selectedWorkerId);
+    render(options || {});
+  }
+
+  function toast(message) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  }
+
+  function validate(workerIds) {
+    const ids = workerIds || [state.selectedWorkerId];
+    const issues = [];
+    const academicBounds = E.academicBounds(state.academicYear);
+    for (const id of ids) {
+      const worker = state.workers.find(w => w.id === id);
+      if (!worker) continue;
+      const prefix = worker.name || '이름 없는 근로자';
+      if (!(worker.organization || state.organization)) issues.push({ key: `${id}-organization`, message: `${prefix}: 소속 기관`, workerId: id, tab: 'overview', selector: '#workerForm [name="organization"]' });
+      if (!worker.job) issues.push({ key: `${id}-job`, message: `${prefix}: 직종`, workerId: id, tab: 'overview', selector: '#workerForm [name="job"]' });
+      if (!worker.name) issues.push({ key: `${id}-name`, message: '근로자: 성명', workerId: id, tab: 'overview', selector: '#workerForm [name="name"]' });
+      if (!(Number(worker.dailyHours) > 0)) issues.push({ key: `${id}-dailyHours`, message: `${prefix}: 1일 소정노동시간`, workerId: id, tab: 'overview', selector: '#workerForm [name="dailyHours"]' });
+      for (const [index, range] of (worker.workRanges || []).entries()) {
+        if (!range.start || !range.end || range.start > range.end) issues.push({
+          key: `${id}-workRange-${index}`, message: `${prefix}: 방학 중 근무기간 시작일·종료일`, workerId: id, tab: 'settings',
+          selector: `[data-list="workRanges"][data-index="${index}"][data-field="start"], [data-list="workRanges"][data-index="${index}"][data-field="end"]`
+        });
+        const vacation = state.vacations.find(item => item.id === range.vacationId);
+        if (range.start && range.end && range.start <= range.end && (!vacation || !vacation.start || !vacation.end || range.start < vacation.start || range.end > vacation.end)) issues.push({
+          key: `${id}-workRange-vacation-${index}`,
+          message: `${prefix}: 근무기간은 선택한 방학기간 안에 입력`, workerId: id, tab: 'settings',
+          selector: `[data-list="workRanges"][data-index="${index}"][data-field="vacationId"], [data-list="workRanges"][data-index="${index}"][data-field="start"], [data-list="workRanges"][data-index="${index}"][data-field="end"]`
+        });
+      }
+    }
+    for (const [index, vacation] of state.vacations.entries()) {
+      if ((vacation.start || vacation.end) && (!vacation.start || !vacation.end || vacation.start > vacation.end)) issues.push({
+        key: `vacation-${index}`, message: `${vacation.name || '방학'}: 시작일·종료일`, workerId: '', tab: 'settings',
+        selector: `[data-list="vacations"][data-index="${index}"][data-field="start"], [data-list="vacations"][data-index="${index}"][data-field="end"]`
+      });
+      if (vacation.start && vacation.end && vacation.start <= vacation.end && (vacation.start < academicBounds.start || vacation.end > academicBounds.end)) issues.push({
+        key: `vacation-academic-year-${index}`,
+        message: `${vacation.name || '방학'}: ${state.academicYear}학년도 기간 안에 입력`, workerId: '', tab: 'settings',
+        selector: `[data-list="vacations"][data-index="${index}"][data-field="start"], [data-list="vacations"][data-index="${index}"][data-field="end"]`
+      });
+    }
+    const datedVacations = state.vacations.map((vacation, index) => ({ vacation, index }))
+      .filter(({ vacation }) => vacation.start && vacation.end && vacation.start <= vacation.end);
+    for (let left = 0; left < datedVacations.length; left += 1) {
+      for (let right = left + 1; right < datedVacations.length; right += 1) {
+        const a = datedVacations[left];
+        const b = datedVacations[right];
+        if (a.vacation.start <= b.vacation.end && b.vacation.start <= a.vacation.end) issues.push({
+          key: `vacation-overlap-${a.index}-${b.index}`,
+          message: `${a.vacation.name || '방학'}과 ${b.vacation.name || '방학'} 기간이 겹침`, workerId: '', tab: 'settings',
+          selector: `[data-list="vacations"][data-index="${a.index}"][data-field="start"], [data-list="vacations"][data-index="${a.index}"][data-field="end"], [data-list="vacations"][data-index="${b.index}"][data-field="start"], [data-list="vacations"][data-index="${b.index}"][data-field="end"]`
+        });
+      }
+    }
+    return [...new Map(issues.map(issue => [issue.key, issue])).values()];
+  }
+
+  function render(options) {
+    options = options || {};
+    result = result || E.calculate(state, state.selectedWorkerId);
+    $('#academicYear').value = state.academicYear;
+    $('#organization').value = state.organization || '';
+    renderWorkers();
+    renderSummary();
+    renderWorkerForm();
+    renderMonthlySummary();
+    renderSettings();
+    renderValidation();
+    if (!options.skipCalendar) renderCalendar();
+    renderDocuments();
+  }
+
+  function renderWorkers() {
+    $('#workerCount').textContent = `${state.workers.length}명`;
+    const all = E.calculateAll(state);
+    $('#workerList').innerHTML = all.map(item => {
+      const w = item.worker;
+      return `<button class="worker-item ${w.id === state.selectedWorkerId ? 'active' : ''}" data-worker-id="${esc(w.id)}">
+        <span class="avatar">${esc((w.name || '?').slice(0, 1))}</span><span class="worker-meta"><strong>${esc(w.name || '이름 미입력')}</strong><span>${esc(w.job || '직종 미입력')} · 유급 ${item.annualPaid}일</span></span>
+      </button>`;
+    }).join('');
+  }
+
+  function renderValidation(workerIds) {
+    const issues = validate(workerIds || [state.selectedWorkerId]);
+    const panel = $('#validationPanel');
+    $$('[data-validation-error]').forEach(element => {
+      element.classList.remove('validation-error-field');
+      element.removeAttribute('data-validation-error');
+      element.removeAttribute('aria-invalid');
+    });
+    visibleValidationIssues = issues;
+    if (!issues.length) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+    panel.classList.remove('hidden');
+    panel.innerHTML = `<strong>입력이 필요한 항목</strong><p>아래 항목을 입력해야 미리보기와 엑셀 파일을 만들 수 있습니다. 항목을 누르면 입력 위치로 이동합니다.</p><div class="validation-list">${issues.map((issue, index) => `<button type="button" data-validation-index="${index}">${esc(issue.message)}</button>`).join('')}</div>`;
+    for (const issue of issues) {
+      if (issue.workerId && issue.workerId !== state.selectedWorkerId) continue;
+      $$(issue.selector).forEach(element => {
+        element.classList.add('validation-error-field');
+        element.dataset.validationError = 'true';
+        element.setAttribute('aria-invalid', 'true');
+      });
+    }
+  }
+
+  function renderSummary() {
+    const paidWeekend = result.months.reduce((s, m) => s + m.paidSunday + m.paidSaturday, 0);
+    const paidHoliday = result.months.reduce((s, m) => s + m.paidHoliday, 0);
+    const absence = result.months.reduce((s, m) => s + m.absence, 0);
+    $('#summaryCards').innerHTML = [
+      ['연간 전체 유급일수', `${result.annualPaid}일`, `${state.academicYear}.3.1. ~ ${state.academicYear + 1}.2월`, true],
+      ['학기 중 유급일수 A', `${result.termPaid}일`, '공휴일·토요휴일·주휴일 포함'],
+      ['방학 중 유급일수 B', `${result.vacationPaid}일`, '개인별 방학 근무 입력 기준'],
+      ['유급 토·일요일', `${paidWeekend}일`, '날짜 중복 없이 배정'],
+      ['유급 공휴일 / 결근', `${paidHoliday}일 / ${absence}일`, '날짜를 누르면 근거 확인']
+    ].map(([label, value, note, accent]) => `<div class="summary-card ${accent ? 'accent' : ''}"><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join('');
+  }
+
+  function renderWorkerForm() {
+    const worker = currentWorker();
+    const form = $('#workerForm');
+    for (const element of form.elements) if (element.name) element.value = worker[element.name] == null ? '' : worker[element.name];
+  }
+
+  function renderMonthlySummary() {
+    $('#monthlySummary').innerHTML = result.months.map(m => `<tr>
+      <td>${m.month}월</td><td><button data-month-list="${m.key}" data-allocation="work">${m.actualWork}</button></td>
+      <td><button data-month-list="${m.key}" data-allocation="sunday">${m.paidSunday}</button></td>
+      <td><button data-month-list="${m.key}" data-allocation="saturday">${m.paidSaturday}</button></td>
+      <td><button data-month-list="${m.key}" data-allocation="holiday">${m.paidHoliday}</button></td>
+      <td>${m.otherPaid}</td><td><button data-month-list="${m.key}" data-allocation="paid">${m.paidTotal}</button></td>
+    </tr>`).join('');
+  }
+
+  function vacationOptions(selected) {
+    return `<option value="">방학 선택</option>${state.vacations.map(v => `<option value="${esc(v.id)}" ${v.id === selected ? 'selected' : ''}>${esc(v.name || '이름 없는 방학')}</option>`).join('')}`;
+  }
+
+  function renderSettings() {
+    $('#vacationList').innerHTML = state.vacations.length ? state.vacations.map((v, i) => `<div class="stack-item"><div class="stack-item-grid">
+      <label>방학 명칭<input data-list="vacations" data-index="${i}" data-field="name" value="${esc(v.name)}"></label>
+      <label>과정명·근무 사유<input data-list="vacations" data-index="${i}" data-field="reason" value="${esc(v.reason || '')}"></label>
+      <label>시작일<input type="date" data-list="vacations" data-index="${i}" data-field="start" value="${esc(v.start || '')}"></label>
+      <label>종료일<input type="date" data-list="vacations" data-index="${i}" data-field="end" value="${esc(v.end || '')}"></label>
+      <label class="wide">비고<input data-list="vacations" data-index="${i}" data-field="note" value="${esc(v.note || '')}"></label>
+    </div><div class="stack-item-actions"><button class="button danger-text" data-remove-list="vacations" data-index="${i}">삭제</button></div></div>`).join('') : '<div class="empty-state">등록된 방학이 없습니다.</div>';
+
+    const ranges = currentWorker().workRanges || [];
+    $('#workRangeList').innerHTML = ranges.length ? ranges.map((r, i) => `<div class="stack-item"><div class="stack-item-grid">
+      <label class="wide">방학<select data-list="workRanges" data-index="${i}" data-field="vacationId">${vacationOptions(r.vacationId)}</select></label>
+      <label>근무 시작일<input type="date" data-list="workRanges" data-index="${i}" data-field="start" value="${esc(r.start || '')}"></label>
+      <label>근무 종료일<input type="date" data-list="workRanges" data-index="${i}" data-field="end" value="${esc(r.end || '')}"></label>
+      <label class="wide">과정명·근무 사유<input data-list="workRanges" data-index="${i}" data-field="reason" value="${esc(r.reason || '')}"></label>
+    </div><div class="stack-item-actions"><button class="button danger-text" data-remove-list="workRanges" data-index="${i}">삭제</button></div></div>`).join('') : '<div class="empty-state">개인별 방학 중 근무기간이 없습니다.</div>';
+
+    $('#holidayList').innerHTML = state.customHolidays.length ? state.customHolidays.map((h, i) => `<div class="stack-item">
+      <label>날짜<input type="date" data-list="customHolidays" data-index="${i}" data-field="date" value="${esc(h.date || '')}"></label>
+      <label>명칭<input data-list="customHolidays" data-index="${i}" data-field="name" value="${esc(h.name || '')}"></label>
+      <label>유형<select data-list="customHolidays" data-index="${i}" data-field="special"><option value="false" ${!h.special ? 'selected' : ''}>일반</option><option value="true" ${h.special ? 'selected' : ''}>특별 유급</option></select></label>
+      <button class="icon-button" data-remove-list="customHolidays" data-index="${i}">×</button></div>`).join('') : '<div class="empty-state">추가한 임시공휴일·선거일이 없습니다.</div>';
+
+    $('#eventList').innerHTML = state.schoolEvents.length ? state.schoolEvents.map((e, i) => `<div class="stack-item">
+      <label>날짜<input type="date" data-list="schoolEvents" data-index="${i}" data-field="date" value="${esc(e.date || '')}"></label>
+      <label>일정명<input data-list="schoolEvents" data-index="${i}" data-field="name" value="${esc(e.name || '')}"></label>
+      <label>비고<input data-list="schoolEvents" data-index="${i}" data-field="note" value="${esc(e.note || '')}"></label>
+      <button class="icon-button" data-remove-list="schoolEvents" data-index="${i}">×</button></div>`).join('') : '<div class="empty-state">등록한 학교 일정이 없습니다.</div>';
+  }
+
+  function primaryLabel(r) {
+    if (r.override) return ({ work: '근무', extraWork: '추가 근무', paidAssumed: '유급 간주', absent: '결근', unpaid: '비근무' })[r.override.type] || r.result;
+    if (r.holiday) return `${r.paid ? '유급' : '무급'} 공휴일`;
+    if (r.dow === 0) return `${r.paid ? '유급' : '무급'} 주휴`;
+    if (r.dow === 6) return `${r.paid ? '유급' : '무급'} 토`;
+    if (r.actualWork) return '근무';
+    return r.inVacation ? '비근무' : '';
+  }
+
+  function renderCalendar() {
+    const undoStack = calendarUndoByWorker.get(currentWorker().id) || [];
+    const undoButton = $('#undoCalendarButton');
+    undoButton.disabled = undoStack.length === 0;
+    undoButton.textContent = undoStack.length ? `마지막 입력 되돌리기 (${undoStack.length})` : '마지막 입력 되돌리기';
+    $('#calendarGrid').innerHTML = result.months.map(m => {
+      const first = `${m.key}-01`;
+      const offset = WorkPlanHolidays.weekday(first);
+      const cells = Array(offset).fill('<div class="day-cell empty"></div>');
+      for (const r of m.records) {
+        const overrideClass = r.override ? ({
+          work: 'type-work',
+          extraWork: 'type-extra-work',
+          paidAssumed: 'type-paid-assumed',
+          absent: 'type-absent',
+          unpaid: 'type-unpaid'
+        })[r.override.type] : '';
+        const inferredWorkClass = !r.override && r.actualWork && r.inVacation ? 'type-work' : '';
+        const autoWeekendClass = !r.override && !r.holiday && r.paid && (r.dow === 0 || r.dow === 6) ? 'type-auto-weekend' : '';
+        const classes = ['day-cell', r.dow === 0 ? 'sunday' : '', r.dow === 6 ? 'saturday' : '', r.paid ? 'paid' : 'unpaid', r.inVacation ? 'in-vacation' : '', r.holiday ? 'is-holiday' : '', r.actualWork ? 'has-work' : '', r.absent ? 'has-absence' : '', overrideClass, inferredWorkClass, autoWeekendClass].filter(Boolean).join(' ');
+        const secondary = r.holiday ? r.holiday.names.join(', ') : r.vacationName;
+        cells.push(`<button class="${classes}" data-date="${r.date}" title="${esc(r.reasons.join(' / '))}"><span class="day-number">${Number(r.date.slice(8))}</span><span class="day-label primary">${esc(primaryLabel(r))}</span>${secondary ? `<span class="day-label">${esc(secondary)}</span>` : ''}</button>`);
+      }
+      while (cells.length % 7) cells.push('<div class="day-cell empty"></div>');
+      return `<article class="month-card"><div class="month-heading"><strong>${m.year}년 ${m.month}월</strong><span>유급 ${m.paidTotal}일 · 결근 ${m.absence}일</span></div><div class="week-head">${['일','월','화','수','목','금','토'].map(d => `<div>${d}</div>`).join('')}</div><div class="month-days">${cells.join('')}</div></article>`;
+    }).join('');
+  }
+
+  function recordVisualType(r) {
+    if (r.override) return ({
+      work: 'type-work', extraWork: 'type-extra-work', paidAssumed: 'type-paid-assumed',
+      absent: 'type-absent', unpaid: 'type-unpaid'
+    })[r.override.type] || '';
+    if (r.holiday) return r.paid ? 'type-paid-holiday' : 'type-unpaid-holiday';
+    if (r.absent) return 'type-absent';
+    if (r.actualWork) return 'type-work';
+    if (r.paid && (r.dow === 0 || r.dow === 6)) return 'type-auto-weekend';
+    if (!r.paid) return 'type-unpaid';
+    return r.paidAssumed ? 'type-paid-assumed' : '';
+  }
+
+  function miniCalendar(m) {
+    const offset = WorkPlanHolidays.weekday(`${m.key}-01`);
+    const cells = Array(offset).fill('<span></span>');
+    for (const r of m.records) {
+      cells.push(`<span class="${recordVisualType(r)}">${Number(r.date.slice(8))}</span>`);
+    }
+    while (cells.length % 7) cells.push('<span></span>');
+    return `<div class="mini-month"><strong>${m.month}월 · 유급 ${m.paidTotal}</strong><div class="mini-days">${cells.join('')}</div></div>`;
+  }
+
+  function manualWorkEvents(calc) {
+    return Object.values(calc.records)
+      .filter(r => r.override && ['work', 'extraWork'].includes(r.override.type))
+      .map(r => `${r.date} ${(r.override.reason || '').trim() || '방학 중 근무'}`);
+  }
+
+  function vacationWorkDates(calc) {
+    const months = calc.months.map(m => {
+      const days = m.records.filter(r => r.inVacation && r.actualWork).map(r => `${Number(r.date.slice(8))}일`);
+      return days.length ? `${m.month}월: ${days.join(', ')}` : '';
+    }).filter(Boolean);
+    return months.join(' / ') || '없음';
+  }
+
+  function calculationPage(calc) {
+    const holidayList = calc.months.map(m => `${m.month}월: ${m.records.filter(r => r.holiday).map(r => `${Number(r.date.slice(8))}일 ${r.holiday.names.join(', ')}`).join(' / ') || '-'}`);
+    const eventList = [...state.schoolEvents.map(e => `${e.date} ${e.name}`), ...manualWorkEvents(calc)];
+    return `<section class="print-page"><header class="doc-title"><h2>${state.academicYear}학년도 ${esc(calc.worker.job || '교육공무직원')} 근무일수 산출표</h2><p>${esc(calc.worker.organization || state.organization)} · ${esc(calc.worker.name)}</p></header>
+      <div class="doc-color-legend"><span class="type-work">근무</span><span class="type-extra-work">추가 근무</span><span class="type-paid-assumed">유급 간주</span><span class="type-auto-weekend">유급 주휴·토</span><span class="type-paid-holiday">유급 공휴일</span><span class="type-unpaid">무급·비근무</span><span class="type-absent">결근</span></div>
+      <div class="doc-section mini-calendar-wrap">${calc.months.map(miniCalendar).join('')}</div>
+      <div class="doc-section"><table class="doc-table"><thead><tr><th>월</th><th>근무일</th><th>주차<br>(유급 일요일)</th><th>토요휴일</th><th>국경일 등</th><th>기타 유급</th><th>월별 계</th></tr></thead><tbody>${calc.months.map(m => `<tr><td>${m.month}월</td><td>${m.actualWork}</td><td>${m.paidSunday}</td><td>${m.paidSaturday}</td><td>${m.paidHoliday}</td><td>${m.otherPaid}</td><td class="total">${m.paidTotal}</td></tr>`).join('')}<tr class="total"><td>연간 합계</td><td>${calc.months.reduce((s,m)=>s+m.actualWork,0)}</td><td>${calc.months.reduce((s,m)=>s+m.paidSunday,0)}</td><td>${calc.months.reduce((s,m)=>s+m.paidSaturday,0)}</td><td>${calc.months.reduce((s,m)=>s+m.paidHoliday,0)}</td><td>${calc.months.reduce((s,m)=>s+m.otherPaid,0)}</td><td>${calc.annualPaid}</td></tr></tbody></table></div>
+      <div class="doc-section"><table class="doc-table"><tr><th style="width:20%">국·공휴일 내역</th><td class="left">${esc(holidayList.join('  |  '))}</td></tr><tr><th>행사 등 내역</th><td class="left">${esc([...new Set(eventList)].sort().join(' / ') || '없음')}</td></tr></table></div></section>`;
+  }
+
+  function planPage(calc) {
+    const worker = calc.worker;
+    const vacationMonths = calc.months.filter(m => m.records.some(r => r.inVacation));
+    return `<section class="print-page"><header class="doc-title"><h2>${state.academicYear}학년도 교육공무직원 연간 근로계획서</h2><p>[방학 중 비상시 근무 직종: ${esc(worker.job || '')}]</p></header>
+      <div class="doc-section"><h3>□ 근로자 인적사항</h3><table class="doc-table"><tr><th>소속</th><td>${esc(worker.organization || state.organization)}</td><th>직종</th><td>${esc(worker.job)}</td><th>성명</th><td>${esc(worker.name)}</td></tr><tr><th>현 근무처<br>근무일자</th><td>${esc(worker.currentWorkDate)}</td><th>1일 소정<br>노동시간</th><td>${worker.dailyHours}시간</td><th>기타사항</th><td>${esc(worker.notes)}</td></tr></table></div>
+      <div class="doc-section"><h3>□ 근로계획 세부 내역</h3><table class="doc-table"><thead><tr><th>구분</th><th>월</th><th>근로일수</th><th style="width:24%">근로일자</th><th>학기 중<br>토요일</th><th>방학 중<br>유급토요일</th><th>주휴일</th><th>유급휴일</th><th>계</th><th>비고</th></tr></thead><tbody>
+        <tr><td>학기 중</td><td>계(A)</td><td colspan="6" class="left">학기 중 유급일수(공휴일·토요휴일·주휴일 포함)</td><td class="total">${calc.termPaid}</td><td></td></tr>
+        ${vacationMonths.map(m => { const list=m.records.filter(r=>r.inVacation); return `<tr><td>방학 중</td><td>${m.month}월</td><td>${list.filter(r=>r.actualWork).length}</td><td>${list.filter(r=>r.actualWork).map(r=>Number(r.date.slice(8))).join(', ')}</td><td>0</td><td>${list.filter(r=>r.allocation==='saturday').length}</td><td>${list.filter(r=>r.allocation==='sunday').length}</td><td>${list.filter(r=>r.allocation==='holiday').length}</td><td class="total">${list.filter(r=>r.paid).length}</td><td>${esc([...new Set(list.map(r=>r.vacationName).filter(Boolean))].join(', '))}</td></tr>`; }).join('')}
+        <tr class="total"><td>방학 계(B)</td><td colspan="7"></td><td>${calc.vacationPaid}</td><td></td></tr><tr class="total"><td>합계(A+B)</td><td colspan="7"></td><td>${calc.annualPaid}</td><td></td></tr>
+      </tbody></table></div>
+      <div class="doc-section"><table class="doc-table"><tr><th style="width:18%">방학기간</th><td class="left">${esc(state.vacations.filter(v=>v.start&&v.end).map(v=>`${v.name}: ${v.start} ~ ${v.end}`).join(' / ') || '미입력')}</td></tr><tr><th>방학 중 근로일자</th><td class="left">${esc(vacationWorkDates(calc))}</td></tr><tr><th>참고사항</th><td class="left">${esc(worker.documentNote || '근로계획은 학교 학사일정에 따라 변경될 수 있음')}</td></tr></table></div>
+      <div class="signature-line">근로자: ${esc(worker.name)} (서명:　　　　　　　　　　　　　　)</div></section>`;
+  }
+
+  function renderDocuments() {
+    $('#documentPreview').innerHTML = calculationPage(result).replace('print-page', 'preview-page') + planPage(result).replace('print-page', 'preview-page');
+  }
+
+  function openDecision(date) {
+    const r = result.records[date];
+    if (!r) return;
+    $('#dialogTitle').textContent = `${r.date} (${r.dayName})`;
+    const week = r.details.week;
+    const holiday = r.details.holiday;
+    $('#dialogBody').innerHTML = `<div class="decision-result"><span class="decision-badge ${r.paid ? 'paid' : 'unpaid'}">${r.result}</span><strong>${esc(primaryLabel(r) || r.result)}</strong></div><ul class="reason-list">${r.reasons.map(reason => `<li>${esc(reason)}</li>`).join('')}</ul>
+      ${week ? `<div class="detail-box"><strong>주휴 판정 근거</strong><br>노동주: ${week.start} ~ ${week.end}<br>노동·출근 간주: ${week.creditDates.join(', ') || '없음'}<br>인정시간: ${week.hours}시간 / 기준 ${week.threshold}시간<br>개근: ${week.allPresent ? '충족' : '미충족'}</div>` : ''}
+      ${holiday ? `<div class="detail-box"><strong>공휴일 판정 근거</strong><br>${esc(holiday.rule)}<br>직전 예정 노동일: ${holiday.previous ? `${holiday.previous.date} (${holiday.previous.worked ? '출근' : '미출근'})` : '없음'}<br>직후 예정 노동일: ${holiday.next ? `${holiday.next.date} (${holiday.next.worked ? '출근' : '미출근'})` : '없음'}<br>적용 기준: 기준 HWPX 「방학 중 (대체)공휴일 유급 요건」</div>` : ''}`;
+    $('#decisionDialog').showModal();
+  }
+
+  function openMonthList(monthKey, allocation) {
+    const m = result.months.find(x => x.key === monthKey);
+    if (!m) return;
+    const list = allocation === 'paid' ? m.records.filter(r => r.paid) : m.records.filter(r => r.allocation === allocation);
+    $('#dialogTitle').textContent = `${m.year}년 ${m.month}월 날짜 목록`;
+    $('#dialogBody').innerHTML = list.length ? `<ul class="reason-list">${list.map(r => `<li><button class="button ghost" data-dialog-date="${r.date}">${r.date} (${r.dayName})</button> ${esc(r.reasons[0])}</li>`).join('')}</ul>` : '<div class="empty-state">해당 날짜가 없습니다.</div>';
+    $('#decisionDialog').showModal();
+  }
+
+  function activateTab(tabName) {
+    const tab = document.querySelector(`[data-tab="${tabName}"]`);
+    if (!tab) return;
+    $$('.tab').forEach(element => element.classList.toggle('active', element === tab));
+    $$('.tab-panel').forEach(element => element.classList.toggle('active', element.dataset.panel === tabName));
+    if (tabName === 'calendar') renderCalendar();
+  }
+
+  function sameOverride(left, right) {
+    return JSON.stringify(left || null) === JSON.stringify(right || null);
+  }
+
+  function toggleMapFor(workerId) {
+    if (!calendarToggleByWorker.has(workerId)) calendarToggleByWorker.set(workerId, new Map());
+    return calendarToggleByWorker.get(workerId);
+  }
+
+  function syncDateToggle(workerId, date, stack, current) {
+    const toggleMap = toggleMapFor(workerId);
+    const previousEntry = [...stack].reverse().find(entry => entry.date === date && sameOverride(entry.applied, current));
+    if (previousEntry) toggleMap.set(date, previousEntry);
+    else toggleMap.delete(date);
+  }
+
+  function focusValidationIssue(index) {
+    const issue = visibleValidationIssues[Number(index)];
+    if (!issue) return;
+    if (issue.workerId && issue.workerId !== state.selectedWorkerId) {
+      state.selectedWorkerId = issue.workerId;
+      result = E.calculate(state, state.selectedWorkerId);
+      render();
+    }
+    activateTab(issue.tab);
+    const fields = $$(issue.selector);
+    fields.forEach(field => {
+      field.classList.add('validation-error-field');
+      field.dataset.validationError = 'true';
+      field.setAttribute('aria-invalid', 'true');
+    });
+    const target = fields.find(field => !field.value) || fields[0];
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+  }
+
+  function requireValid(ids) {
+    const issues = validate(ids);
+    if (!issues.length) return true;
+    renderValidation(ids);
+    toast(`입력이 필요한 항목이 ${issues.length}개 있습니다.`);
+    $('#validationPanel').scrollIntoView({ top: 0, behavior: 'smooth', block: 'start' });
+    return false;
+  }
+
+  function openPrint(ids) {
+    if (!requireValid(ids)) return;
+    const pages = ids.flatMap(id => { const calc = E.calculate(state, id); return [calculationPage(calc), planPage(calc)]; });
+    $('#printPages').innerHTML = pages.join('');
+    $('#printPageInfo').textContent = `${ids.length}명 · A4 ${pages.length}쪽`;
+    $('#printOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${state.academicYear}학년도_근무계획_전체자료.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  function importJson(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || !Number(parsed.academicYear) || !Array.isArray(parsed.workers)) throw new Error('학년도 또는 근로자 목록이 없습니다.');
+        if (!confirm('현재 자료를 불러온 파일의 내용으로 덮어쓸까요?')) return;
+        state = E.normalizeState(parsed);
+        commit();
+        toast('JSON 자료를 정상적으로 불러왔습니다.');
+      } catch (error) {
+        alert(`파일을 적용하지 않았습니다.\n${error.message}`);
+      } finally { $('#jsonImport').value = ''; }
+    };
+    reader.onerror = () => alert('파일을 읽지 못했습니다.');
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function applyAcademicYear() {
+    const input = $('#academicYear');
+    const next = Number(input.value);
+    if (!Number.isInteger(next) || next < 2020 || next > 2040) {
+      input.value = state.academicYear;
+      return toast('학년도는 2020~2040 사이로 입력하세요.');
+    }
+    if (next === state.academicYear) return toast(`${next}학년도 달력이 적용되어 있습니다.`);
+    const hasScheduleDates = state.vacations.some(v => v.start || v.end) || state.customHolidays.some(h => h.date) ||
+      state.schoolEvents.some(e => e.date) || state.workers.some(w => (w.workRanges || []).some(r => r.start || r.end) || Object.keys(w.overrides || {}).length);
+    if (!hasScheduleDates) return applyAcademicYearChoice(next, 'keep');
+    pendingAcademicYear = next;
+    $('#academicYearChangeMessage').textContent = `${state.academicYear}학년도에서 ${next}학년도로 변경합니다. 기존 일정 날짜를 어떻게 처리할지 선택하세요.`;
+    $('#academicYearChangeDialog').showModal();
+  }
+
+  function applyAcademicYearChoice(next, choice) {
+    const previous = state.academicYear;
+    if (choice === 'shift') E.shiftScheduleDates(state, next - previous);
+    else if (choice === 'clear') E.clearScheduleDates(state);
+    state.academicYear = next;
+    pendingAcademicYear = null;
+    calendarUndoByWorker.clear();
+    calendarToggleByWorker.clear();
+    if ($('#academicYearChangeDialog').open) $('#academicYearChangeDialog').close();
+    commit();
+    const detail = choice === 'shift' ? '기존 일정 날짜도 함께 이동했습니다.' : choice === 'clear' ? '기존 일정은 초기화했습니다.' : '기존 일정 날짜는 유지했습니다.';
+    toast(`${next}학년도 달력을 적용했습니다. ${detail}`);
+  }
+
+  function offerScheduleReplacement(label, start, end, workers) {
+    if (!start || !end || start > end) return false;
+    const manualInputs = E.overrideDatesInRange(workers, start, end);
+    if (!manualInputs.length) return false;
+    const workerCount = new Set(manualInputs.map(item => item.workerId)).size;
+    pendingScheduleReplacement = {
+      start, end, count: manualInputs.length,
+      workerIds: [...new Set(manualInputs.map(item => item.workerId))]
+    };
+    $('#scheduleReplaceMessage').textContent =
+      `${label} ${start} ~ ${end} 기간에 달력 수동입력 ${manualInputs.length}건이 있습니다.\n` +
+      `${workerCount > 1 ? `${workerCount}명의 수동입력이 포함되어 있습니다.\n` : ''}` +
+      `새 일정 반영을 선택하면 해당 기간의 수동 근무·비근무·결근·유급간주 입력을 삭제하고 새 방학·근무일정으로 다시 계산합니다.`;
+    $('#scheduleReplaceDialog').showModal();
+    return true;
+  }
+
+  function openWorkerImport() {
+    $('#workerImportList').innerHTML = state.workers.map(worker => `<div class="worker-import-item">
+      <div><strong>${esc(worker.name || '이름 미입력')}</strong><span>${esc(worker.job || '직종 미입력')} · 방학 중 근무기간 ${(worker.workRanges || []).length}건</span></div>
+      <button class="button secondary" data-import-worker-id="${esc(worker.id)}">이 내역 불러오기</button>
+    </div>`).join('');
+    $('#workerImportDialog').showModal();
+  }
+
+  function importWorkerDetails(sourceId) {
+    const source = state.workers.find(worker => worker.id === sourceId);
+    if (!source) return toast('불러올 근로자를 찾지 못했습니다.');
+    const id = uid('worker');
+    const copiedWorker = {
+      id,
+      organization: source.organization || state.organization || '',
+      job: source.job || '',
+      name: '',
+      currentWorkDate: source.currentWorkDate || '',
+      dailyHours: Number(source.dailyHours) || 8,
+      notes: source.notes || '',
+      documentTitle: source.documentTitle || '',
+      documentNote: source.documentNote || '',
+      workRanges: (source.workRanges || []).map(range => Object.assign({}, range, { id: uid('range') })),
+      overrides: {}
+    };
+    state.workers.push(copiedWorker);
+    state.selectedWorkerId = id;
+    $('#workerImportDialog').close();
+    result = null;
+    commit();
+    activateTab('overview');
+    const nameInput = $('#workerForm [name="name"]');
+    nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nameInput.focus({ preventScroll: true });
+    toast(`${source.name || '선택한 근로자'}의 내역을 불러왔습니다. 새 근로자의 성명을 입력하세요.`);
+  }
+
+  function handleAction(action) {
+    const worker = currentWorker();
+    if (action === 'apply-year') applyAcademicYear();
+    else if (action === 'open-worker-import') openWorkerImport();
+    else if (action === 'close-worker-import') $('#workerImportDialog').close();
+    else if (action === 'add-worker') {
+      const id = uid('worker');
+      state.workers.push({ id, organization: state.organization || '', job: '', name: `근로자 ${state.workers.length + 1}`, currentWorkDate: '', dailyHours: 8, notes: '', documentTitle: '', documentNote: '', workRanges: [], overrides: {} });
+      state.selectedWorkerId = id; commit();
+    } else if (action === 'delete-worker') {
+      if (state.workers.length === 1) return toast('근로자는 최소 1명이 필요합니다.');
+      if (confirm(`${worker.name} 근로자와 개인별 달력 입력을 삭제할까요?`)) { calendarUndoByWorker.delete(worker.id); calendarToggleByWorker.delete(worker.id); state.workers = state.workers.filter(w => w.id !== worker.id); state.selectedWorkerId = state.workers[0].id; commit(); }
+    } else if (action === 'add-vacation') { state.vacations.push({ id: uid('vac'), name: '기타 방학', start: '', end: '', reason: '', note: '' }); commit({ skipCalendar: true });
+    } else if (action === 'add-work-range') { worker.workRanges.push({ id: uid('range'), vacationId: state.vacations[0] ? state.vacations[0].id : '', start: '', end: '', reason: '' }); commit({ skipCalendar: true });
+    } else if (action === 'add-holiday') { state.customHolidays.push({ date: '', name: '임시공휴일', special: false }); commit({ skipCalendar: true });
+    } else if (action === 'add-event') { state.schoolEvents.push({ date: '', name: '학교 행사', note: '' }); commit({ skipCalendar: true });
+    } else if (action === 'export-json') exportJson();
+    else if (action === 'excel-current') { if (requireValid([worker.id])) X.download(state, [worker.id], `${state.academicYear}학년도_${worker.name}_근무계획.xlsx`); }
+    else if (action === 'excel-all') { const ids = state.workers.map(w => w.id); if (requireValid(ids)) X.download(state, ids, `${state.academicYear}학년도_전체근로자_근무계획.xlsx`); }
+    else if (action === 'print-current') openPrint([worker.id]);
+    else if (action === 'print-all') openPrint(state.workers.map(w => w.id));
+    else if (action === 'go-calendar') {
+      activateTab('calendar');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    else if (action === 'replace-schedule-manual') {
+      if (!pendingScheduleReplacement) return;
+      const pending = pendingScheduleReplacement;
+      const workers = state.workers.filter(item => pending.workerIds.includes(item.id));
+      const cleared = E.clearOverridesInRange(workers, pending.start, pending.end);
+      for (const workerId of pending.workerIds) { calendarUndoByWorker.delete(workerId); calendarToggleByWorker.delete(workerId); }
+      pendingScheduleReplacement = null;
+      $('#scheduleReplaceDialog').close();
+      commit();
+      toast(`수동입력 ${cleared.length}건을 삭제하고 새 일정으로 다시 계산했습니다.`);
+    }
+    else if (action === 'keep-schedule-manual') {
+      pendingScheduleReplacement = null;
+      $('#scheduleReplaceDialog').close();
+      commit();
+      toast('수동입력을 유지하고 새 일정을 저장했습니다.');
+    }
+    else if (action === 'year-change-shift' && pendingAcademicYear != null) applyAcademicYearChoice(pendingAcademicYear, 'shift');
+    else if (action === 'year-change-keep' && pendingAcademicYear != null) applyAcademicYearChoice(pendingAcademicYear, 'keep');
+    else if (action === 'year-change-clear' && pendingAcademicYear != null) applyAcademicYearChoice(pendingAcademicYear, 'clear');
+    else if (action === 'year-change-cancel') {
+      pendingAcademicYear = null;
+      $('#academicYear').value = state.academicYear;
+      $('#academicYearChangeDialog').close();
+    }
+    else if (action === 'undo-calendar') {
+      const stack = calendarUndoByWorker.get(worker.id) || [];
+      const previousAction = stack.pop();
+      if (!previousAction) return toast('되돌릴 달력 입력이 없습니다.');
+      if (previousAction.previous) worker.overrides[previousAction.date] = previousAction.previous;
+      else delete worker.overrides[previousAction.date];
+      syncDateToggle(worker.id, previousAction.date, stack, previousAction.previous);
+      commit();
+      toast(`${previousAction.date}의 마지막 입력을 되돌렸습니다.`);
+    }
+    else if (action === 'close-dialog') $('#decisionDialog').close();
+    else if (action === 'close-print') { $('#printOverlay').classList.add('hidden'); document.body.style.overflow = ''; }
+    else if (action === 'do-print') window.print();
+  }
+
+  document.addEventListener('click', event => {
+    const actionEl = event.target.closest('[data-action]');
+    if (actionEl) return handleAction(actionEl.dataset.action);
+    const tab = event.target.closest('[data-tab]');
+    if (tab) { activateTab(tab.dataset.tab); return; }
+    const validationItem = event.target.closest('[data-validation-index]');
+    if (validationItem) { focusValidationIssue(validationItem.dataset.validationIndex); return; }
+    const importWorkerButton = event.target.closest('[data-import-worker-id]');
+    if (importWorkerButton) { importWorkerDetails(importWorkerButton.dataset.importWorkerId); return; }
+    const workerButton = event.target.closest('[data-worker-id]');
+    if (workerButton) { state.selectedWorkerId = workerButton.dataset.workerId; result = null; commit(); return; }
+    const day = event.target.closest('[data-date]');
+    if (day) {
+      const date = day.dataset.date;
+      const mode = $('#calendarMode').value;
+      if (mode === 'inspect') return openDecision(date);
+      const selectedWorker = currentWorker();
+      const previous = selectedWorker.overrides[date] ? JSON.parse(JSON.stringify(selectedWorker.overrides[date])) : null;
+      const next = mode === 'restore' ? null : { type: mode, reason: $('#calendarReason').value.trim() };
+      const stack = calendarUndoByWorker.get(selectedWorker.id) || [];
+      const toggleMap = toggleMapFor(selectedWorker.id);
+      const toggleEntry = toggleMap.get(date);
+      if (sameOverride(previous, next)) {
+        if (!toggleEntry || !sameOverride(toggleEntry.applied, next)) return toast('이미 같은 내용으로 입력되어 있습니다.');
+        if (toggleEntry.previous) selectedWorker.overrides[date] = toggleEntry.previous;
+        else delete selectedWorker.overrides[date];
+        const actionIndex = stack.indexOf(toggleEntry);
+        if (actionIndex >= 0) stack.splice(actionIndex, 1);
+        syncDateToggle(selectedWorker.id, date, stack, toggleEntry.previous);
+        calendarUndoByWorker.set(selectedWorker.id, stack);
+        commit();
+        toast(`${date}을(를) 직전 상태로 복원했습니다.`);
+        return;
+      }
+      const action = { date, previous, applied: next };
+      stack.push(action);
+      if (stack.length > 100) stack.shift();
+      calendarUndoByWorker.set(selectedWorker.id, stack);
+      toggleMap.set(date, action);
+      if (next) selectedWorker.overrides[date] = next;
+      else delete selectedWorker.overrides[date];
+      commit();
+      return;
+    }
+    const monthButton = event.target.closest('[data-month-list]');
+    if (monthButton) return openMonthList(monthButton.dataset.monthList, monthButton.dataset.allocation);
+    const detailDate = event.target.closest('[data-dialog-date]');
+    if (detailDate) return openDecision(detailDate.dataset.dialogDate);
+    const remove = event.target.closest('[data-remove-list]');
+    if (remove) {
+      const list = remove.dataset.removeList;
+      const index = Number(remove.dataset.index);
+      if (list === 'workRanges') currentWorker().workRanges.splice(index, 1); else state[list].splice(index, 1);
+      commit();
+    }
+  });
+
+  document.addEventListener('change', event => {
+    const target = event.target;
+    if (target.id === 'academicYear') return;
+    if (target.id === 'organization') { applyOrganizationToAll(target.value); commit({ skipCalendar: true }); return; }
+    if (target.id === 'jsonImport') return importJson(target.files[0]);
+    if (target.form && target.form.id === 'workerForm' && target.name) {
+      if (target.name === 'organization') applyOrganizationToAll(target.value);
+      else currentWorker()[target.name] = target.name === 'dailyHours' ? Number(target.value) : target.value;
+      commit({ skipCalendar: true }); return;
+    }
+    if (target.dataset.list) {
+      const list = target.dataset.list;
+      const item = list === 'workRanges' ? currentWorker().workRanges[Number(target.dataset.index)] : state[list][Number(target.dataset.index)];
+      if (!item) return;
+      let value = target.value;
+      if (target.dataset.field === 'special') value = value === 'true';
+      item[target.dataset.field] = value;
+      let awaitingChoice = false;
+      if (list === 'vacations' && ['start', 'end'].includes(target.dataset.field)) {
+        awaitingChoice = offerScheduleReplacement(item.name || '방학기간', item.start, item.end, state.workers);
+      } else if (list === 'workRanges' && ['vacationId', 'start', 'end'].includes(target.dataset.field)) {
+        awaitingChoice = offerScheduleReplacement('방학 중 근무기간', item.start, item.end, [currentWorker()]);
+      }
+      if (awaitingChoice) return;
+      commit();
+    }
+  });
+
+  $('#workerForm').addEventListener('input', event => {
+    if (!event.target.name) return;
+    if (event.target.name === 'organization') applyOrganizationToAll(event.target.value);
+    else currentWorker()[event.target.name] = event.target.name === 'dailyHours' ? Number(event.target.value) : event.target.value;
+    saveState('입력 저장됨');
+  });
+  $('#organization').addEventListener('input', event => { applyOrganizationToAll(event.target.value); saveState('입력 저장됨'); });
+  $('#academicYear').addEventListener('keydown', event => { if (event.key === 'Enter') applyAcademicYear(); });
+
+  const fixturePath = new URLSearchParams(location.search).get('fixture');
+  if (fixturePath) {
+    fetch(fixturePath).then(response => {
+      if (!response.ok) throw new Error(`검증 자료를 읽지 못했습니다 (${response.status})`);
+      return response.json();
+    }).then(data => {
+      state = E.normalizeState(data);
+      result = null;
+      render();
+      openPrint(state.workers.map(w => w.id));
+      document.documentElement.dataset.fixtureReady = 'true';
+    }).catch(error => {
+      console.error(error);
+      render();
+    });
+  } else {
+    render();
+  }
+})();
+
+  </script>
+</body>
+</html>
