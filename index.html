@@ -285,6 +285,59 @@
       background: #245b55;
     }
 
+    .meeting-record-card {
+      border: 1px solid #d9d9f2;
+      background: linear-gradient(180deg, #f8f7ff 0%, #ffffff 34%);
+    }
+
+    .meeting-record-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #596fd7, #9b72cf);
+      content: "";
+    }
+
+    .meeting-record-card .usage-guide {
+      width: calc(100% + 18px);
+      min-height: 0;
+      margin-right: -9px;
+      margin-left: -9px;
+      padding: 14px 13px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .meeting-record-card .usage-guide ol {
+      margin: 0;
+      padding-left: 21px;
+      line-height: 1.75;
+    }
+
+    .meeting-record-card .usage-guide-note {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .pdf-editor-card .usage-guide {
+      width: calc(100% + 18px);
+      min-height: 0;
+      margin-right: -9px;
+      margin-left: -9px;
+      padding: 14px 13px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .pdf-editor-card .usage-guide-note {
+      margin-top: 7px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
     footer {
       padding: 30px 20px;
       text-align: center;
@@ -421,7 +474,7 @@
         </a>
       </div>
 
-      <div class="tool-card">
+      <div class="tool-card pdf-editor-card">
         <div class="tool-icon">📄</div>
 
         <h2>PDF 문서 편집기</h2>
@@ -500,6 +553,37 @@
           rel="noopener"
         >
           프로그램 실행
+        </a>
+      </div>
+
+      <div class="tool-card meeting-record-card">
+        <div class="tool-icon">📝</div>
+
+        <h2>학운위 회의록&amp;<br>홍보자료 작성기</h2>
+
+        <div class="usage-guide">
+          <span class="usage-guide-title">📌 사용방법</span>
+
+          <ol>
+            <li>아래 버튼으로 ZIP 파일을 받습니다.</li>
+            <li>압축을 푼 뒤 설치 파일을 실행합니다.</li>
+            <li>프로그램을 열고 Gemini API 키를 설정합니다.</li>
+            <li>회의자료와 저장 폴더를 선택해 문서를 생성합니다.</li>
+          </ol>
+
+          <span class="usage-guide-note">
+            ※ 처음 설치할 때 Windows 보호 안내가 나오면 파일을 확인한 뒤 ‘추가 정보 → 실행’을 선택하세요.<br><br>
+            Windows 10·11 · 한컴오피스 한글 2024 필요<br>
+            사용자 본인의 Gemini API 키와 인터넷 연결 필요
+          </span>
+        </div>
+
+        <a
+          class="button download-button"
+          href="./학운위%20회의록%26홍보자료%20작성기.zip"
+          download
+        >
+          프로그램 ZIP 다운로드
         </a>
       </div>
 
