@@ -55,6 +55,10 @@
       box-shadow: 0 10px 30px rgba(224, 108, 54, 0.1);
     }
 
+    .tool-list + .community-card {
+      margin-top: 32px;
+    }
+
     .community-card::after {
       position: absolute;
       right: -36px;
@@ -132,15 +136,89 @@
     }
 
     .tool-list {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .tool-category {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
+      grid-template-columns: 122px minmax(0, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .category-label {
+      position: relative;
+      display: flex;
+      min-height: 100%;
+      padding: 24px 14px;
+      overflow: hidden;
+      flex-direction: column;
+      justify-content: center;
+      color: #493d36;
+      background: linear-gradient(145deg, #fff0d8, #ffe4ca);
+      border: 1px solid #f1d5b8;
+      border-radius: 22px;
+    }
+
+    .category-label::after {
+      position: absolute;
+      right: -25px;
+      bottom: -35px;
+      width: 105px;
+      height: 105px;
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .category-icon {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 12px;
+      font-size: 35px;
+    }
+
+    .category-label strong {
+      position: relative;
+      z-index: 1;
+      font-size: 18px;
+      line-height: 1.45;
+      letter-spacing: -0.04em;
+    }
+
+    .category-tools {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 252px);
+      gap: 18px;
+      align-items: start;
+      justify-content: start;
+    }
+
+    .category-committee .category-label {
+      background: linear-gradient(145deg, #eef0ff, #e6e2f8);
+      border-color: #d9d9f2;
+    }
+
+    .category-facility .category-label {
+      background: linear-gradient(145deg, #eaf8f1, #dcefe5);
+      border-color: #cce4d7;
+    }
+
+    .category-etc .category-label {
+      background: linear-gradient(145deg, #f2f5f7, #e8edf1);
+      border-color: #dce3e7;
     }
 
     .tool-card {
       position: relative;
+      display: flex;
+      width: 252px;
+      aspect-ratio: 5 / 8;
       overflow: hidden;
-      padding: 35px 25px;
+      padding: 22px 14px;
+      flex-direction: column;
       text-align: center;
       background: white;
       border-radius: 22px;
@@ -148,39 +226,40 @@
     }
 
     .tool-icon {
-      margin-bottom: 15px;
-      font-size: 55px;
+      margin-bottom: 8px;
+      font-size: 38px;
     }
 
     .tool-card h2 {
-      margin: 10px 0;
-      font-size: 23px;
+      margin: 6px 0;
+      font-size: 18px;
     }
 
     .tool-card p {
-      min-height: 75px;
-      margin: 15px 0 25px;
+      min-height: 52px;
+      margin: 10px 0 16px;
       color: #666;
-      line-height: 1.7;
+      font-size: 13px;
+      line-height: 1.5;
     }
 
     .usage-guide {
-      min-height: 126px;
-      margin: 15px 0 25px;
-      padding: 14px 16px;
+      min-height: 0;
+      margin: 10px 0 14px;
+      padding: 10px 11px;
       text-align: left;
       background: #f8f9ff;
       border-radius: 12px;
       color: #555;
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .usage-guide-title {
       display: block;
-      margin-bottom: 7px;
+      margin-bottom: 4px;
       color: #364fc7;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: bold;
       text-align: center;
     }
@@ -195,15 +274,18 @@
 
     .usage-guide-note {
       display: block;
-      margin-top: 7px;
+      margin-top: 4px;
       color: #777;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.35;
     }
 
     .button {
       display: inline-block;
-      padding: 13px 24px;
+      align-self: center;
+      margin-top: auto;
+      padding: 10px 16px;
+      font-size: 13px;
       color: white;
       font-weight: bold;
       text-decoration: none;
@@ -285,6 +367,37 @@
       background: #245b55;
     }
 
+    .insurance-card {
+      border: 1px solid #f1d8ca;
+      background: linear-gradient(180deg, #fff8f2 0%, #ffffff 34%);
+    }
+
+    .insurance-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #ff7a3d, #f4b45f 52%, #2e6f68);
+      content: "";
+    }
+
+    .insurance-card .usage-guide {
+      background: #fff6ef;
+    }
+
+    .insurance-card .usage-guide-title {
+      color: #d65f2d;
+    }
+
+    .insurance-button {
+      background: #e96e38;
+    }
+
+    .insurance-button:hover {
+      background: #cf5728;
+    }
+
     .meeting-record-card {
       border: 1px solid #d9d9f2;
       background: linear-gradient(180deg, #f8f7ff 0%, #ffffff 34%);
@@ -300,42 +413,79 @@
       content: "";
     }
 
+    .agenda-card,
+    .construction-card,
+    .pdf-editor-card {
+      border: 1px solid var(--card-border);
+      background: linear-gradient(180deg, var(--card-tint) 0%, #ffffff 34%);
+    }
+
+    .agenda-card::before,
+    .construction-card::before,
+    .pdf-editor-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: var(--card-stripe);
+      content: "";
+    }
+
+    .agenda-card {
+      --card-border: #d9d9f2;
+      --card-tint: #f8f7ff;
+      --card-stripe: linear-gradient(90deg, #596fd7, #9b72cf);
+    }
+
+    .construction-card {
+      --card-border: #cce4d7;
+      --card-tint: #f4fbf7;
+      --card-stripe: linear-gradient(90deg, #3f8f72, #76c49a);
+    }
+
+    .pdf-editor-card {
+      --card-border: #dce3e7;
+      --card-tint: #f6f8fa;
+      --card-stripe: linear-gradient(90deg, #607d8b, #8fa8b4);
+    }
+
     .meeting-record-card .usage-guide {
-      width: calc(100% + 18px);
+      width: 100%;
       min-height: 0;
-      margin-right: -9px;
-      margin-left: -9px;
-      padding: 14px 13px;
-      font-size: 13px;
-      line-height: 1.6;
+      margin-right: 0;
+      margin-left: 0;
+      padding: 9px 10px;
+      font-size: 11px;
+      line-height: 1.4;
     }
 
     .meeting-record-card .usage-guide ol {
       margin: 0;
       padding-left: 21px;
-      line-height: 1.75;
-    }
-
-    .meeting-record-card .usage-guide-note {
-      margin-top: 8px;
-      font-size: 12px;
       line-height: 1.45;
     }
 
+    .meeting-record-card .usage-guide-note {
+      margin-top: 5px;
+      font-size: 9.5px;
+      line-height: 1.3;
+    }
+
     .pdf-editor-card .usage-guide {
-      width: calc(100% + 18px);
+      width: 100%;
       min-height: 0;
-      margin-right: -9px;
-      margin-left: -9px;
-      padding: 14px 13px;
-      font-size: 13px;
-      line-height: 1.55;
+      margin-right: 0;
+      margin-left: 0;
+      padding: 10px 11px;
+      font-size: 11px;
+      line-height: 1.4;
     }
 
     .pdf-editor-card .usage-guide-note {
-      margin-top: 7px;
-      font-size: 12px;
-      line-height: 1.4;
+      margin-top: 4px;
+      font-size: 10px;
+      line-height: 1.3;
     }
 
     footer {
@@ -389,10 +539,37 @@
       }
 
       .tool-card {
+        min-height: 580px;
+        aspect-ratio: auto;
         padding: 30px 20px;
+      }
+
+      .tool-category {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .category-label {
+        min-height: 0;
+        padding: 20px 22px;
+      }
+
+      .category-icon {
+        margin-bottom: 7px;
+        font-size: 30px;
+      }
+
+      .category-tools {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .category-tools .tool-card {
+        width: 100%;
       }
     }
   </style>
+
 </head>
 
 <body>
@@ -403,33 +580,104 @@
   </header>
 
   <main>
-    <section class="community-card" aria-labelledby="community-title">
-      <div class="community-content">
-        <div class="community-icon" aria-hidden="true">💬</div>
+    <section class="tool-list" aria-label="업무별 행정도구">
 
-        <div>
-          <span class="community-label">JINI COMMUNITY</span>
-          <h2 id="community-title">지니의 생각나눔터</h2>
-          <p>
-            행정도구에 대한 아이디어, 질문, 사용 후기와 불편한 점을<br>
-            함께 나누고 더 편리한 도구를 만들어가는 공간입니다.
-          </p>
+      <section class="tool-category category-personnel" aria-labelledby="category-personnel-title">
+        <div class="category-label">
+          <span class="category-icon" aria-hidden="true">👥</span>
+          <strong id="category-personnel-title">비공무원<br>인사·급여</strong>
         </div>
-      </div>
 
-      <a
-        class="community-button"
-        href="https://text-organizer--hangbukhage.replit.app"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        생각 나누러 가기 →
-      </a>
-    </section>
+        <div class="category-tools">
+          <div class="tool-card work-plan-card">
+            <div class="tool-icon">🗓️</div>
+            <h2>교육공무직 근무계획표</h2>
+            <div class="usage-guide">
+              <span class="usage-guide-title">📌 연간 근무·유급일수 자동 계산</span>
+              방학·근무일정을 입력하면<br>
+              근무계획서와 유급일수를 자동 작성합니다.
+              <span class="usage-guide-note">
+                ※ 토·일·공휴일 유급 여부 자동판정<br>
+                ※ 근로자별 엑셀 저장 및 인쇄 지원<br>
+                ※ 입력 자료는 내 컴퓨터에만 저장
+              </span>
+            </div>
+            <a class="button work-plan-button" href="./교육공무직근무계획표/index.html" target="_blank" rel="noopener">
+              프로그램 실행
+            </a>
+          </div>
 
-    <section class="tool-list">
+          <div class="tool-card insurance-card">
+            <div class="tool-icon">🧾</div>
+            <h2>비공무원 4대보험<br>개인별 정리</h2>
+            <div class="usage-guide">
+              <span class="usage-guide-title">📌 보험료 통합·검증·엑셀 저장</span>
+              건강·연금·고용·산재 내역을 모아<br>
+              개인별·기관별 부담금을 자동 정리합니다.
+              <span class="usage-guide-note">
+                ※ 보험 자료 5~6개를 한 번에 선택<br>
+                ※ 국민연금 내역이 없으면 생략 가능<br>
+                ※ 파일은 외부 서버로 전송되지 않음
+              </span>
+            </div>
+            <a class="button insurance-button" href="./노트북_이동용_개인별_4대보험_정리/개인별_4대보험_정리.html" target="_blank" rel="noopener">
+              프로그램 실행
+            </a>
+          </div>
+        </div>
+      </section>
 
-      <div class="tool-card">
+      <section class="tool-category category-committee" aria-labelledby="category-committee-title">
+        <div class="category-label">
+          <span class="category-icon" aria-hidden="true">🏫</span>
+          <strong id="category-committee-title">학교운영<br>위원회</strong>
+        </div>
+
+        <div class="category-tools">
+          <div class="tool-card agenda-card">
+            <div class="tool-icon">📚</div>
+            <h2>학운위 안건 취합기</h2>
+            <div class="usage-guide">
+              <span class="usage-guide-title">📌 사용방법</span>
+              1. 압축을 풉니다.<br>
+              2. <code>Jini_Agenda_Merger.exe</code> 실행
+              <span class="usage-guide-note">
+                ※ 파일명에 <strong>'붙임'</strong>이 들어간 파일은<br>
+                목차에 들어가지 않습니다.
+              </span>
+            </div>
+            <a class="button download-button" href="./회의안건취합기/지니의회의안건취합기.zip" download>
+              프로그램 다운로드
+            </a>
+          </div>
+
+          <div class="tool-card meeting-record-card">
+            <div class="tool-icon">📝</div>
+            <h2>학운위 회의록&amp;<br>홍보자료 작성기</h2>
+            <div class="usage-guide">
+              <span class="usage-guide-title">📌 사용방법</span>
+              <ol>
+                <li>아래 버튼으로 ZIP 파일을 받습니다.</li>
+                <li>압축을 푼 뒤 설치 파일을 실행합니다.</li>
+                <li>프로그램을 열고 Gemini API 키를 설정합니다.</li>
+                <li>회의자료와 저장 폴더를 선택해 문서를 생성합니다.</li>
+              </ol>
+            </div>
+            <a class="button download-button" href="./학운위%20회의록%26홍보자료%20작성기.zip" download>
+              프로그램 다운로드
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="tool-category category-facility" aria-labelledby="category-facility-title">
+        <div class="category-label">
+          <span class="category-icon" aria-hidden="true">🏗️</span>
+          <strong id="category-facility-title">시설·공사</strong>
+        </div>
+
+        <div class="category-tools">
+          <div class="tool-card construction-card">
         <div class="tool-icon">📷</div>
 
         <h2>공사사진 만들기</h2>
@@ -443,38 +691,22 @@
           class="button"
           href="./공사사진/index.html"
           target="_blank"
+          rel="noopener"
         >
           프로그램 실행
         </a>
-      </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="tool-card">
-        <div class="tool-icon">📚</div>
-
-        <h2>학운위 안건 취합기</h2>
-
-        <div class="usage-guide">
-          <span class="usage-guide-title">📌 사용방법</span>
-
-          1. 압축을 풉니다.<br>
-          2. <code>Jini_Agenda_Merger.exe</code> 실행
-
-          <span class="usage-guide-note">
-            ※ 파일명에 <strong>'붙임'</strong>이 들어간 파일은<br>
-            목차에 들어가지 않습니다.
-          </span>
+      <section class="tool-category category-etc" aria-labelledby="category-etc-title">
+        <div class="category-label">
+          <span class="category-icon" aria-hidden="true">🧰</span>
+          <strong id="category-etc-title">기타</strong>
         </div>
 
-        <a
-          class="button download-button"
-          href="./회의안건취합기/지니의회의안건취합기.zip"
-          download
-        >
-          프로그램 다운로드
-        </a>
-      </div>
-
-      <div class="tool-card pdf-editor-card">
+        <div class="category-tools">
+          <div class="tool-card pdf-editor-card">
         <div class="tool-icon">📄</div>
 
         <h2>PDF 문서 편집기</h2>
@@ -497,12 +729,13 @@
           class="button"
           href="./원본문서편집기/index.html"
           target="_blank"
+          rel="noopener"
         >
           프로그램 실행
         </a>
-      </div>
+          </div>
 
-      <div class="tool-card file-diet-card">
+          <div class="tool-card file-diet-card">
         <div class="tool-icon">🗜️</div>
 
         <h2>파일용량줄이기</h2>
@@ -523,70 +756,38 @@
           class="button file-diet-button"
           href="./파일용량줄이기/index.html"
           target="_blank"
-        >
-          프로그램 실행
-        </a>
-      </div>
-
-      <div class="tool-card work-plan-card">
-        <div class="tool-icon">🗓️</div>
-
-        <h2>교육공무직 근무계획표</h2>
-
-        <div class="usage-guide">
-          <span class="usage-guide-title">📌 연간 근무·유급일수 자동 계산</span>
-
-          방학·근무일정을 입력하면<br>
-          근무계획서와 유급일수를 자동 작성합니다.
-
-          <span class="usage-guide-note">
-            ※ 토·일·공휴일 유급 여부 자동판정<br>
-            ※ 근로자별 엑셀 저장 및 인쇄 지원<br>
-            ※ 입력 자료는 내 컴퓨터에만 저장
-          </span>
-        </div>
-
-        <a
-          class="button work-plan-button"
-          href="./교육공무직근무계획표/index.html"
-          target="_blank"
           rel="noopener"
         >
           프로그램 실행
         </a>
-      </div>
-
-      <div class="tool-card meeting-record-card">
-        <div class="tool-icon">📝</div>
-
-        <h2>학운위 회의록&amp;<br>홍보자료 작성기</h2>
-
-        <div class="usage-guide">
-          <span class="usage-guide-title">📌 사용방법</span>
-
-          <ol>
-            <li>아래 버튼으로 ZIP 파일을 받습니다.</li>
-            <li>압축을 푼 뒤 설치 파일을 실행합니다.</li>
-            <li>프로그램을 열고 Gemini API 키를 설정합니다.</li>
-            <li>회의자료와 저장 폴더를 선택해 문서를 생성합니다.</li>
-          </ol>
-
-          <span class="usage-guide-note">
-            ※ 처음 설치할 때 Windows 보호 안내가 나오면 파일을 확인한 뒤 ‘추가 정보 → 실행’을 선택하세요.<br><br>
-            Windows 10·11 · 한컴오피스 한글 2024 필요<br>
-            사용자 본인의 Gemini API 키와 인터넷 연결 필요
-          </span>
+          </div>
         </div>
+      </section>
 
-        <a
-          class="button download-button"
-          href="./학운위%20회의록%26홍보자료%20작성기.zip"
-          download
-        >
-          프로그램 다운로드
-        </a>
+    </section>
+
+    <section class="community-card" aria-labelledby="community-title">
+      <div class="community-content">
+        <div class="community-icon" aria-hidden="true">💬</div>
+
+        <div>
+          <span class="community-label">JINI COMMUNITY</span>
+          <h2 id="community-title">지니의 생각나눔터</h2>
+          <p>
+            행정도구에 대한 아이디어, 질문, 사용 후기와 불편한 점을<br>
+            함께 나누고 더 편리한 도구를 만들어가는 공간입니다.
+          </p>
+        </div>
       </div>
 
+      <a
+        class="community-button"
+        href="https://text-organizer--hangbukhage.replit.app"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        생각 나누러 가기 →
+      </a>
     </section>
   </main>
 
