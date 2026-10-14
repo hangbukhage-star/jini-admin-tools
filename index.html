@@ -293,6 +293,18 @@
       border-radius: 12px;
     }
 
+    .tool-stats {
+      display: block;
+      min-height: 18px;
+      margin-top: 10px;
+      color: #868e96;
+      font-size: 12px;
+    }
+
+    .tool-stats[data-state="offline"] {
+      display: none;
+    }
+
     .button:hover {
       background: #f76707;
     }
@@ -752,7 +764,7 @@
         </div>
 
         <div class="category-tools">
-          <div class="tool-card work-plan-card">
+          <div class="tool-card work-plan-card" data-tool-id="work-plan">
             <div class="tool-icon">🗓️</div>
             <h2>교육공무직 근무계획표</h2>
             <div class="usage-guide">
@@ -765,12 +777,13 @@
                 ※ 입력 자료는 내 컴퓨터에만 저장
               </span>
             </div>
-            <a class="button work-plan-button" href="./교육공무직근무계획표/index.html" target="_blank" rel="noopener">
+            <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
+            <a class="button work-plan-button" data-track-tool href="./교육공무직근무계획표/index.html" target="_blank" rel="noopener">
               프로그램 실행
             </a>
           </div>
 
-          <div class="tool-card insurance-card">
+          <div class="tool-card insurance-card" data-tool-id="insurance-summary">
             <div class="tool-icon">🧾</div>
             <h2>비공무원 4대보험<br>개인별 정리</h2>
             <div class="usage-guide">
@@ -783,7 +796,8 @@
                 ※ 파일은 외부 서버로 전송되지 않음
               </span>
             </div>
-            <a class="button insurance-button" href="./노트북_이동용_개인별_4대보험_정리/개인별_4대보험_정리.html" target="_blank" rel="noopener">
+            <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
+            <a class="button insurance-button" data-track-tool href="./노트북_이동용_개인별_4대보험_정리/개인별_4대보험_정리.html" target="_blank" rel="noopener">
               프로그램 실행
             </a>
           </div>
@@ -797,7 +811,7 @@
         </div>
 
         <div class="category-tools">
-          <div class="tool-card agenda-card">
+          <div class="tool-card agenda-card" data-tool-id="agenda-merger">
             <div class="tool-icon">📚</div>
             <h2>학운위 안건 취합기</h2>
             <div class="usage-guide">
@@ -809,12 +823,13 @@
                 목차에 들어가지 않습니다.
               </span>
             </div>
-            <a class="button download-button" href="./회의안건취합기/지니의회의안건취합기.zip" download>
+            <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
+            <a class="button download-button" data-track-tool href="./회의안건취합기/지니의회의안건취합기.zip" download>
               프로그램 다운로드
             </a>
           </div>
 
-          <div class="tool-card meeting-record-card">
+          <div class="tool-card meeting-record-card" data-tool-id="meeting-record-writer">
             <div class="tool-icon">📝</div>
             <h2>학운위 회의록&amp;<br>홍보자료 작성기</h2>
             <div class="usage-guide">
@@ -826,7 +841,8 @@
                 <li>회의자료와 저장 폴더를 선택해 문서를 생성합니다.</li>
               </ol>
             </div>
-            <a class="button download-button" href="https://8wujl15c3qwtvr5k.public.blob.vercel-storage.com/school-committee-writer-20260911.zip" download>
+            <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
+            <a class="button download-button" data-track-tool href="https://8wujl15c3qwtvr5k.public.blob.vercel-storage.com/school-committee-writer-20260911.zip" download>
               프로그램 다운로드
             </a>
           </div>
@@ -840,7 +856,7 @@
         </div>
 
         <div class="category-tools">
-          <div class="tool-card construction-card">
+          <div class="tool-card construction-card" data-tool-id="construction-photos">
         <div class="tool-icon">📷</div>
 
         <h2>공사사진 만들기</h2>
@@ -850,8 +866,10 @@
           사진대장을 만들고 인쇄하거나 PDF로 저장합니다.
         </p>
 
+        <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
         <a
           class="button"
+          data-track-tool
           href="./공사사진/index.html"
           target="_blank"
           rel="noopener"
@@ -869,7 +887,7 @@
         </div>
 
         <div class="category-tools">
-          <div class="tool-card pdf-editor-card">
+          <div class="tool-card pdf-editor-card" data-tool-id="pdf-editor">
         <div class="tool-icon">📄</div>
 
         <h2>PDF 문서 편집기</h2>
@@ -888,8 +906,10 @@
           </span>
         </div>
 
+        <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
         <a
           class="button"
+          data-track-tool
           href="./원본문서편집기/index.html"
           target="_blank"
           rel="noopener"
@@ -898,7 +918,7 @@
         </a>
           </div>
 
-          <div class="tool-card file-diet-card">
+          <div class="tool-card file-diet-card" data-tool-id="file-compressor">
         <div class="tool-icon">🗜️</div>
 
         <h2>파일용량줄이기</h2>
@@ -915,8 +935,10 @@
           </span>
         </div>
 
+        <span class="tool-stats" aria-live="polite">조회수 확인 중</span>
         <a
           class="button file-diet-button"
+          data-track-tool
           href="./파일용량줄이기/index.html"
           target="_blank"
           rel="noopener"
@@ -957,6 +979,9 @@
   <footer>
     필요한 행정도구가 있다면 게시판에 남겨주세요.
   </footer>
+
+  <script src="./assets/stats-config.js"></script>
+  <script src="./assets/stats.js"></script>
 
 </body>
 </html>

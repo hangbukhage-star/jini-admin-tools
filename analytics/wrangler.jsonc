@@ -1,0 +1,18 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "jini-tool-stats",
+	"account_id": "feef2cd0e256d16c06ae4f868e64aee2",
+	"main": "src/worker.js",
+	"compatibility_date": "2026-08-19",
+	"vars": {
+		"ALLOWED_ORIGINS": "http://127.0.0.1:8765,http://localhost:8765,https://jini-admin-tools.vercel.app"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "jini-tool-stats",
+			"database_id": "cfdb724c-fe00-4086-8cbe-6a2f0ac3dbaf",
+			"migrations_dir": "migrations"
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "jini-tool-stats",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/worker.js && node --test tests/worker.test.mjs",
+    "dev": "wrangler dev",
+    "db:local": "wrangler d1 migrations apply jini-tool-stats --local",
+    "db:remote": "wrangler d1 migrations apply jini-tool-stats --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
