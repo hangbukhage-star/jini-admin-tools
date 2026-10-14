@@ -13,7 +13,7 @@
     const element = counter(card);
     if (!element) return;
     const count = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
-    element.textContent = `👁 실행 ${numberFormat.format(count)}회`;
+    element.textContent = `👁 실행 ${numberFormat.format(count)}회 (2026.10.14. 이후)`;
     element.dataset.state = "ready";
     card.dataset.toolCount = String(count);
   }
