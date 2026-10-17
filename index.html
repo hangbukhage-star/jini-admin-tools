@@ -330,6 +330,31 @@
       font-weight: bold;
     }
 
+    .comment-meta-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .comment-delete {
+      padding: 3px 7px;
+      color: #a33d35;
+      font-size: 11px;
+      background: #fff;
+      border: 1px solid #e9c7c4;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .comment-delete:hover {
+      background: #fff1f0;
+    }
+
+    .comment-delete:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
     .comment-content {
       margin: 0;
       color: #343b46;
@@ -990,7 +1015,7 @@
       <div class="comments-header">
         <div>
           <h2 id="comments-title">도구 댓글</h2>
-          <p id="comments-notice">이름과 댓글은 누구나 볼 수 있어요. 개인정보는 적지 말아 주세요.</p>
+          <p id="comments-notice">이름과 댓글은 누구나 볼 수 있어요. 댓글은 작성한 브라우저에서 삭제할 수 있습니다. 개인정보는 적지 말아 주세요.</p>
         </div>
         <button class="comments-close" type="button" aria-label="댓글 창 닫기">×</button>
       </div>

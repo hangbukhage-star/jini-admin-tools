@@ -93,6 +93,12 @@ async function listComments(env, toolId, origin) {
   return json({ comments: result.results || [] }, 200, origin);
 }
 
+async function hashDeleteToken(token) {
+  const value = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", value);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 async function createComment(request, env, toolId, origin) {
   if (!TOOL_ID_SET.has(toolId)) {
     return json({ error: "등록되지 않은 도구입니다." }, 404, origin);
@@ -116,17 +122,23 @@ async function createComment(request, env, toolId, origin) {
 
   const author = typeof input?.author === "string" ? input.author.trim() : "";
   const content = typeof input?.content === "string" ? input.content.trim() : "";
+  const deleteToken = typeof input?.deleteToken === "string" ? input.deleteToken : "";
   if (!author || author.length > COMMENT_NAME_MAX) {
     return json({ error: `이름은 1~${COMMENT_NAME_MAX}자로 입력해 주세요.` }, 400, origin);
   }
   if (!content || content.length > COMMENT_TEXT_MAX) {
     return json({ error: `댓글은 1~${COMMENT_TEXT_MAX}자로 입력해 주세요.` }, 400, origin);
   }
+  if (!/^[0-9a-f-]{36}$/i.test(deleteToken)) {
+    return json({ error: "삭제 정보를 만들지 못했습니다. 다시 시도해 주세요." }, 400, origin);
+  }
+
+  const deleteTokenHash = await hashDeleteToken(deleteToken);
 
   const result = await env.DB.prepare(
-    `INSERT INTO tool_comments (tool_id, author, content)
-     VALUES (?1, ?2, ?3)`
-  ).bind(toolId, author, content).run();
+    `INSERT INTO tool_comments (tool_id, author, content, delete_token_hash)
+     VALUES (?1, ?2, ?3, ?4)`
+  ).bind(toolId, author, content, deleteTokenHash).run();
 
   const comment = await env.DB.prepare(
     `SELECT id, author, content, created_at
@@ -135,6 +147,36 @@ async function createComment(request, env, toolId, origin) {
   ).bind(result.meta?.last_row_id).first();
 
   return json({ comment }, 201, origin);
+}
+
+async function deleteComment(request, env, toolId, commentId, origin) {
+  if (!TOOL_ID_SET.has(toolId)) {
+    return json({ error: "등록되지 않은 도구입니다." }, 404, origin);
+  }
+
+  let input;
+  try {
+    input = await request.json();
+  } catch {
+    return json({ error: "삭제 정보를 확인해 주세요." }, 400, origin);
+  }
+
+  const token = typeof input?.deleteToken === "string" ? input.deleteToken : "";
+  if (!/^[0-9a-f-]{36}$/i.test(token)) {
+    return json({ error: "이 브라우저에서 작성한 댓글만 삭제할 수 있어요." }, 403, origin);
+  }
+
+  const tokenHash = await hashDeleteToken(token);
+  const result = await env.DB.prepare(
+    `DELETE FROM tool_comments
+     WHERE id = ?1 AND tool_id = ?2 AND delete_token_hash = ?3`
+  ).bind(commentId, toolId, tokenHash).run();
+
+  if (!Number(result.meta?.changes)) {
+    return json({ error: "삭제 권한이 없거나 댓글을 찾을 수 없습니다." }, 404, origin);
+  }
+
+  return json({ ok: true }, 200, origin);
 }
 
 export default {
@@ -168,6 +210,11 @@ export default {
       }
       if (request.method === "POST" && commentsMatch) {
         return await createComment(request, env, commentsMatch[1], origin);
+      }
+
+      const deleteMatch = pathname.match(/^\/comments\/([a-z0-9-]+)\/(\d+)\/delete$/);
+      if (request.method === "POST" && deleteMatch) {
+        return await deleteComment(request, env, deleteMatch[1], Number(deleteMatch[2]), origin);
       }
 
       return json({ error: "요청 경로를 확인해 주세요." }, 404, origin);

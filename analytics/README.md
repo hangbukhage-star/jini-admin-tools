@@ -13,6 +13,7 @@ Cloudflare Worker와 APAC 지역 D1 데이터베이스에 배포되어 있습니
 - `src/worker.js`: 조회수·댓글 API와 등록 도구 목록
 - `migrations/0001_create_tool_counts.sql`: 조회수 테이블과 초기 도구 목록
 - `migrations/0002_create_tool_comments.sql`: 도구 댓글 테이블
+- `migrations/0003_add_comment_delete_tokens.sql`: 본인 댓글 삭제 권한 해시
 - `wrangler.jsonc`: Worker, D1, 허용 홈페이지 주소 설정
 - `tests/worker.test.mjs`: 집계·차단 동작 자동검사
 - `../assets/stats-config.js`: 홈페이지에서 사용할 배포 API 주소
