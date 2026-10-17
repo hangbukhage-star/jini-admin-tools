@@ -1,7 +1,8 @@
 # 지니 행정도구 조회수 운영 안내
 
-홈페이지 카드의 `프로그램 실행` 또는 `프로그램 다운로드` 클릭 횟수를 저장합니다.
-방문자의 이름, IP, 파일 내용 등 개인정보는 저장하지 않습니다.
+홈페이지 카드의 `프로그램 실행` 또는 `프로그램 다운로드` 클릭 횟수와,
+도구별 공개 댓글을 저장합니다. 댓글 작성 시 이름과 댓글 내용은 공개되며,
+별도의 로그인은 필요하지 않습니다.
 
 현재 통계 API는 `https://jini-tool-stats.yjj32.workers.dev`이며,
 Cloudflare Worker와 APAC 지역 D1 데이터베이스에 배포되어 있습니다.
@@ -9,12 +10,14 @@ Cloudflare Worker와 APAC 지역 D1 데이터베이스에 배포되어 있습니
 
 ## 파일 구성
 
-- `src/worker.js`: 조회·증가 API와 등록 도구 목록
-- `migrations/0001_create_tool_counts.sql`: D1 테이블과 초기 도구 목록
+- `src/worker.js`: 조회수·댓글 API와 등록 도구 목록
+- `migrations/0001_create_tool_counts.sql`: 조회수 테이블과 초기 도구 목록
+- `migrations/0002_create_tool_comments.sql`: 도구 댓글 테이블
 - `wrangler.jsonc`: Worker, D1, 허용 홈페이지 주소 설정
 - `tests/worker.test.mjs`: 집계·차단 동작 자동검사
 - `../assets/stats-config.js`: 홈페이지에서 사용할 배포 API 주소
 - `../assets/stats.js`: 카드 조회 및 클릭 집계
+- `../assets/comments.js`: 도구별 댓글 보기·등록
 
 ## 현재 배포 상태
 
@@ -28,6 +31,14 @@ npx wrangler deploy
 ```
 
 홈페이지의 `index.html` 또는 `../assets` 파일을 수정한 경우에는 저장소의 `main` 브랜치에 올려야 Vercel 홈페이지에 반영됩니다.
+
+댓글 기능을 배포할 때는 먼저 새 D1 테이블을 적용하고 Worker를 배포한 다음,
+홈페이지 변경을 `main` 브랜치에 올립니다.
+
+```powershell
+npx wrangler d1 migrations apply jini-tool-stats --remote
+npx wrangler deploy
+```
 
 ## 새 계정에 최초 배포할 때
 

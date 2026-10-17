@@ -40,101 +40,6 @@
       margin: 50px auto;
     }
 
-    .community-card {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 28px;
-      overflow: hidden;
-      margin-bottom: 32px;
-      padding: 30px 34px;
-      background: linear-gradient(135deg, #fff4ec 0%, #fffaf5 55%, #ffe7d8 100%);
-      border: 1px solid #ffd8c2;
-      border-radius: 22px;
-      box-shadow: 0 10px 30px rgba(224, 108, 54, 0.1);
-    }
-
-    .tool-list + .community-card {
-      margin-top: 32px;
-    }
-
-    .community-card::after {
-      position: absolute;
-      right: -36px;
-      bottom: -58px;
-      width: 170px;
-      height: 170px;
-      background: rgba(255, 146, 92, 0.12);
-      border-radius: 50%;
-      content: "";
-    }
-
-    .community-content {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .community-icon {
-      display: grid;
-      flex: 0 0 64px;
-      width: 64px;
-      height: 64px;
-      place-items: center;
-      background: white;
-      border: 1px solid #ffe0cf;
-      border-radius: 20px;
-      box-shadow: 0 8px 20px rgba(224, 108, 54, 0.1);
-      font-size: 34px;
-    }
-
-    .community-label {
-      display: inline-block;
-      margin-bottom: 7px;
-      color: #e76835;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 0.08em;
-    }
-
-    .community-card h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-
-    .community-card p {
-      margin: 0;
-      color: #6f625c;
-      line-height: 1.65;
-    }
-
-    .community-button {
-      position: relative;
-      z-index: 1;
-      flex: 0 0 auto;
-      padding: 14px 22px;
-      color: white;
-      font-weight: bold;
-      text-decoration: none;
-      background: #ee7946;
-      border-radius: 12px;
-      box-shadow: 0 8px 18px rgba(238, 121, 70, 0.22);
-      transition: transform 0.2s, background 0.2s;
-    }
-
-    .community-button:hover {
-      background: #dc6534;
-      transform: translateY(-2px);
-    }
-
-    .community-button:focus-visible {
-      outline: 3px solid rgba(238, 121, 70, 0.32);
-      outline-offset: 3px;
-    }
-
     .tool-list {
       display: flex;
       flex-direction: column;
@@ -307,6 +212,193 @@
 
     .button:hover {
       background: #f76707;
+    }
+
+    .card-actions {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .card-actions .button {
+      margin-top: 0;
+    }
+
+    .comment-open {
+      display: inline-block;
+      padding: 10px 13px;
+      color: #374151;
+      font-size: 13px;
+      font-weight: bold;
+      text-decoration: none;
+      background: #eef2f7;
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .comment-open:hover {
+      background: #dfe7f0;
+    }
+
+    .comments-dialog {
+      width: min(520px, calc(100% - 28px));
+      max-height: min(760px, calc(100% - 28px));
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: 20px;
+      box-shadow: 0 24px 80px rgba(18, 28, 45, 0.28);
+    }
+
+    .comments-dialog::backdrop {
+      background: rgba(25, 33, 45, 0.52);
+      backdrop-filter: blur(3px);
+    }
+
+    .comments-shell {
+      display: flex;
+      max-height: min(760px, calc(100vh - 28px));
+      flex-direction: column;
+      background: #fff;
+    }
+
+    .comments-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 24px 16px;
+      background: #fff8ef;
+      border-bottom: 1px solid #f1e5d8;
+    }
+
+    .comments-header h2 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .comments-header p {
+      margin: 7px 0 0;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .comments-close {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      color: #505967;
+      font-size: 24px;
+      background: #fff;
+      border: 1px solid #e6e8eb;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .comments-list {
+      display: flex;
+      min-height: 140px;
+      padding: 16px 24px;
+      overflow-y: auto;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .comment-item {
+      padding: 13px 14px;
+      background: #f7f8fa;
+      border-radius: 12px;
+    }
+
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      color: #697386;
+      font-size: 12px;
+    }
+
+    .comment-author {
+      color: #303948;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .comment-content {
+      margin: 0;
+      color: #343b46;
+      font-size: 14px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .comments-empty,
+    .comments-status {
+      margin: 12px 0;
+      color: #717987;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .comments-form {
+      display: grid;
+      padding: 16px 24px 22px;
+      gap: 10px;
+      border-top: 1px solid #eceef1;
+    }
+
+    .comments-form label {
+      color: #414b59;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .comments-form input,
+    .comments-form textarea {
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px 12px;
+      color: #303744;
+      font: inherit;
+      font-size: 14px;
+      border: 1px solid #d8dde5;
+      border-radius: 9px;
+    }
+
+    .comments-form textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .comments-form button[type="submit"] {
+      justify-self: end;
+      padding: 10px 17px;
+      color: white;
+      font-weight: bold;
+      background: #e97843;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .comments-form button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    .comments-trap {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
 
     .download-button {
@@ -622,35 +714,6 @@
         border-radius: 14px;
       }
 
-      .community-card {
-        gap: 34px;
-        padding: 36px 41px;
-        border-radius: 26px;
-      }
-
-      .community-content {
-        gap: 24px;
-      }
-
-      .community-icon {
-        width: 77px;
-        height: 77px;
-        flex-basis: 77px;
-        font-size: 41px;
-      }
-
-      .community-label {
-        font-size: 16px;
-      }
-
-      .community-card h2 {
-        font-size: 29px;
-      }
-
-      .community-card p,
-      .community-button {
-        font-size: 19px;
-      }
     }
 
     @media (min-width: 601px) and (max-width: 800px) {
@@ -678,37 +741,6 @@
 
       main {
         margin: 30px auto;
-      }
-
-      .community-card,
-      .community-content {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .community-card {
-        gap: 22px;
-        padding: 26px 22px;
-      }
-
-      .community-content {
-        gap: 14px;
-      }
-
-      .community-icon {
-        width: 56px;
-        height: 56px;
-        flex-basis: 56px;
-        border-radius: 17px;
-        font-size: 30px;
-      }
-
-      .community-card h2 {
-        font-size: 22px;
-      }
-
-      .community-button {
-        align-self: flex-start;
       }
 
       .tool-card {
@@ -951,37 +983,43 @@
 
     </section>
 
-    <section class="community-card" aria-labelledby="community-title">
-      <div class="community-content">
-        <div class="community-icon" aria-hidden="true">💬</div>
-
-        <div>
-          <span class="community-label">JINI COMMUNITY</span>
-          <h2 id="community-title">지니의 생각나눔터</h2>
-          <p>
-            행정도구에 대한 아이디어, 질문, 사용 후기와 불편한 점을<br>
-            함께 나누고 더 편리한 도구를 만들어가는 공간입니다.
-          </p>
-        </div>
-      </div>
-
-      <a
-        class="community-button"
-        href="https://text-organizer--hangbukhage.replit.app"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        생각 나누러 가기 →
-      </a>
-    </section>
   </main>
 
+  <dialog class="comments-dialog" aria-labelledby="comments-title" aria-describedby="comments-notice">
+    <div class="comments-shell">
+      <div class="comments-header">
+        <div>
+          <h2 id="comments-title">도구 댓글</h2>
+          <p id="comments-notice">이름과 댓글은 누구나 볼 수 있어요. 개인정보는 적지 말아 주세요.</p>
+        </div>
+        <button class="comments-close" type="button" aria-label="댓글 창 닫기">×</button>
+      </div>
+      <div class="comments-list" aria-live="polite" aria-label="댓글 목록"></div>
+      <form class="comments-form">
+        <label>
+          작성자 이름
+          <input name="author" type="text" maxlength="30" autocomplete="nickname" required placeholder="이름을 입력해 주세요">
+        </label>
+        <label>
+          댓글
+          <textarea name="content" maxlength="500" required placeholder="이 도구에 대한 의견을 남겨 주세요"></textarea>
+        </label>
+        <div class="comments-trap" aria-hidden="true">
+          <label>웹사이트<input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <p class="comments-status" role="status"></p>
+        <button type="submit">댓글 등록</button>
+      </form>
+    </div>
+  </dialog>
+
   <footer>
-    필요한 행정도구가 있다면 게시판에 남겨주세요.
+    댓글은 이름과 함께 공개됩니다. 개인정보를 적지 말아 주세요.
   </footer>
 
   <script src="./assets/stats-config.js"></script>
   <script src="./assets/stats.js"></script>
+  <script src="./assets/comments.js"></script>
 
 </body>
 </html>

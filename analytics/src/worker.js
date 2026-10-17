@@ -9,6 +9,9 @@ const TOOL_IDS = Object.freeze([
 ]);
 
 const TOOL_ID_SET = new Set(TOOL_IDS);
+const COMMENT_LIMIT = 100;
+const COMMENT_NAME_MAX = 30;
+const COMMENT_TEXT_MAX = 500;
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get("Origin") || "";
@@ -74,6 +77,66 @@ async function incrementCount(env, toolId, origin) {
   return json({ toolId, count: Number(row?.count) || 0 }, 200, origin);
 }
 
+async function listComments(env, toolId, origin) {
+  if (!TOOL_ID_SET.has(toolId)) {
+    return json({ error: "등록되지 않은 도구입니다." }, 404, origin);
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT id, author, content, created_at
+     FROM tool_comments
+     WHERE tool_id = ?1
+     ORDER BY created_at DESC, id DESC
+     LIMIT ?2`
+  ).bind(toolId, COMMENT_LIMIT).all();
+
+  return json({ comments: result.results || [] }, 200, origin);
+}
+
+async function createComment(request, env, toolId, origin) {
+  if (!TOOL_ID_SET.has(toolId)) {
+    return json({ error: "등록되지 않은 도구입니다." }, 404, origin);
+  }
+
+  const contentLength = Number(request.headers.get("Content-Length") || 0);
+  if (contentLength > 5000) {
+    return json({ error: "댓글 내용이 너무 깁니다." }, 413, origin);
+  }
+
+  let input;
+  try {
+    input = await request.json();
+  } catch {
+    return json({ error: "댓글 내용을 확인해 주세요." }, 400, origin);
+  }
+
+  if (typeof input?.website === "string" && input.website.trim()) {
+    return json({ ok: true }, 200, origin);
+  }
+
+  const author = typeof input?.author === "string" ? input.author.trim() : "";
+  const content = typeof input?.content === "string" ? input.content.trim() : "";
+  if (!author || author.length > COMMENT_NAME_MAX) {
+    return json({ error: `이름은 1~${COMMENT_NAME_MAX}자로 입력해 주세요.` }, 400, origin);
+  }
+  if (!content || content.length > COMMENT_TEXT_MAX) {
+    return json({ error: `댓글은 1~${COMMENT_TEXT_MAX}자로 입력해 주세요.` }, 400, origin);
+  }
+
+  const result = await env.DB.prepare(
+    `INSERT INTO tool_comments (tool_id, author, content)
+     VALUES (?1, ?2, ?3)`
+  ).bind(toolId, author, content).run();
+
+  const comment = await env.DB.prepare(
+    `SELECT id, author, content, created_at
+     FROM tool_comments
+     WHERE id = ?1`
+  ).bind(result.meta?.last_row_id).first();
+
+  return json({ comment }, 201, origin);
+}
+
 export default {
   async fetch(request, env) {
     const origin = allowedOrigin(request, env);
@@ -97,6 +160,14 @@ export default {
       const match = pathname.match(/^\/count\/([a-z0-9-]+)$/);
       if (request.method === "POST" && match) {
         return await incrementCount(env, match[1], origin);
+      }
+
+      const commentsMatch = pathname.match(/^\/comments\/([a-z0-9-]+)$/);
+      if (request.method === "GET" && commentsMatch) {
+        return await listComments(env, commentsMatch[1], origin);
+      }
+      if (request.method === "POST" && commentsMatch) {
+        return await createComment(request, env, commentsMatch[1], origin);
       }
 
       return json({ error: "요청 경로를 확인해 주세요." }, 404, origin);
