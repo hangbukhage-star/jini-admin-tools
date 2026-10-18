@@ -181,7 +181,9 @@ export async function fetchPage(url, fetcher = fetch) {
   if(!publicURL(url)) throw new Error('공개 홈페이지 주소만 수집할 수 있습니다.');
   let current = url;
   for(let i=0;i<4;i++) {
-    const r = await fetcher(current,{redirect:'manual',signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Jini-Culture-News/1.0 (+https://jini-admin-tools.vercel.app/news/)','Accept':'text/html'}});
+    let r;
+    try{r=await fetcher(current,{redirect:'manual',signal:AbortSignal.timeout(12000),headers:{'User-Agent':'Jini-Culture-News/1.0 (+https://jini-admin-tools.vercel.app/news/)','Accept':'text/html'}});}
+    catch(e){throw new Error(`원문 연결 실패 (${clean(e.cause?.code||e.name).slice(0,80)})`);}
     if(r.status >= 300 && r.status < 400) {
       const next = publicURL(r.headers.get('location'),current);
       if(!next || new URL(next).hostname !== new URL(current).hostname) throw new Error('다른 호스트로 이동합니다. 주소를 확인해 주세요.');
