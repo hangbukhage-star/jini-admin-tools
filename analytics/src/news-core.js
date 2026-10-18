@@ -38,3 +38,16 @@ export function recommendCategory(title, context='', source='') {
   return {category:'기타 소식',reason:'분류할 단서가 부족해요. 원문을 보고 분류를 선택해 주세요.',needsReview:true};
 }
 export const category=(title,context='',source='')=>recommendCategory(title,context,source).category;
+
+// Search only explicit monetary amounts. Ages, dates and discount percentages are not fees.
+export function priceInfo(value) {
+  let text=clean(value);const amounts=new Set();
+  const add=number=>{if(Number.isSafeInteger(number)&&number>=0&&number<=100000000)amounts.add(number);};
+  text=text.replace(/(\d+(?:\.\d+)?)\s*만\s*(?:(\d+(?:\.\d+)?)\s*천)?\s*원/g,(_,man,thousand)=>{add(Number(man)*10000+Number(thousand||0)*1000);return ' ';});
+  text=text.replace(/(\d[\d,]*(?:\.\d+)?)\s*(천)?\s*원/g,(_,number,thousand)=>{add(Number(number.replace(/,/g,''))*(thousand?1000:1));return ' ';});
+  for(const match of text.matchAll(/(?<![\d,])\d{1,3}(?:,\d{3})+(?![\d,])/g))add(Number(match[0].replace(/,/g,'')));
+  if(/^\d+$/.test(text))add(Number(text));
+  if(/무료(?!\s*(?:아님|아닙))|초대/i.test(value))add(0);
+  const sorted=[...amounts].sort((a,b)=>a-b),paid=sorted.some(n=>n>0),free=sorted.includes(0);
+  return {type:paid?(free?'mixed':'paid'):free?'free':/유료/.test(value)?'paid':'unknown',amounts:sorted};
+}

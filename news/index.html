@@ -1,6 +1,13 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>지니가 전하는 소식</title><link rel="stylesheet" href="../assets/news.css"></head>
 <body class="news-page"><header><h1>🌷 지니가 전하는 소식</h1><p>가까운 공연·전시·세미나·문화강좌 소식을 나눠요.</p></header><main>
 <div class="news-toolbar"><a class="button" href="../">← 행정도구 만물상</a><button id="upcoming" aria-pressed="true">예정·진행 중</button><button id="archive" aria-pressed="false">지난 소식</button><label>분류 <select id="category"><option value="">전체</option><option>공연</option><option>전시</option><option>세미나</option><option>문화강좌</option><option>기타 소식</option></select></label></div>
+<form id="news-search" class="panel news-search" role="search" aria-label="문화행사 검색"><h2>문화행사 찾기</h2><div class="search-fields">
+<label class="search-title">공연명<input name="q" type="search" maxlength="160" placeholder="공연·전시·강좌 이름으로 검색"></label>
+<label>공연장소<input name="venue" type="search" maxlength="200" list="venue-options" placeholder="전체 장소 / 장소명 입력"><datalist id="venue-options"></datalist></label>
+<label>요금 구분<select name="fee"><option value="">전체</option><option value="free">무료·초대</option><option value="paid">유료</option><option value="unknown">요금 확인 필요</option></select></label>
+<label>최소 금액(원)<input name="minPrice" type="number" min="0" max="100000000" step="1" inputmode="numeric" placeholder="제한 없음"></label>
+<label>최대 금액(원)<input name="maxPrice" type="number" min="0" max="100000000" step="1" inputmode="numeric" placeholder="예: 10000"></label>
+</div><div class="actions"><button type="submit" class="primary" id="search-submit">검색하기</button><button type="button" id="search-reset">초기화</button></div><p class="muted">장소명은 일부만 입력해도 됩니다. 좌석별 요금 중 입력 범위에 해당하는 금액이 있는 행사를 찾습니다. 금액이 미정인 행사는 금액 범위 검색에서 제외됩니다.</p></form>
 <p id="status" class="news-status" role="status">소식을 불러오고 있어요.</p><section id="list" class="panel" aria-label="소식 목록"></section><button id="more" hidden>더 보기</button>
 <p class="muted">일정·가격·예약 가능 여부는 변경될 수 있어요. 방문 전 공식 안내를 확인해 주세요.</p>
 <dialog id="detail"><form method="dialog"><button style="float:right" aria-label="닫기">닫기 ✕</button></form><article id="detail-content"></article></dialog>

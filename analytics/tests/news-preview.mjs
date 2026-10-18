@@ -13,7 +13,7 @@ const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=u
 createServer(async(req,res)=>{
   try{
     const path=new URL(req.url,'http://127.0.0.1:8765').pathname;
-    if(path==='/news'||path==='/news/admin'||/^\/news\/(posts|images|admin)\//.test(path)||path==='/counts'||path.startsWith('/count/')||path.startsWith('/comments/')){
+    if(path==='/news'||path==='/news/venues'||path==='/news/admin'||/^\/news\/(posts|images|admin)\//.test(path)||path==='/counts'||path.startsWith('/count/')||path.startsWith('/comments/')){
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const response=await worker.fetch(new Request(`http://127.0.0.1:8765${req.url}`,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})}),env);
       res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;

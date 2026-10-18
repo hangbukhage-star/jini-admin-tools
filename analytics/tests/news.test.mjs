@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory} from '../src/news-collectors.js';
+import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -20,6 +20,45 @@ const collectSource=(e,s,fetcher)=>collectSite(s,async data=>{
 },fetcher);
 const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',config:'{}'};
 const detail=(date='2026-10-21',title='가을 음악회')=>`<html><body><div class="skinveiw-detail"><div class="sktit">${title}</div><div class="skinlist"><p>기간</p><p>${date}~${date}</p></div><div class="skinlist"><p>시간</p><p>19:30</p></div><div class="skinlist"><p>장소</p><p>연지홀</p></div></div><div class="notboximg"><img src="/poster.jpg"></div></body></html>`;
+
+test('요금 검색은 무료·초대·유료·미정과 좌석별 금액을 구분하며 나이와 할인을 금액으로 삼지 않는다',()=>{
+  for(const value of ['무료','전석 초대','0원','0'])assert.deepEqual(priceInfo(value),{type:'free',amounts:[0]});
+  assert.deepEqual(priceInfo('R석 20,000원 / S석 15,000원'),{type:'paid',amounts:[15000,20000]});
+  assert.deepEqual(priceInfo('VIP_70,000 / R_60,000'),{type:'paid',amounts:[60000,70000]});
+  assert.deepEqual(priceInfo('성인 1만5천원 / 어린이 5천원'),{type:'paid',amounts:[5000,15000]});
+  assert.deepEqual(priceInfo('무료 / 체험비 7,000원'),{type:'mixed',amounts:[0,7000]});
+  for(const value of ['', '관람료 추후 공지','주최 문화원','8세 이상 / 50% 할인'])assert.deepEqual(priceInfo(value),{type:'unknown',amounts:[]});
+  assert.deepEqual(priceInfo('유료 · 금액은 원문 확인'),{type:'paid',amounts:[]});
+});
+
+test('제목·장소·요금 조합을 전체 글에서 검색하고 동일 좌석 금액·페이지·비공개 경계를 지킨다',async()=>{
+  const e=env();
+  const add=async p=>(await(await call(e,'/admin/post','POST',{category:'공연',status:'published',...p})).json()).id;
+  for(let i=0;i<32;i++)await add({title:`다른 공연 ${i}`,venue:'다른 공연장',price:'무료'});
+  const paid=await add({title:'가을 Jazz 음악회',venue:'소리문화의전당 연지홀',price:'R석 20,000원 / S석 10,000원'});
+  await add({title:'봄 음악회',venue:'소리문화의전당 명인홀',price:'무료'});
+  await add({title:'후원 음악회',venue:'소리문화의전당 명인홀',price:'무료 / 특별석 7,000원'});
+  await add({title:'미정 음악회',venue:'작은 극장',price:'관람료 추후 공지'});
+  await add({title:'유료 음악회',venue:'작은 극장',price:'유료 · 금액은 원문 확인'});
+  await add({title:'비공개 음악회',venue:'비밀 장소',price:'10000',status:'pending'});
+  const deleted=await add({title:'삭제 음악회',venue:'삭제 장소',price:'10000'});await call(e,'/admin/bulk','POST',{ids:[deleted],action:'delete'});
+  const list=async query=>(await(await call(e,'?'+new URLSearchParams(query))).json());
+  let result=await list({q:'jazz',venue:'소리문화',fee:'paid',minPrice:'10000',maxPrice:'10000'});assert.equal(result.total,1);assert.equal(result.posts[0].id,paid);
+  assert.equal((await list({q:'음악회',minPrice:'12000',maxPrice:'18000'})).total,0);
+  assert.equal((await list({q:'음악회',fee:'free',minPrice:'7000',maxPrice:'7000'})).total,0);
+  assert.equal((await list({q:'음악회',fee:'free'})).total,2);assert.equal((await list({q:'음악회',fee:'paid'})).total,3);
+  assert.equal((await list({q:'음악회',fee:'unknown'})).total,1);
+  result=await list({fee:'free',limit:'30'});assert.equal(result.total,34);assert.equal(result.posts.length,30);assert.equal(result.hasMore,true);
+  const page=await list({fee:'free',limit:'30',offset:'30'});assert.equal(page.posts.length,4);assert.ok(page.posts.every(p=>!result.posts.some(x=>x.id===p.id)));
+  for(const q of ['%',"' OR 1=1 --",'非公開'])assert.equal((await list({q})).total,0);
+  for(const query of [{minPrice:'-1'},{maxPrice:'NaN'},{minPrice:'2',maxPrice:'1'},{fee:'fake'},{minPrice:'100000001'}])assert.equal((await call(e,'?'+new URLSearchParams(query))).status,400);
+  const venues=await(await call(e,'/venues')).json();assert.ok(venues.venues.includes('소리문화의전당 연지홀'));assert.ok(!venues.venues.includes('비밀 장소'));assert.ok(!venues.venues.includes('삭제 장소'));
+  await call(e,'/admin/post','POST',{id:paid,title:'가을 Jazz 음악회',venue:'소리문화의전당 연지홀',status:'published',category:'공연',price:'무료'});
+  assert.equal((await list({q:'jazz',fee:'paid'})).total,0);assert.equal((await list({q:'jazz',fee:'free'})).total,1);
+  await add({title:'지난 음악회',venue:'지난 공연장',price:'5000',startDate:'2020-01-01'});
+  assert.equal((await list({q:'지난'})).total,0);assert.equal((await list({q:'지난',archive:'1',maxPrice:'5000'})).total,1);
+  assert.ok((await(await call(e,'/venues?archive=1')).json()).venues.includes('지난 공연장'));
+});
 
 test('여섯 반응은 브라우저별 하나만 저장하고 재요청·변경·취소·재열기에 일관된다',async()=>{
   const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'반응 시험',category:'공연',status:'published'})).json();

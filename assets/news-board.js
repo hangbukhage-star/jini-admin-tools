@@ -1,6 +1,9 @@
 (()=>{
   const {api,el,row,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
   let archive=false,offset=0,posts=[],generation=0;
+  let filters={},venueGeneration=0;
+  const searchForm=$('#news-search');
+  async function loadVenues(){const run=++venueGeneration;try{const data=await api(`/news/venues?archive=${archive?1:0}`);if(run!==venueGeneration)return;$('#venue-options').replaceChildren(...data.venues.map(value=>{const option=el('option');option.value=value;return option;}));}catch{/* Typing a place still works if suggestions are unavailable. */}}
   let detailGeneration=0,visitorId='';
   function visitor(){
     if(visitorId)return visitorId;
@@ -33,8 +36,9 @@
   function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map(row));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
   async function load(reset=true){
     const run=++generation;
-    if(reset){offset=0;posts=[];}$('#more').disabled=true;status('소식을 불러오고 있어요.');
-    try{const data=await api(`/news?archive=${archive?1:0}&offset=${offset}&limit=30&category=${encodeURIComponent($('#category').value)}`);if(run!==generation)return;posts.push(...data.posts);offset+=data.posts.length;render();$('#more').hidden=!data.hasMore;status('');}catch(e){if(run===generation)status(e.message);}finally{if(run===generation)$('#more').disabled=false;}
+    if(reset){offset=0;posts=[];render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
+    const params=new URLSearchParams({...filters,archive:archive?1:0,offset,limit:30,category:$('#category').value});
+    try{const data=await api('/news?'+params);if(run!==generation)return;posts.push(...data.posts);offset+=data.posts.length;render();$('#more').hidden=!data.hasMore;status(`검색 결과 ${data.total.toLocaleString('ko-KR')}건 · ${posts.length}건 표시`);}catch(e){if(run===generation)status(e.message);}finally{if(run===generation){$('#more').disabled=false;$('#list').setAttribute('aria-busy','false');}}
   }
   async function detail(id){
     const run=++detailGeneration;
@@ -52,8 +56,10 @@
     }catch(e){if(run===detailGeneration)content.replaceChildren(el('p',e.message));}
   }
   $('#list').addEventListener('click',e=>{const a=e.target.closest('a.news-row');if(!a||e.ctrlKey||e.metaKey)return;e.preventDefault();const id=new URL(a.href).searchParams.get('post');history.replaceState(null,'',`?post=${encodeURIComponent(id)}`);detail(id);});
-  $('#upcoming').onclick=()=>{archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();};
-  $('#archive').onclick=()=>{archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();};
+  $('#upcoming').onclick=()=>{archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();loadVenues();};
+  $('#archive').onclick=()=>{archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
+  searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));if(values.minPrice!==''&&values.maxPrice!==''&&Number(values.minPrice)>Number(values.maxPrice)){status('최소 금액은 최대 금액보다 작거나 같게 입력해 주세요.');return;}filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
+  $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='';filters={};load();};
   $('#category').onchange=()=>load();$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname);});
-  load();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);
+  load();loadVenues();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);
 })();
