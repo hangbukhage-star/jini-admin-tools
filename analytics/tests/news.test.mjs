@@ -62,6 +62,7 @@ test('국악원 월별 목록과 도서관 접수 페이지를 행사 운영일�
   const months=listingURLs(kukak,new Date('2026-12-30T22:00:00Z')).map(x=>new URL(x).searchParams.get('searchYearMonth'));assert.deepEqual(months,['202612','202701','202702','202703']);
   const html='<h4><strong>무용단 정기공연</strong></h4><div class="perf_top"><dl><dt>공연일시</dt><dd>2026년 10월 31일 Sat요일15:00</dd><dt>공연장소</dt><dd>모악당</dd><dt>관람료</dt><dd>무료</dd><dt>주의사항</dt><dd>관람료 등 세부 일정은 추후 공지 예정</dd></dl></div>';
   const k=parseDetail(html,links[0].url,kukak);assert.equal(k.startDate,'2026-10-31');assert.equal(k.time,'15:00');assert.equal(k.venue,'모악당');assert.equal(k.price,'관람료 추후 공지');
+  const blank=parseDetail(html.replace('<dt>관람료</dt>','<dt>관람연령</dt><dd></dd><dt>예약현황</dt><dd>잔여 1000석</dd><dt>관람료</dt>'),links[0].url,kukak);assert.equal(blank.audience,'');
   const library={id:'library',adapter:'library',name:'도서관',url:'https://lib.jeonju.go.kr/index.jeonju?menuCd=DOM_000000102002000000'};
   const l=parseDetail('<table class="bbs_write"><tr><th>과정명</th><td>그림책 읽어주기</td></tr><tr><th>운영기간</th><td>2026-12-15 ~ 2026-12-15</td><th>접수기간</th><td>2026-05-21 ~ 2026-12-14</td></tr><tr><th>운영시간</th><td>10:00~10:40</td><th>운영장소</th><td>송천도서관</td></tr><tr><th>신청대상</th><td>유아</td><th>수강료</th><td>0원</td></tr></table>',library.url,library);
   assert.equal(l.startDate,'2026-12-15');assert.equal(l.endDate,'2026-12-15');assert.equal(l.venue,'송천도서관');assert.equal(l.price,'0원');assert.equal(l.category,'문화강좌');

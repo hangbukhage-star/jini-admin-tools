@@ -33,7 +33,7 @@ function pairs(root) {
 }
 function label(root, names) {
   const p = pairs(root);
-  for (const n of names) if (p[n]) return p[n];
+  for (const n of names) if (Object.hasOwn(p,n)) return p[n];
   const s = clean(root.textContent);
   const labels = '공연대상|일정|기간|공연시간|시간|공연장소|장소|연령|가격|관람료|주최|주관|문의|담당자|접수기간|1인당|신청자';
   for(const n of names) {
