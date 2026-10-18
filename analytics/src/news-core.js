@@ -26,5 +26,5 @@ export function horizon(now = new Date()) {
   return d.toISOString().slice(0,10);
 }
 export function category(title) {
-  return /전시|展|갤러리/.test(title) ? '전시' : /세미나|포럼|심포지엄/.test(title) ? '세미나' : /강좌|교육|워크숍|강연/.test(title) ? '문화강좌' : '공연';
+  return /전시|展|갤러리/.test(title) ? '전시' : /세미나|포럼|심포지엄/.test(title) ? '세미나' : /교육극|음악극|뮤지컬|콘서트|연주회|연극|오페라|발레|독주회|독창회/.test(title) ? '공연' : /강좌|교육|워크숍|강연/.test(title) ? '문화강좌' : '공연';
 }

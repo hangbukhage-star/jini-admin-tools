@@ -45,6 +45,7 @@ export async function ingestPost(env,source,url,raw) {
   const stamp=nowISO();
   await env.DB.prepare('INSERT INTO news_seen VALUES(?,?,?) ON CONFLICT(url) DO UPDATE SET checked_at=excluded.checked_at').bind(canonical,source.id,stamp).run();
   const current=await env.DB.prepare('SELECT * FROM news_posts WHERE source_url=?').bind(canonical).first();
+  if(current?.deleted_at)return {skipped:true};
   if(!current && data.endDate && (data.endDate<koreaToday() || data.startDate>horizon()))return {skipped:true};
   const fp=await fingerprint(data);
   data.sourceName=source.name;data.link=canonical;
@@ -84,13 +85,13 @@ export async function newsRequest(request,env,origin) {
       const offset=Math.min(10000,Math.max(0,Number(url.searchParams.get('offset'))||0));
       const filter=archive?"end_date<>'' AND end_date<?":"(end_date='' OR end_date>=?)";
       const category=url.searchParams.get('category')||'';
-      const posts=await rows(env,`SELECT * FROM news_posts WHERE status='published' AND ${filter} AND (?='' OR json_extract(data,'$.category')=?) ORDER BY pinned DESC, CASE WHEN start_date='' THEN 1 ELSE 0 END, start_date ${archive?'DESC':'ASC'},created_at DESC LIMIT ? OFFSET ?`,today,category,category,limit+1,offset);
+      const posts=await rows(env,`SELECT * FROM news_posts WHERE status='published' AND deleted_at IS NULL AND ${filter} AND (?='' OR json_extract(data,'$.category')=?) ORDER BY pinned DESC, CASE WHEN start_date='' THEN 1 ELSE 0 END, start_date ${archive?'DESC':'ASC'},created_at DESC LIMIT ? OFFSET ?`,today,category,category,limit+1,offset);
       return json({posts:posts.slice(0,limit).map(x=>hydrate(x)),hasMore:posts.length>limit});
     }
     const imageMatch=path.match(/^\/news\/images\/([a-f0-9-]+)$/);
     if(request.method==='GET' && imageMatch) {
       // Uploaded drafts remain private until a published post references the image.
-      const row=await env.DB.prepare("SELECT i.body FROM news_images i WHERE i.id=? AND EXISTS(SELECT 1 FROM news_posts p WHERE p.status='published' AND p.data LIKE '%' || ? || '%')").bind(imageMatch[1],`/news/images/${imageMatch[1]}`).first();
+      const row=await env.DB.prepare("SELECT i.body FROM news_images i WHERE i.id=? AND EXISTS(SELECT 1 FROM news_posts p WHERE p.status='published' AND p.deleted_at IS NULL AND p.data LIKE '%' || ? || '%')").bind(imageMatch[1],`/news/images/${imageMatch[1]}`).first();
       if(!row && await authorized(request,env)) {
         const draft=await env.DB.prepare('SELECT body FROM news_images WHERE id=?').bind(imageMatch[1]).first();
         if(draft)return new Response(draft.body,{headers:{...headers,'Content-Type':'image/jpeg','Cache-Control':'no-store'}});
@@ -101,24 +102,38 @@ export async function newsRequest(request,env,origin) {
     const detail=path.match(/^\/news\/posts\/([a-f0-9-]+)$/);
     const view=path.match(/^\/news\/posts\/([a-f0-9-]+)\/view$/);
     if(request.method==='POST' && view) {
-      const row=await env.DB.prepare("UPDATE news_posts SET view_count=view_count+1 WHERE id=? AND status='published' RETURNING *").bind(view[1]).first();
+      const row=await env.DB.prepare("UPDATE news_posts SET view_count=view_count+1 WHERE id=? AND status='published' AND deleted_at IS NULL RETURNING *").bind(view[1]).first();
       return row?json({post:hydrate(row)}):json({error:'게시글을 찾을 수 없습니다.'},404);
     }
     if(request.method==='GET' && detail) {
-      const row=await env.DB.prepare("SELECT * FROM news_posts WHERE id=? AND status='published'").bind(detail[1]).first();
+      const row=await env.DB.prepare("SELECT * FROM news_posts WHERE id=? AND status='published' AND deleted_at IS NULL").bind(detail[1]).first();
       return row?json({post:hydrate(row)}):json({error:'게시글을 찾을 수 없습니다.'},404);
     }
     if(admin && request.method==='GET' && path==='/news/admin') {
       const status=url.searchParams.get('status')||'pending';
-      if(!['pending','published','hidden'].includes(status))fail('상태를 확인해 주세요.');
+      if(!['pending','published','hidden','deleted'].includes(status))fail('상태를 확인해 주세요.');
       const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
-      const posts=await rows(env,'SELECT * FROM news_posts WHERE status=? ORDER BY updated_at DESC LIMIT 51 OFFSET ?',status,offset);
-      const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' ORDER BY checked_at DESC LIMIT 50");
-      const counts=await rows(env,'SELECT status,COUNT(*) AS count FROM news_posts GROUP BY status');
+      const posts=status==='deleted'?await rows(env,'SELECT * FROM news_posts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 51 OFFSET ?',offset):await rows(env,'SELECT * FROM news_posts WHERE status=? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 51 OFFSET ?',status,offset);
+      const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' AND deleted_at IS NULL ORDER BY checked_at DESC LIMIT 50");
+      const counts=await rows(env,"SELECT CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END AS status,COUNT(*) AS count FROM news_posts GROUP BY CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END");
       return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
     }
     if(admin && request.method==='GET' && path==='/news/admin/export') {
       return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images')});
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/bulk') {
+      const b=await body(request);
+      if(!['publish','hide','delete','restore'].includes(b.action))fail('처리 방법을 선택해 주세요.');
+      if(!Array.isArray(b.ids)||!b.ids.length||b.ids.length>100||b.ids.some(id=>typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id)))fail('게시글을 1~100개 선택해 주세요.');
+      const ids=[...new Set(b.ids)],encodedIds=JSON.stringify(ids),stamp=nowISO();
+      const records=await rows(env,'SELECT id,deleted_at FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
+      if(records.length!==ids.length)fail('일부 글을 찾을 수 없습니다. 목록을 새로고침해 주세요.',409);
+      const restoring=b.action==='restore';
+      if(records.some(r=>restoring?!r.deleted_at:!!r.deleted_at))fail('글 상태가 바뀌었습니다. 목록을 새로고침해 주세요.',409);
+      const changes={publish:"status='published',locked=1",hide:"status='hidden',locked=1",delete:'deleted_at=?,locked=1',restore:"deleted_at=NULL,status='pending',locked=1"};
+      const values=b.action==='delete'?[stamp,stamp,encodedIds]:[stamp,encodedIds];
+      const updated=await rows(env,`UPDATE news_posts SET ${changes[b.action]},updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS ${restoring?'NOT ':''}NULL RETURNING id`,...values);
+      return json({ok:true,count:updated.length});
     }
     const backupImage=path.match(/^\/news\/admin\/backup-image\/([a-f0-9-]+)$/);
     if(admin && request.method==='GET' && backupImage) {
@@ -168,6 +183,7 @@ export async function newsRequest(request,env,origin) {
       const data=validatePost(b),id=b.id||crypto.randomUUID();
       const existing=b.id?await env.DB.prepare('SELECT * FROM news_posts WHERE id=?').bind(id).first():null;
       if(b.id && !existing)fail('게시글을 찾을 수 없습니다.',404);
+      if(existing?.deleted_at)fail('삭제함에서 먼저 복구해 주세요.',409);
       const fp=await fingerprint(data);
       if(existing) await env.DB.prepare('UPDATE news_posts SET data=?,candidate=NULL,status=?,locked=1,pinned=?,start_date=?,end_date=?,fingerprint=?,updated_at=? WHERE id=?').bind(JSON.stringify(data),b.status,b.pinned?1:0,data.startDate,data.endDate,fp,stamp,id).run();
       else await env.DB.prepare('INSERT INTO news_posts(id,status,data,locked,pinned,start_date,end_date,fingerprint,created_at,updated_at) VALUES(?,?,?,1,?,?,?,?,?,?)').bind(id,b.status,JSON.stringify(data),b.pinned?1:0,data.startDate,data.endDate,fp,stamp,stamp).run();
@@ -176,7 +192,7 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','nihc','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','nihc','jjticket','wanju','naru','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();

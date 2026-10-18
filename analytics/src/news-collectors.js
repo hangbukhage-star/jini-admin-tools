@@ -45,9 +45,23 @@ function label(root, names) {
 function images(root, selector, url) {
   return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('src'), url)).filter(Boolean))].slice(0,3);
 }
-function dateRange(value) {
-  const dates = [...String(value).matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)].map(m => day(m[0])).filter(Boolean);
-  return [dates[0] || '', dates[1] || dates[0] || ''];
+export function dateRange(value) {
+  const raw=String(value),matches=[...raw.matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)];
+  const dates=matches.map(m=>day(m[0])).filter(Boolean);
+  if(dates.length!==1)return [dates[0]||'',dates[1]||dates[0]||''];
+  const tail=raw.slice(matches[0].index+matches[0][0].length);
+  const short=tail.match(/^[\s.일]*(?:\([^)]*\))?\s*[~～–—]\s*(?:(\d{1,2})\s*[.월/]\s*)?(\d{1,2})\s*(?:[.일]|\(|$)/);
+  if(!short)return [dates[0],dates[0]];
+  let year=Number(dates[0].slice(0,4));const startMonth=Number(dates[0].slice(5,7)),month=Number(short[1]||startMonth);
+  if(short[1]&&month<startMonth)year++;
+  const end=day(`${year}-${month}-${short[2]}`);
+  return [dates[0],end&&end>=dates[0]?end:dates[0]];
+}
+function formattedField(root,names){
+  for(const name of names){const pattern=name.replace(/\s/g,'').split('').join('\\s*');const re=new RegExp(`^\\s*${pattern}\\s*[:：|｜]\\s*(.+)$`);
+    for(const row of root.querySelectorAll('li,p,tr')){const match=clean(row.textContent).match(re);if(match)return clean(match[1]);}
+  }
+  return '';
 }
 export function parseDetail(html, url, source, hint = '') {
   const root = documentOf(html);
@@ -78,6 +92,23 @@ export function parseDetail(html, url, source, hint = '') {
     time = dateText.match(/(?:오전|오후|am|pm)?\s*\d{1,2}\s*[:시]\s*\d{0,2}(?:분)?/i)?.[0]?.trim() || '';
     price = /무료/.test(title) ? '무료' : /유료/.test(title) ? '유료 · 금액은 원문 확인' : '';
     pics = images(root,'img[name^="IMG"]',url);
+  } else if(source.adapter==='jjticket') {
+    title=root.querySelector('meta[property="og:title"]')?.getAttribute('content')||hint;
+    dateText=formattedField(root,['기간','공연일시','일시']);time=formattedField(root,['시간','공연시간']);venue=formattedField(root,['장소','공연장소']);
+    price=formattedField(root,['가격','관람료','티켓가격']);audience=formattedField(root,['관람연령']);
+    pics=images(root,'.shop_view img[src*="upload/"],.goods_wrapper img[src*="upload/"],.fr-view img[src*="upload/"]',url);
+  } else if(source.adapter==='wanju') {
+    const box=root.querySelector('.show_right');if(!box)throw new Error('완주 공연 상세 구조를 확인해 주세요.');
+    title=text(box,'h4');dateText=formattedField(box,['공연일자']);time=formattedField(box,['공연시간']);venue=formattedField(box,['공연장소']);
+    const fee=formattedField(box,['요금']);audience=fee.match(/\d+세\s*이상\s*관람가/)?.[0]||'';
+    const amounts=[...fee.matchAll(/(성인|청소년|어린이)\s*:\s*([\d,]+)\s*원/g)];
+    price=amounts.length?(amounts.every(m=>Number(m[2].replace(/,/g,''))===0)?'무료':amounts.map(m=>`${m[1]} ${Number(m[2].replace(/,/g,'')).toLocaleString('ko-KR')}원`).join(' / ')):fee.replace(/\d+세.*$/,'').trim();
+    pics=images(root,'.img_box img,.show_info img',url);
+  } else if(source.adapter==='naru') {
+    title=formattedField(root,['공연명']);dateText=formattedField(root,['공연일시']);venue=formattedField(root,['공연장소']);
+    time=dateText.includes(' / ')?dateText.split(' / ').slice(1).join(' / '):dateText.match(/\d{1,2}:\d{2}[\s\S]*$/)?.[0]||'';
+    price=formattedField(root,['티켓금액']);audience=formattedField(root,['연령제한']);
+    pics=images(root,'.ssimg1 img,.deimg img',url);
   } else {
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
@@ -91,7 +122,7 @@ export function parseDetail(html, url, source, hint = '') {
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');
-  const selector = {sori:'a[href*="/show/performance/"]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]'}[source.adapter] || config.links;
+  const selector = {sori:'a[href*="/show/performance/"]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
@@ -101,6 +132,7 @@ export function linksFrom(html, url, source) {
     const u = new URL(href);
     if(source.adapter === 'woojin') ['page','div','key','sword'].forEach(k=>u.searchParams.delete(k));
     if(source.adapter === 'nihc') ['year','month','page','subPath'].forEach(k=>u.searchParams.delete(k));
+    if(source.adapter==='wanju')['page','s_word','s_kinds'].forEach(k=>u.searchParams.delete(k));
     u.searchParams.sort();
     const key = u.href, hint = clean(a.textContent);
     if(!found.has(key) || hint.length > found.get(key).hint.length) found.set(key,{url:key,hint});
@@ -117,6 +149,8 @@ export function listingURLs(source, now = new Date()) {
     const u = new URL(source.url);u.pathname = u.pathname.replace(/\/$/,'')+'/';u.searchParams.set('size','100');u.searchParams.set('page','0');urls.push(u.href);
   } else if(source.adapter === 'woojin') {
     for(let i=1;i<=3;i++) {const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
+  } else if(['jjticket','wanju'].includes(source.adapter)) {
+    for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else urls.push(source.url);
   return urls;
 }

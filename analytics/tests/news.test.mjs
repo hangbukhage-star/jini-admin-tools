@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage} from '../src/news-collectors.js';
+import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -20,6 +20,55 @@ const collectSource=(e,s,fetcher)=>collectSite(s,async data=>{
 },fetcher);
 const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',config:'{}'};
 const detail=(date='2026-10-21',title='가을 음악회')=>`<html><body><div class="skinveiw-detail"><div class="sktit">${title}</div><div class="skinlist"><p>기간</p><p>${date}~${date}</p></div><div class="skinlist"><p>시간</p><p>19:30</p></div><div class="skinlist"><p>장소</p><p>연지홀</p></div></div><div class="notboximg"><img src="/poster.jpg"></div></body></html>`;
+
+test('새 공연 사이트의 다일 공연 종료일과 좌석별·무료 요금을 정확히 읽는다',()=>{
+  assert.deepEqual(dateRange('2026년 11월 12일(목)~14일(토) / 목,금 10:30'),['2026-11-12','2026-11-14']);
+  assert.deepEqual(dateRange('2026.12.31 ~ 1.2'),['2026-12-31','2027-01-02']);
+  const jj=parseDetail('<meta property="og:title" content="가을 연극"><div class="fr-view"><p>기 간｜2026. 10. 22.(목) ~ 24.(토)</p><p>장 소｜덕진예술회관</p><p>가 격｜R석 20,000원 / S석 15,000원</p></div>','https://jjticketbox.com/performance/?idx=225',{adapter:'jjticket',name:'전주티켓박스'});
+  assert.equal(jj.endDate,'2026-10-24');assert.equal(jj.venue,'덕진예술회관');assert.equal(jj.price,'R석 20,000원 / S석 15,000원');
+  const wanjuHtml=fee=>`<div class="show_right"><h4>음악교육극</h4><ul><li><span>공연일자</span><span>: 2026-11-13 ~ 2026-11-13</span></li><li><span>공연장소</span><span>: 완주향토예술문화회관</span></li><li><span>요금</span><span>: (성인:${fee}원) 6세이상 관람가</span></li></ul></div>`;
+  const w=parseDetail(wanjuHtml(0),'https://culture.wanju.go.kr/index.wanju?dx=448',{adapter:'wanju',name:'완주'});assert.equal(w.price,'무료');assert.equal(w.category,'공연');assert.equal(w.audience,'6세이상 관람가');
+  assert.equal(parseDetail(wanjuHtml(10000),'https://culture.wanju.go.kr/index.wanju?dx=448',{adapter:'wanju',name:'완주'}).price,'성인 10,000원');
+  const n=parseDetail('<ul><li><span>공 연 명</span> : 어린이 극장</li><li><span>공연일시</span> : 2026년 11월 12일(목)~14일(토) / 목,금 10:30</li><li><span>공연장소</span> : 전북예술회관</li><li><span>티켓금액</span> : S석 : 20,000원</li></ul>','https://www.naruculture.com/sub1_detail.html?concertid=abc',{adapter:'naru',name:'나루'});assert.equal(n.endDate,'2026-11-14');assert.equal(n.time,'목,금 10:30');assert.equal(n.price,'S석 : 20,000원');
+});
+test('추가 사이트의 상세 링크만 골라내고 신규 세 사이트를 기존 설정 변경 없이 등록한다',()=>{
+  assert.equal(linksFrom('<a href="/performance/?idx=1">공연</a><a href="/performance/?idx=1">사진</a><a href="/performance/?page=2">2</a>','https://jjticketbox.com/performance',{adapter:'jjticket'}).length,1);
+  assert.equal(linksFrom('<a href="?dx=1&page=1&menuCd=abc">상세</a><a href="?dx=1&page=2&menuCd=abc">상세</a>','https://culture.wanju.go.kr/index.wanju',{adapter:'wanju'}).length,1);
+  const e=env();e.DB.db.exec("UPDATE news_sources SET name='내 설정' WHERE id='sori'");const sql=readFileSync(new URL('../migrations/0007_add_culture_sources.sql',import.meta.url),'utf8');e.DB.db.exec(sql);e.DB.db.exec(sql);assert.equal(e.DB.db.prepare('SELECT count(*) AS count FROM news_sources').get().count,6);assert.equal(e.DB.db.prepare("SELECT name FROM news_sources WHERE id='sori'").get().name,'내 설정');
+});
+
+test('선택한 글만 일괄 게시·숨김·삭제·복구하고 조회수를 보존한다',async()=>{
+  const e=env(),ids=[];
+  for(const title of ['첫 글','둘째 글','남길 글'])ids.push((await(await call(e,'/admin/post','POST',{title,status:'pending',category:'공연'})).json()).id);
+  assert.equal((await call(e,'/admin/bulk','POST',{action:'publish',ids},false)).status,401);
+  const result=await(await call(e,'/admin/bulk','POST',{action:'publish',ids:ids.slice(0,2)})).json();assert.equal(result.count,2);
+  assert.equal((await(await call(e,'')).json()).posts.length,2);
+  await call(e,`/posts/${ids[0]}/view`,'POST');
+  await call(e,'/admin/bulk','POST',{action:'hide',ids:ids.slice(0,2)});assert.equal((await(await call(e,'')).json()).posts.length,0);
+  await call(e,'/admin/bulk','POST',{action:'publish',ids:ids.slice(0,2)});
+  await call(e,'/admin/bulk','POST',{action:'delete',ids:ids.slice(0,2)});
+  assert.equal((await(await call(e,'')).json()).posts.length,0);assert.equal((await call(e,`/posts/${ids[0]}/view`,'POST')).status,404);
+  const deleted=await(await call(e,'/admin?status=deleted')).json();assert.equal(deleted.posts.length,2);assert.equal(deleted.counts.find(x=>x.status==='pending').count,1);
+  assert.equal((await call(e,'/admin/post','POST',{title:'수정',id:ids[0],status:'published'})).status,409);
+  await call(e,'/admin/bulk','POST',{action:'restore',ids:ids.slice(0,2)});
+  assert.equal((await(await call(e,'/admin')).json()).posts.length,3);
+  assert.equal((await e.DB.prepare('SELECT view_count FROM news_posts WHERE id=?').bind(ids[0]).first()).view_count,1);
+});
+test('일괄 요청에 없는 글이나 잘못된 선택이 있으면 일부만 게시하지 않는다',async()=>{
+  const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'남길 글',status:'pending'})).json();
+  assert.equal((await call(e,'/admin/bulk','POST',{action:'publish',ids:[id,crypto.randomUUID()]})).status,409);
+  assert.equal((await(await call(e,'')).json()).posts.length,0);
+  for(const input of [{action:'publish',ids:[]},{action:'publish',ids:[id,...Array(100).fill(id)]},{action:'erase',ids:[id]},{action:'publish',ids:['invalid']}])assert.equal((await call(e,'/admin/bulk','POST',input)).status,400);
+  assert.equal((await(await call(e,'/admin/bulk','POST',{action:'publish',ids:[id,id]})).json()).count,1);
+});
+test('삭제한 수집 글은 재수집해도 되살아나지 않으며 원문 변경도 덮어쓰지 않는다',async()=>{
+  const e=env(),s=await e.DB.prepare("SELECT * FROM news_sources WHERE id='sori'").first();
+  let title='원래 공연';const fetcher=async url=>url.endsWith('/42')?detail(koreaToday(),title):'<a href="/site/1/menu/8/show/performance/42">공연</a>';
+  await collectSource(e,s,fetcher);const p=(await(await call(e,'/admin')).json()).posts[0];
+  await call(e,'/admin/bulk','POST',{action:'delete',ids:[p.id]});title='바뀐 공연';await collectSource(e,s,fetcher);
+  const d=await(await call(e,'/admin?status=deleted')).json();assert.equal(d.posts.length,1);assert.equal(d.posts[0].title,'원래 공연');assert.equal(d.changes.length,0);
+  assert.equal((await(await call(e,'/admin')).json()).posts.length,0);
+});
 
 test('게시글 열기와 새로고침마다 조회수를 올리며 목록·관리·숨김은 집계하지 않는다',async()=>{
   const e=env(),input={title:'조회수 확인',category:'공연',status:'published'};
