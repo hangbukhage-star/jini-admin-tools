@@ -34,10 +34,10 @@
     catch(e){if(completed){try{await load();}catch{}status(`${completed}개 처리 후 중단했습니다. ${e.message} 남은 글을 다시 선택해 주세요.`,true);}else status(e.message,true);}
     finally{bulkBusy=false;updateSelection();}
   }
-  function postRow(p,changed=false){
+  function postRow(p,changed=false,index){
     const row=el('div',null,'post-summary'),copy=el('div',null,'post-summary-copy');
     if(!changed){const checkbox=el('input');checkbox.type='checkbox';checkbox.value=p.id;checkbox.checked=selected.has(p.id);checkbox.setAttribute('aria-label',`${p.title} 선택`);checkbox.addEventListener('change',()=>{if(checkbox.checked)selected.add(p.id);else selected.delete(p.id);updateSelection();});row.append(checkbox);}
-    copy.append(el('strong',p.title),el('p',[p.category,p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
+    copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
     if(p.status==='pending'&&p.recommendation)copy.append(el('p',`추천 분류: ${p.recommendation.category}${p.recommendation.needsReview?' · 확인 필요':''}`,'category-recommendation'));
     row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
   }
@@ -45,9 +45,9 @@
     const data=await admin(`?status=${state}&offset=${reset?0:offset}`);
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
-    $('#posts').replaceChildren(...posts.map(p=>postRow(p)));if(!posts.length)$('#posts').append(el('p','해당하는 글이 없어요.','muted'));
+    $('#posts').replaceChildren(...posts.map((p,index)=>postRow(p,false,index)));if(!posts.length)$('#posts').append(el('p','해당하는 글이 없어요.','muted'));
     $('#more').hidden=!data.hasMore;
-    $('#changes').replaceChildren(...data.changes.map(p=>postRow(p,true)));if(!data.changes.length)$('#changes').append(el('p','확인할 변경 사항이 없어요.','muted'));
+    $('#changes').replaceChildren(...data.changes.map((p,index)=>postRow(p,true,index)));if(!data.changes.length)$('#changes').append(el('p','확인할 변경 사항이 없어요.','muted'));
     $('#sources').replaceChildren(...data.sources.map(source=>{
       const e=el('div',null,'source');e.append(el('strong',source.name),el('p',`${source.enabled?'수집 켜짐':'수집 꺼짐'} · ${source.auto_publish?'자동 게시':'확인 후 게시'}`,'muted'),el('p',`마지막 성공: ${source.last_success?new Date(source.last_success).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'아직 없음'} · 최근 ${source.last_count}개 확인`,'muted'));
       if(source.last_error)e.append(el('p',source.last_error,'news-error'));

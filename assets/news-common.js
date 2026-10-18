@@ -12,6 +12,6 @@
     return /\d/.test(price)?`유료 · ${price}`:price;
   }
   async function api(path,options={}){if(!base)throw new Error('게시판 연결을 준비하고 있어요.');const r=await fetch(base+path,options);const data=await r.json();if(!r.ok)throw new Error(data.error||'요청을 처리하지 못했어요.');return data;}
-  function row(post){const a=el('a',null,'news-row');a.href=`/news/?post=${encodeURIComponent(post.id)}`;a.append(el('strong',`${post.pinned?'📌 ':''}${post.cancelled?'[취소] ':''}${post.title}`),el('small',[post.startDate||'일정은 안내 참고',post.venue,priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;}
+  function row(post,index){const a=el('a',null,'news-row');a.href=`/news/?post=${encodeURIComponent(post.id)}`;a.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${post.pinned?'📌 ':''}${post.cancelled?'[취소] ':''}${post.title}`),el('small',[post.startDate||'일정은 안내 참고',post.venue,priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;}
   window.JiniNews={base,el,safeURL,imageURL,api,row,priceLabel};
 })();
