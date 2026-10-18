@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange} from '../src/news-collectors.js';
+import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -20,6 +20,63 @@ const collectSource=(e,s,fetcher)=>collectSite(s,async data=>{
 },fetcher);
 const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',config:'{}'};
 const detail=(date='2026-10-21',title='가을 음악회')=>`<html><body><div class="skinveiw-detail"><div class="sktit">${title}</div><div class="skinlist"><p>기간</p><p>${date}~${date}</p></div><div class="skinlist"><p>시간</p><p>19:30</p></div><div class="skinlist"><p>장소</p><p>연지홀</p></div></div><div class="notboximg"><img src="/poster.jpg"></div></body></html>`;
+
+test('여섯 반응은 브라우저별 하나만 저장하고 재요청·변경·취소·재열기에 일관된다',async()=>{
+  const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'반응 시험',category:'공연',status:'published'})).json();
+  const visitorId=crypto.randomUUID(),other=crypto.randomUUID();
+  const react=async input=>(await(await call(e,`/posts/${id}/reactions`,'POST',input,false)).json());
+  let data=await react({visitorId});assert.equal(data.selected,null);assert.deepEqual(Object.values(data.counts),[0,0,0,0,0,0]);
+  for(const kind of ['like','thanks','dislike','excited','cheer','sad']){
+    for(let attempt=0;attempt<2;attempt++){
+      data=await react({visitorId,reaction:kind});assert.equal(data.selected,kind);assert.equal(data.counts[kind],1);assert.equal(Object.values(data.counts).reduce((a,b)=>a+b,0),1);
+    }
+  }
+  data=await react({visitorId:other,reaction:'sad'});assert.equal(data.counts.sad,2);
+  data=await react({visitorId});assert.equal(data.selected,'sad');assert.equal(data.counts.sad,2);
+  const stored=e.DB.db.prepare('SELECT visitor_hash FROM news_reactions WHERE post_id=?').all(id);assert.ok(stored.every(x=>x.visitor_hash.length===64&&x.visitor_hash!==visitorId));
+  const backup=await(await call(e,'/admin/export')).json();assert.equal(backup.reactions[0].count,2);assert.equal(JSON.stringify(backup.reactions).includes(visitorId),false);
+  for(let i=0;i<2;i++){data=await react({visitorId,reaction:null});assert.equal(data.selected,null);assert.equal(data.counts.sad,1);}
+  assert.equal((await(await call(e,`/posts/${id}`)).json()).post.views,0);
+});
+
+test('비공개 글의 반응을 읽거나 변경할 수 없고 편집·삭제·복구가 반응을 보존한다',async()=>{
+  const e=env(),input={title:'숨길 반응',category:'전시',status:'pending'},visitorId=crypto.randomUUID();
+  const {id}=await(await call(e,'/admin/post','POST',input)).json();
+  const react=b=>call(e,`/posts/${id}/reactions`,'POST',b,false);
+  assert.equal((await react({visitorId})).status,404);
+  await call(e,'/admin/post','POST',{...input,id,status:'published'});
+  for(const b of [{visitorId:'x'},{visitorId,reaction:'invalid'},{visitorId,reaction:''},null])assert.equal((await react(b)).status,400);
+  await react({visitorId,reaction:'thanks'});
+  await call(e,'/admin/post','POST',{...input,id,title:'수정된 글',status:'published'});
+  assert.equal((await(await react({visitorId})).json()).counts.thanks,1);
+  await call(e,'/admin/bulk','POST',{ids:[id],action:'hide'});assert.equal((await react({visitorId,reaction:'sad'})).status,404);
+  await call(e,'/admin/bulk','POST',{ids:[id],action:'delete'});assert.equal((await react({visitorId})).status,404);
+  await call(e,'/admin/bulk','POST',{ids:[id],action:'restore'});assert.equal((await react({visitorId})).status,404);
+  await call(e,'/admin/bulk','POST',{ids:[id],action:'publish'});assert.equal((await(await react({visitorId})).json()).selected,'thanks');
+});
+
+test('국악원 월별 목록과 도서관 접수 페이지를 행사 운영일·요금으로 추출한다',()=>{
+  const kukak={id:'kukak',adapter:'kukak',name:'국악원',url:'https://kukakwon.jb.go.kr/site/menu/MENU_000000000000371'};
+  const links=linksFrom(`<a onclick="getViewPage('1912');">상세</a><a onclick="getViewPage('1912');">상세</a><a onclick="alert('1913')">위험</a>`,kukak.url,kukak);
+  assert.equal(links.length,1);assert.equal(new URL(links[0].url).searchParams.get('sidx'),'1912');
+  const months=listingURLs(kukak,new Date('2026-12-30T22:00:00Z')).map(x=>new URL(x).searchParams.get('searchYearMonth'));assert.deepEqual(months,['202612','202701','202702','202703']);
+  const html='<h4><strong>무용단 정기공연</strong></h4><div class="perf_top"><dl><dt>공연일시</dt><dd>2026년 10월 31일 Sat요일15:00</dd><dt>공연장소</dt><dd>모악당</dd><dt>관람료</dt><dd>무료</dd><dt>주의사항</dt><dd>관람료 등 세부 일정은 추후 공지 예정</dd></dl></div>';
+  const k=parseDetail(html,links[0].url,kukak);assert.equal(k.startDate,'2026-10-31');assert.equal(k.time,'15:00');assert.equal(k.venue,'모악당');assert.equal(k.price,'관람료 추후 공지');
+  const library={id:'library',adapter:'library',name:'도서관',url:'https://lib.jeonju.go.kr/index.jeonju?menuCd=DOM_000000102002000000'};
+  const l=parseDetail('<table class="bbs_write"><tr><th>과정명</th><td>그림책 읽어주기</td></tr><tr><th>운영기간</th><td>2026-12-15 ~ 2026-12-15</td><th>접수기간</th><td>2026-05-21 ~ 2026-12-14</td></tr><tr><th>운영시간</th><td>10:00~10:40</td><th>운영장소</th><td>송천도서관</td></tr><tr><th>신청대상</th><td>유아</td><th>수강료</th><td>0원</td></tr></table>',library.url,library);
+  assert.equal(l.startDate,'2026-12-15');assert.equal(l.endDate,'2026-12-15');assert.equal(l.venue,'송천도서관');assert.equal(l.price,'0원');assert.equal(l.category,'문화강좌');
+  const list='<div class="lib_program_list"><a class="detail" href="?menuCd=DETAIL&reUniqId=RE1&searchWord=x">상세보기</a><a href="?menuCd=APPLY&reUniqId=RE1">신청</a></div>';
+  const items=linksFrom(list,library.url,library);assert.equal(items.length,1);assert.equal(new URL(items[0].url).searchParams.has('searchWord'),false);
+});
+
+test('추천 분류는 근거와 불확실성을 표시하며 직접 저장한 분류를 덮어쓰지 않는다',async()=>{
+  for(const [title,value] of [['음악교육극','공연'],['정기 음악회','공연'],['사진 전시회','전시'],['전시 해설사 양성 교육','문화강좌'],['건축 세미나','세미나'],['그림책 읽어주기','문화강좌']])assert.equal(recommendCategory(title).category,value);
+  assert.equal(recommendCategory('알림').needsReview,true);assert.equal(recommendCategory('알림','','library').category,'문화강좌');
+  const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'사진 전시회',category:'공연',status:'pending'})).json();
+  const post=(await(await call(e,'/admin')).json()).posts.find(x=>x.id===id);assert.equal(post.category,'공연');assert.equal(post.recommendation.category,'전시');assert.match(post.recommendation.reason,/전시/);
+  const sql=readFileSync(new URL('../migrations/0008_add_kukak_library.sql',import.meta.url),'utf8');e.DB.db.exec(sql);e.DB.db.exec(sql);assert.equal(e.DB.db.prepare('SELECT COUNT(*) AS count FROM news_sources').get().count,5);
+  assert.equal((await call(e,'/admin/source','POST',{id:'library',name:'도서관',url:'https://lib.jeonju.go.kr',adapter:'library',enabled:true})).status,200);
+});
 
 test('새 공연 사이트의 다일 공연 종료일과 좌석별·무료 요금을 정확히 읽는다',()=>{
   assert.deepEqual(dateRange('2026년 11월 12일(목)~14일(토) / 목,금 10:30'),['2026-11-12','2026-11-14']);

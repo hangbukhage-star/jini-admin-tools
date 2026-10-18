@@ -1,4 +1,4 @@
-import {clean,day,publicURL,koreaToday,horizon} from './news-core.js';
+import {clean,day,publicURL,koreaToday,horizon,recommendCategory} from './news-core.js';
 
 const MAX_SOURCES = 12;
 const nowISO = () => new Date().toISOString();
@@ -33,7 +33,11 @@ export function validatePost(input) {
 }
 function hydrate(row,admin=false) {
   const out={...parse(row.data),id:row.id,pinned:!!row.pinned,views:Number(row.view_count)||0,checkedAt:row.checked_at,updatedAt:row.updated_at};
-  if(admin) Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,candidate:row.candidate?parse(row.candidate):null});
+  if(admin) {
+    const candidate=row.candidate?parse(row.candidate):null;
+    Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,candidate,recommendation:recommendCategory(out.title,out.description,row.source_id)});
+    if(candidate)candidate.recommendation=recommendCategory(candidate.title,candidate.description,row.source_id);
+  }
   return out;
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
@@ -101,6 +105,26 @@ export async function newsRequest(request,env,origin) {
     }
     const detail=path.match(/^\/news\/posts\/([a-f0-9-]+)$/);
     const view=path.match(/^\/news\/posts\/([a-f0-9-]+)\/view$/);
+    const reactionMatch=path.match(/^\/news\/posts\/([a-f0-9-]+)\/reactions$/);
+    if(request.method==='POST' && reactionMatch) {
+      const id=reactionMatch[1],b=await body(request);
+      // One anonymous browser identifier, hashed separately for each post. No IP or login is stored.
+      if(typeof b?.visitorId!=='string'||!/^[a-f0-9-]{36}$/.test(b.visitorId))fail('반응 연결 정보를 확인해 주세요.');
+      const kinds=['like','thanks','dislike','excited','cheer','sad'];
+      const changing=Object.hasOwn(b,'reaction');
+      if(changing && b.reaction!==null && !kinds.includes(b.reaction))fail('반응을 선택해 주세요.');
+      const post=await env.DB.prepare("SELECT id FROM news_posts WHERE id=? AND status='published' AND deleted_at IS NULL").bind(id).first();
+      if(!post)return json({error:'게시글을 찾을 수 없습니다.'},404);
+      const visitor=await sha(`${id}:${b.visitorId}`);
+      if(changing){
+        if(b.reaction===null)await env.DB.prepare('DELETE FROM news_reactions WHERE post_id=? AND visitor_hash=?').bind(id,visitor).run();
+        else await env.DB.prepare("INSERT INTO news_reactions(post_id,visitor_hash,reaction) SELECT id,?,? FROM news_posts WHERE id=? AND status='published' AND deleted_at IS NULL ON CONFLICT(post_id,visitor_hash) DO UPDATE SET reaction=excluded.reaction").bind(visitor,b.reaction,id).run();
+      }
+      const counts=Object.fromEntries(kinds.map(kind=>[kind,0]));
+      for(const row of await rows(env,'SELECT reaction,COUNT(*) AS count FROM news_reactions WHERE post_id=? GROUP BY reaction',id))counts[row.reaction]=Number(row.count);
+      const selected=await env.DB.prepare('SELECT reaction FROM news_reactions WHERE post_id=? AND visitor_hash=?').bind(id,visitor).first();
+      return json({counts,selected:selected?.reaction||null});
+    }
     if(request.method==='POST' && view) {
       const row=await env.DB.prepare("UPDATE news_posts SET view_count=view_count+1 WHERE id=? AND status='published' AND deleted_at IS NULL RETURNING *").bind(view[1]).first();
       return row?json({post:hydrate(row)}):json({error:'게시글을 찾을 수 없습니다.'},404);
@@ -119,7 +143,7 @@ export async function newsRequest(request,env,origin) {
       return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
     }
     if(admin && request.method==='GET' && path==='/news/admin/export') {
-      return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images')});
+      return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images'),reactions:await rows(env,'SELECT post_id,reaction,COUNT(*) AS count FROM news_reactions GROUP BY post_id,reaction')});
     }
     if(admin && request.method==='POST' && path==='/news/admin/bulk') {
       const b=await body(request);
@@ -192,7 +216,7 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','nihc','jjticket','wanju','naru','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();

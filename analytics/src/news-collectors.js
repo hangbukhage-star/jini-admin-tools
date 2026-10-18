@@ -109,6 +109,18 @@ export function parseDetail(html, url, source, hint = '') {
     time=dateText.includes(' / ')?dateText.split(' / ').slice(1).join(' / '):dateText.match(/\d{1,2}:\d{2}[\s\S]*$/)?.[0]||'';
     price=formattedField(root,['티켓금액']);audience=formattedField(root,['연령제한']);
     pics=images(root,'.ssimg1 img,.deimg img',url);
+  } else if(source.adapter==='kukak') {
+    const box=root.querySelector('.perf_top');if(!box)throw new Error('국악원 공연 상세 구조를 확인해 주세요.');
+    title=text(root,'h4 strong')||hint;dateText=label(box,['공연일시']);venue=label(box,['공연장소']);
+    time=dateText.match(/\d{1,2}:\d{2}/)?.[0]||'';price=label(box,['관람료']);audience=label(box,['관람연령']);
+    // Provisional template prices must not override an explicit notice of later confirmation.
+    if(/관람료[^\n]{0,100}추후\s*공지/.test(box.textContent))price='관람료 추후 공지';
+    pics=images(root,'.perf_top .perf_slider img,.perf_detail .con_area img',url);
+  } else if(source.adapter==='library') {
+    const box=root.querySelector('table.bbs_write');if(!box)throw new Error('도서관 프로그램 상세 구조를 확인해 주세요.');
+    title=label(box,['과정명']);dateText=label(box,['운영기간']);time=label(box,['운영시간']);venue=label(box,['운영장소']);
+    price=label(box,['수강료']);audience=label(box,['신청대상']);
+    pics=images(box,'td img:not([src*="btn_"])',url);
   } else {
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
@@ -118,11 +130,19 @@ export function parseDetail(html, url, source, hint = '') {
   const [startDate,endDate] = dateRange(dateText);
   title = clean(title).slice(0,160);
   if(!title) throw new Error('제목을 읽지 못했습니다.');
-  return { title, category: category(title), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
+  return { title, category: category(title,'',source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');
-  const selector = {sori:'a[href*="/show/performance/"]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]'}[source.adapter] || config.links;
+  if(source.adapter==='kukak'){
+    // Read a numeric identifier from the site's button; never execute its JavaScript.
+    return [...new Map([...root.querySelectorAll('[onclick]')].flatMap(a=>{
+      const id=a.getAttribute('onclick')?.match(/^getViewPage\('(\d+)'\);?$/)?.[1];if(!id)return [];
+      const u=new URL(source.url);u.searchParams.set('showViewType','view');u.searchParams.set('sidx',id);u.searchParams.sort();
+      return [[u.href,{url:u.href,hint:clean(a.closest('li')?.textContent)}]];
+    })).values()];
+  }
+  const selector = {sori:'a[href*="/show/performance/"]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
@@ -133,6 +153,7 @@ export function linksFrom(html, url, source) {
     if(source.adapter === 'woojin') ['page','div','key','sword'].forEach(k=>u.searchParams.delete(k));
     if(source.adapter === 'nihc') ['year','month','page','subPath'].forEach(k=>u.searchParams.delete(k));
     if(source.adapter==='wanju')['page','s_word','s_kinds'].forEach(k=>u.searchParams.delete(k));
+    if(source.adapter==='library')for(const k of [...u.searchParams.keys()])if(!['menuCd','reUniqId'].includes(k))u.searchParams.delete(k);
     u.searchParams.sort();
     const key = u.href, hint = clean(a.textContent);
     if(!found.has(key) || hint.length > found.get(key).hint.length) found.set(key,{url:key,hint});
@@ -141,14 +162,16 @@ export function linksFrom(html, url, source) {
 }
 export function listingURLs(source, now = new Date()) {
   const urls = [];
-  if(source.adapter === 'nihc') {
+  if(['nihc','kukak'].includes(source.adapter)) {
     const d = new Date(`${koreaToday(now)}T00:00:00Z`);
-    for(let i=0;i<4;i++) { const u = new URL(source.url); u.searchParams.set('year',d.getUTCFullYear());u.searchParams.set('month',d.getUTCMonth()+1);urls.push(u.href);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1); }
+    for(let i=0;i<4;i++) { const u = new URL(source.url); if(source.adapter==='kukak'){u.searchParams.set('searchYearMonth',`${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}`);u.searchParams.set('showViewType','list');}else{u.searchParams.set('year',d.getUTCFullYear());u.searchParams.set('month',d.getUTCMonth()+1);}urls.push(u.href);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1); }
   } else if(source.adapter === 'sori') {
     // Larger list avoids fetching a page for each ten results.
     const u = new URL(source.url);u.pathname = u.pathname.replace(/\/$/,'')+'/';u.searchParams.set('size','100');u.searchParams.set('page','0');urls.push(u.href);
   } else if(source.adapter === 'woojin') {
     for(let i=1;i<=3;i++) {const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
+  } else if(source.adapter==='library'){
+    for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);u.searchParams.set('orderField','RE_SDATE');u.searchParams.set('orderSort','desc');urls.push(u.href);}
   } else if(['jjticket','wanju'].includes(source.adapter)) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else urls.push(source.url);

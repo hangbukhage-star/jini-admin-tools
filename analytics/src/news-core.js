@@ -25,6 +25,16 @@ export function horizon(now = new Date()) {
   d.setUTCDate(Math.min(d.getUTCDate(), last)); d.setUTCMonth(targetMonth);
   return d.toISOString().slice(0,10);
 }
-export function category(title) {
-  return /전시|展|갤러리/.test(title) ? '전시' : /세미나|포럼|심포지엄/.test(title) ? '세미나' : /교육극|음악극|뮤지컬|콘서트|연주회|연극|오페라|발레|독주회|독창회/.test(title) ? '공연' : /강좌|교육|워크숍|강연/.test(title) ? '문화강좌' : '공연';
+export function recommendCategory(title, context='', source='') {
+  const rules=[
+    ['세미나',/세미나|포럼|심포지엄|학술대회|학술행사/],
+    ['문화강좌',/강좌|워크[숍샵]|강연|특강|교실|수강|양성|교육(?!극)|배우기|만들기|체험|독서모임|책놀이|읽어주기/],
+    ['전시',/전시|展|갤러리/],
+    ['공연',/공연|음악회|음악극|교육극|뮤지컬|콘서트|연주회|연극|오페라|발레|독주회|독창회|낭독회|인형극|국악|가무악/]
+  ];
+  for(const value of [clean(title),clean(context)])for(const [category,pattern] of rules){const match=value.match(pattern);if(match)return {category,reason:`‘${match[0]}’ 표현을 기준으로 추천했어요.`,needsReview:false};}
+  if(source==='library')return {category:'문화강좌',reason:'도서관 프로그램으로 교육·강좌를 추천했어요. 행사 성격을 확인해 주세요.',needsReview:true};
+  if(['sori','kukak','naru','jjticket','wanju'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
+  return {category:'기타 소식',reason:'분류할 단서가 부족해요. 원문을 보고 분류를 선택해 주세요.',needsReview:true};
 }
+export const category=(title,context='',source='')=>recommendCategory(title,context,source).category;

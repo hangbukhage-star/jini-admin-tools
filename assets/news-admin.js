@@ -38,6 +38,7 @@
     const row=el('div',null,'post-summary'),copy=el('div',null,'post-summary-copy');
     if(!changed){const checkbox=el('input');checkbox.type='checkbox';checkbox.value=p.id;checkbox.checked=selected.has(p.id);checkbox.setAttribute('aria-label',`${p.title} 선택`);checkbox.addEventListener('change',()=>{if(checkbox.checked)selected.add(p.id);else selected.delete(p.id);updateSelection();});row.append(checkbox);}
     copy.append(el('strong',p.title),el('p',[p.category,p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
+    if(p.status==='pending'&&p.recommendation)copy.append(el('p',`추천 분류: ${p.recommendation.category}${p.recommendation.needsReview?' · 확인 필요':''}`,'category-recommendation'));
     row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
   }
   async function load(reset=true){
@@ -71,6 +72,10 @@
     $('#previous-value').hidden=!changed;
     $('#previous-value').textContent=changed?`현재 게시 내용: ${p.title} / ${p.startDate||'일정 없음'} / ${p.time||''} / ${p.venue||'장소 없음'} / ${p.price||'가격 미정'}`:'';
     $('#original-link').hidden=!safeURL(value.link);$('#original-link').href=safeURL(value.link)||'#';
+    const suggestion=value.recommendation;
+    $('#category-suggestion').hidden=!suggestion;
+    $('#category-reason').textContent=suggestion?`추천 분류: ${suggestion.category} · ${suggestion.reason} 직접 수정한 분류는 그대로 유지됩니다.`:'';
+    $('#apply-category').onclick=()=>{if(suggestion){$('#post-form').elements.category.value=suggestion.category;$('#category-reason').textContent=`${suggestion.category} 추천을 적용했어요. 저장 버튼을 눌러 반영하세요.`;}};
     $('#post-warning').textContent=changed?'아래는 새로 수집한 내용입니다. 기존 글과 비교해 확인한 후 게시하세요.':(!value.startDate||!value.venue)?'날짜·장소가 없는 항목은 원문을 확인해 채워주세요. 일반 소식은 비워둘 수 있어요.':'';
     $('#editor').showModal();await preview();
   }
