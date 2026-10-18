@@ -1,0 +1,6 @@
+node_modules/
+/news-admin-access.txt
+.vercel/
+.env
+.env.*
+!.env.example

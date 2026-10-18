@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>지니의 행정도구 만물상</title>
+  <link rel="stylesheet" href="./assets/news.css">
 
   <style>
     * {
@@ -812,6 +813,11 @@
   </header>
 
   <main>
+    <section class="news-box" aria-labelledby="home-news-title">
+      <div class="news-heading"><h2 id="home-news-title">🌷 지니가 전하는 소식</h2><a href="./news/">전체 보기 ›</a></div>
+      <p class="news-caption">가까운 공연·전시·세미나·문화강좌 소식을 나눠요.</p>
+      <div id="home-news-list" aria-live="polite"><p class="news-empty">소식을 불러오고 있어요.</p></div>
+    </section>
     <section class="tool-list" aria-label="업무별 행정도구">
 
       <section class="tool-category category-personnel" aria-labelledby="category-personnel-title">
@@ -1043,6 +1049,8 @@
   </footer>
 
   <script src="./assets/stats-config.js"></script>
+  <script src="./assets/news-common.js"></script>
+  <script src="./assets/news-home.js"></script>
   <script src="./assets/stats.js"></script>
   <script src="./assets/comments.js"></script>
 

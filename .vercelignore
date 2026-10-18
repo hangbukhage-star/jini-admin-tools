@@ -1,0 +1,9 @@
+tmp/
+news-admin-access.txt
+.env.*
+analytics/.wrangler/
+analytics/tests/
+analytics/node_modules/
+**/.dev.vars
+**/.env
+**/.env.*

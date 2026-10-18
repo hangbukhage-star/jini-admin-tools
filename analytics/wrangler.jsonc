@@ -4,7 +4,9 @@
 	"account_id": "feef2cd0e256d16c06ae4f868e64aee2",
 	"main": "src/worker.js",
 	"compatibility_date": "2026-08-19",
+	"triggers": { "crons": ["0 22 * * *"] },
 	"vars": {
+		"NEWS_COLLECTOR_URL": "https://jini-admin-tools.vercel.app/api/news-collect",
 		"ALLOWED_ORIGINS": "http://127.0.0.1:8765,http://localhost:8765,https://jini-admin-tools.vercel.app"
 	},
 	"d1_databases": [

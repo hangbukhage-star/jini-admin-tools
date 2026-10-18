@@ -1,3 +1,5 @@
+import { newsRequest, runCollection } from './news.js';
+
 const TOOL_IDS = Object.freeze([
   "work-plan",
   "insurance-summary",
@@ -180,9 +182,16 @@ async function deleteComment(request, env, toolId, commentId, origin) {
 }
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runCollection(env));
+  },
   async fetch(request, env) {
     const origin = allowedOrigin(request, env);
     if (!origin) return json({ error: "허용되지 않은 홈페이지입니다." }, 403, "null");
+
+    if (new URL(request.url).pathname === '/news' || new URL(request.url).pathname.startsWith('/news/')) {
+      return newsRequest(request, env, origin);
+    }
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });

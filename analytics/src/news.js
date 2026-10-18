@@ -1,0 +1,190 @@
+import {clean,day,publicURL,koreaToday,horizon} from './news-core.js';
+
+const MAX_SOURCES = 12;
+const nowISO = () => new Date().toISOString();
+const parse = value => JSON.parse(value || '{}');
+async function sha(value) {const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function fail(message,status=400) {throw Object.assign(new Error(message),{status});}
+async function authorized(request,env) {
+  if(!env.NEWS_ADMIN_KEY || env.NEWS_ADMIN_KEY.length < 32) return false;
+  const supplied = request.headers.get('Authorization')?.replace(/^Bearer /,'') || '';
+  const a = await sha(supplied), b = await sha(env.NEWS_ADMIN_KEY);let diff=0;
+  for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);
+  return diff===0;
+}
+async function body(request) {
+  if(Number(request.headers.get('Content-Length'))>32000) fail('입력 내용이 너무 큽니다.',413);
+  const text=await request.text();if(text.length>32000)fail('입력 내용이 너무 큽니다.',413);
+  try{return JSON.parse(text);}catch{fail('입력 형식을 확인해 주세요.');}
+}
+export function validatePost(input) {
+  const data = {};
+  for(const [key,max] of Object.entries({title:160,category:20,time:200,venue:200,price:200,audience:100,description:2000,sourceName:100,imageCredit:200})) data[key]=clean(input[key]).slice(0,max);
+  if(!data.title) fail('제목을 입력해 주세요.');
+  if(!['공연','전시','세미나','문화강좌','기타 소식'].includes(data.category)) data.category='기타 소식';
+  for(const key of ['startDate','endDate']) { data[key]=day(input[key]);if(input[key] && !data[key])fail('날짜를 확인해 주세요.'); }
+  if(data.startDate && !data.endDate)data.endDate=data.startDate;
+  if(data.startDate && data.endDate && data.endDate<data.startDate)fail('종료일이 시작일보다 빠릅니다.');
+  data.link=input.link ? publicURL(input.link) : '';
+  if(input.link && !data.link)fail('공식 안내 링크를 확인해 주세요.');
+  data.images=(Array.isArray(input.images)?input.images:[]).slice(0,3).map(x=>clean(x)).filter(x=>/^\/news\/images\/[a-f0-9-]+$/.test(x) || publicURL(x));
+  data.cancelled=!!input.cancelled;
+  return data;
+}
+function hydrate(row,admin=false) {
+  const out={...parse(row.data),id:row.id,pinned:!!row.pinned,views:Number(row.view_count)||0,checkedAt:row.checked_at,updatedAt:row.updated_at};
+  if(admin) Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,candidate:row.candidate?parse(row.candidate):null});
+  return out;
+}
+async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
+async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
+export async function ingestPost(env,source,url,raw) {
+  const data=validatePost(raw);
+  const canonical=publicURL(url);
+  if(!canonical || new URL(canonical).hostname!==new URL(source.url).hostname)fail('수집 원문 주소가 등록된 사이트와 다릅니다.');
+  const stamp=nowISO();
+  await env.DB.prepare('INSERT INTO news_seen VALUES(?,?,?) ON CONFLICT(url) DO UPDATE SET checked_at=excluded.checked_at').bind(canonical,source.id,stamp).run();
+  const current=await env.DB.prepare('SELECT * FROM news_posts WHERE source_url=?').bind(canonical).first();
+  if(!current && data.endDate && (data.endDate<koreaToday() || data.startDate>horizon()))return {skipped:true};
+  const fp=await fingerprint(data);
+  data.sourceName=source.name;data.link=canonical;
+  if(!source.images_allowed)data.images=[];
+  if(current) {
+    const changed=JSON.stringify(parse(current.data))!==JSON.stringify(data);
+    if(changed && (current.locked || current.status==='published')) {
+      await env.DB.prepare('UPDATE news_posts SET candidate=?,checked_at=? WHERE id=?').bind(JSON.stringify(data),stamp,current.id).run();
+    }else if(changed && current.status!=='hidden'){
+      await env.DB.prepare('UPDATE news_posts SET data=?,start_date=?,end_date=?,fingerprint=?,checked_at=?,updated_at=? WHERE id=?').bind(JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,current.id).run();
+    }else await env.DB.prepare('UPDATE news_posts SET checked_at=?,candidate=NULL WHERE id=?').bind(stamp,current.id).run();
+  }else{
+    const duplicate=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? LIMIT 1').bind(fp).first();
+    const ready=data.startDate&&data.endDate&&data.venue&&!data.cancelled&&!duplicate;
+    const status=source.auto_publish&&ready?'published':'pending';
+    await env.DB.prepare('INSERT INTO news_posts(id,source_id,source_url,status,data,start_date,end_date,fingerprint,checked_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),source.id,canonical,status,JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,stamp).run();
+  }
+  return {ok:true};
+}
+export async function runCollection(env,sourceId) {
+  if(!env.NEWS_COLLECTOR_KEY || !env.NEWS_COLLECTOR_URL)fail('수집기 연결 전입니다. Vercel 수집 함수와 연결 키를 먼저 설정해 주세요.',503);
+  const result=await fetch(env.NEWS_COLLECTOR_URL,{method:'POST',headers:{Authorization:`Bearer ${env.NEWS_COLLECTOR_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({sourceId:sourceId||null})});
+  const data=await result.json();if(!result.ok)fail(data.error||'수집기 연결을 확인해 주세요.',result.status);
+  return data;
+}
+export async function newsRequest(request,env,origin) {
+  const url=new URL(request.url),path=url.pathname;
+  const headers={'Content-Type':'application/json; charset=utf-8','Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Cache-Control':'no-store','Vary':'Origin','X-Content-Type-Options':'nosniff'};
+  const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+  try{
+    const admin=path.startsWith('/news/admin');
+    if(admin && !await authorized(request,env))return json({error:env.NEWS_ADMIN_KEY?'관리자 비밀번호를 확인해 주세요.':'관리자 연결 전입니다. 운영 안내에 따라 관리자 키를 설정해 주세요.'},401);
+    if(request.method==='GET' && path==='/news') {
+      const archive=url.searchParams.get('archive')==='1',today=koreaToday();
+      const limit=Math.min(50,Math.max(1,Number(url.searchParams.get('limit'))||20));
+      const offset=Math.min(10000,Math.max(0,Number(url.searchParams.get('offset'))||0));
+      const filter=archive?"end_date<>'' AND end_date<?":"(end_date='' OR end_date>=?)";
+      const category=url.searchParams.get('category')||'';
+      const posts=await rows(env,`SELECT * FROM news_posts WHERE status='published' AND ${filter} AND (?='' OR json_extract(data,'$.category')=?) ORDER BY pinned DESC, CASE WHEN start_date='' THEN 1 ELSE 0 END, start_date ${archive?'DESC':'ASC'},created_at DESC LIMIT ? OFFSET ?`,today,category,category,limit+1,offset);
+      return json({posts:posts.slice(0,limit).map(x=>hydrate(x)),hasMore:posts.length>limit});
+    }
+    const imageMatch=path.match(/^\/news\/images\/([a-f0-9-]+)$/);
+    if(request.method==='GET' && imageMatch) {
+      // Uploaded drafts remain private until a published post references the image.
+      const row=await env.DB.prepare("SELECT i.body FROM news_images i WHERE i.id=? AND EXISTS(SELECT 1 FROM news_posts p WHERE p.status='published' AND p.data LIKE '%' || ? || '%')").bind(imageMatch[1],`/news/images/${imageMatch[1]}`).first();
+      if(!row && await authorized(request,env)) {
+        const draft=await env.DB.prepare('SELECT body FROM news_images WHERE id=?').bind(imageMatch[1]).first();
+        if(draft)return new Response(draft.body,{headers:{...headers,'Content-Type':'image/jpeg','Cache-Control':'no-store'}});
+      }
+      if(!row)return json({error:'사진을 찾을 수 없습니다.'},404);
+      return new Response(row.body,{headers:{...headers,'Content-Type':'image/jpeg','Content-Security-Policy':"default-src 'none'"}});
+    }
+    const detail=path.match(/^\/news\/posts\/([a-f0-9-]+)$/);
+    const view=path.match(/^\/news\/posts\/([a-f0-9-]+)\/view$/);
+    if(request.method==='POST' && view) {
+      const row=await env.DB.prepare("UPDATE news_posts SET view_count=view_count+1 WHERE id=? AND status='published' RETURNING *").bind(view[1]).first();
+      return row?json({post:hydrate(row)}):json({error:'게시글을 찾을 수 없습니다.'},404);
+    }
+    if(request.method==='GET' && detail) {
+      const row=await env.DB.prepare("SELECT * FROM news_posts WHERE id=? AND status='published'").bind(detail[1]).first();
+      return row?json({post:hydrate(row)}):json({error:'게시글을 찾을 수 없습니다.'},404);
+    }
+    if(admin && request.method==='GET' && path==='/news/admin') {
+      const status=url.searchParams.get('status')||'pending';
+      if(!['pending','published','hidden'].includes(status))fail('상태를 확인해 주세요.');
+      const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
+      const posts=await rows(env,'SELECT * FROM news_posts WHERE status=? ORDER BY updated_at DESC LIMIT 51 OFFSET ?',status,offset);
+      const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' ORDER BY checked_at DESC LIMIT 50");
+      const counts=await rows(env,'SELECT status,COUNT(*) AS count FROM news_posts GROUP BY status');
+      return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
+    }
+    if(admin && request.method==='GET' && path==='/news/admin/export') {
+      return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images')});
+    }
+    const backupImage=path.match(/^\/news\/admin\/backup-image\/([a-f0-9-]+)$/);
+    if(admin && request.method==='GET' && backupImage) {
+      const row=await env.DB.prepare('SELECT body FROM news_images WHERE id=?').bind(backupImage[1]).first();
+      return row?new Response(row.body,{headers:{...headers,'Content-Type':'image/jpeg'}}):json({error:'사진을 찾을 수 없습니다.'},404);
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/cleanup-images') {
+      const result=await env.DB.prepare("DELETE FROM news_images WHERE julianday(created_at)<julianday('now','-1 day') AND NOT EXISTS(SELECT 1 FROM news_posts WHERE data LIKE '%' || '/news/images/' || news_images.id || '%' OR candidate LIKE '%' || '/news/images/' || news_images.id || '%')").run();
+      return json({removed:result.meta?.changes||0});
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/collection') {
+      const b=await body(request);
+      if(b.action==='start') {
+        const lock=await env.DB.prepare("INSERT INTO news_locks(id,expires_at) VALUES('collect',unixepoch()+900) ON CONFLICT(id) DO UPDATE SET expires_at=excluded.expires_at WHERE news_locks.expires_at<unixepoch()").run();
+        return json({busy:!lock.meta?.changes,sources:lock.meta?.changes?await rows(env,'SELECT * FROM news_sources WHERE enabled=1 ORDER BY name LIMIT 12'):[]});
+      }
+      if(b.action==='finish'){await env.DB.prepare("DELETE FROM news_locks WHERE id='collect'").run();return json({ok:true});}
+      const source=await env.DB.prepare('SELECT * FROM news_sources WHERE id=?').bind(clean(b.sourceId)).first();
+      if(!source || !source.enabled)fail('수집할 사이트를 찾을 수 없습니다.',404);
+      if(b.action==='state') {
+        await env.DB.prepare('UPDATE news_sources SET last_attempt=? WHERE id=?').bind(nowISO(),source.id).run();
+        return json({source,seen:await rows(env,'SELECT url,checked_at FROM news_seen WHERE source_id=?',source.id)});
+      }
+      if(b.action==='ingest')return json(await ingestPost(env,source,b.url,b.data));
+      if(b.action==='result'){
+        const error=clean(b.error).slice(0,500),count=Math.max(0,Number(b.count)||0);
+        if(error)await env.DB.prepare('UPDATE news_sources SET last_error=?,last_count=? WHERE id=?').bind(error,count,source.id).run();
+        else await env.DB.prepare('UPDATE news_sources SET last_success=?,last_error=NULL,last_count=? WHERE id=?').bind(nowISO(),count,source.id).run();
+        return json({ok:true});
+      }
+      fail('수집 요청을 확인해 주세요.');
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/collect') {
+      const b=await body(request);if(!b.sourceId)fail('확인할 사이트를 선택해 주세요.');
+      const result=await runCollection(env,clean(b.sourceId));return json(result,result.busy?409:200);
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/image') {
+      const bytes=await request.arrayBuffer();
+      if(bytes.byteLength>180000 || bytes.byteLength<3 || new Uint8Array(bytes)[0]!==255 || new Uint8Array(bytes)[1]!==216)fail('사진은 180KB 이하 JPEG만 올릴 수 있습니다.');
+      const total=await env.DB.prepare('SELECT COALESCE(SUM(length(body)),0) AS size FROM news_images').first();
+      if(total.size+bytes.byteLength>50000000)fail('무료 운영을 위한 사진 보관 한도에 도달했습니다. 백업 후 지난 사진을 정리해 주세요.',413);
+      const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO news_images VALUES(?,?,?)').bind(id,bytes,nowISO()).run();return json({url:`/news/images/${id}`});
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/post') {
+      const b=await body(request),stamp=nowISO();
+      if(!['published','pending','hidden'].includes(b.status))fail('게시 상태를 선택해 주세요.');
+      const data=validatePost(b),id=b.id||crypto.randomUUID();
+      const existing=b.id?await env.DB.prepare('SELECT * FROM news_posts WHERE id=?').bind(id).first():null;
+      if(b.id && !existing)fail('게시글을 찾을 수 없습니다.',404);
+      const fp=await fingerprint(data);
+      if(existing) await env.DB.prepare('UPDATE news_posts SET data=?,candidate=NULL,status=?,locked=1,pinned=?,start_date=?,end_date=?,fingerprint=?,updated_at=? WHERE id=?').bind(JSON.stringify(data),b.status,b.pinned?1:0,data.startDate,data.endDate,fp,stamp,id).run();
+      else await env.DB.prepare('INSERT INTO news_posts(id,status,data,locked,pinned,start_date,end_date,fingerprint,created_at,updated_at) VALUES(?,?,?,1,?,?,?,?,?,?)').bind(id,b.status,JSON.stringify(data),b.pinned?1:0,data.startDate,data.endDate,fp,stamp,stamp).run();
+      return json({ok:true,id});
+    }
+    if(admin && request.method==='POST' && path==='/news/admin/source') {
+      const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
+      if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
+      if(!['woojin','sori','nihc','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
+      const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
+      const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();
+      if(!previous && count.count>=MAX_SOURCES)fail('무료 운영을 위해 사이트는 최대 12곳까지 등록합니다. 더 늘릴 때 수집 용량을 점검해 주세요.');
+      if(b.autoPublish && b.adapter==='generic' && (!config.links||!config.title||!config.date||!config.venue))fail('수집 항목 확인 후 자동 게시를 켤 수 있습니다.');
+      await env.DB.prepare('INSERT INTO news_sources(id,name,url,adapter,config,enabled,auto_publish,images_allowed) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,adapter=excluded.adapter,config=excluded.config,enabled=excluded.enabled,auto_publish=excluded.auto_publish,images_allowed=excluded.images_allowed').bind(id,name,address,b.adapter,JSON.stringify(config),b.enabled?1:0,b.autoPublish?1:0,b.imagesAllowed?1:0).run();
+      return json({ok:true,id});
+    }
+    return json({error:'요청 경로를 확인해 주세요.'},404);
+  }catch(e){if(!e.status)console.error('news error',e);return json({error:e.status?e.message:'소식을 처리하지 못했습니다. 연결 상태를 확인해 주세요.'},e.status||500);}
+}

@@ -1,0 +1,6 @@
+{
+  "name": "jini-admin-tools",
+  "private": true,
+  "dependencies": { "linkedom": "0.18.12" },
+  "scripts": { "check:news": "npm --prefix analytics run check" }
+}

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/worker.js && node --test tests/worker.test.mjs",
+    "check": "node --check src/worker.js && node --check src/news.js && node --test tests/*.test.mjs",
     "dev": "wrangler dev",
     "db:local": "wrangler d1 migrations apply jini-tool-stats --local",
     "db:remote": "wrangler d1 migrations apply jini-tool-stats --remote",
@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.12"
   }
 }
