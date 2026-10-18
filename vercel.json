@@ -1,6 +1,6 @@
 {
   "installCommand": "npm ci",
   "functions": {
-    "api/news-collect.js": { "maxDuration": 300, "includeFiles": "node_modules/**" }
+    "api/news-collect.mjs": { "maxDuration": 300, "includeFiles": "node_modules/**" }
   }
 }

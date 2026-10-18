@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
 import {collectSite} from '../src/news-collection.js';
-import handler from '../../api/news-collect.js';
+import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
   constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}

@@ -71,7 +71,7 @@ Cloudflare 쪽 관리자 키와 Vercel 쪽 관리자 키는 서로 같게, 수�
 1. 현재 계정이 무료 플랜인지, 기존 예약 실행을 포함해 Cloudflare 무료 예약 개수 한도를 넘지 않는지 확인합니다.
 2. `analytics`에서 `npm ci` 후 `npx wrangler d1 migrations apply jini-tool-stats --remote`로 새 테이블을 추가합니다. 기존 통계·댓글 테이블은 삭제하지 않습니다.
 3. `npx wrangler secret put NEWS_ADMIN_KEY`, `npx wrangler secret put NEWS_COLLECTOR_KEY`로 비밀키를 입력합니다.
-4. Vercel 프로젝트의 서버 환경변수에 같은 두 키를 입력합니다. 루트 `package.json`, 잠금 파일, `api/news-collect.js`, `vercel.json`을 포함하여 배포합니다. 프레임워크는 기존 정적 사이트 설정을 유지하고, 설치는 루트 `npm ci`를 사용합니다.
+4. Vercel 프로젝트의 운영 서버 환경변수에 같은 두 키를 입력합니다. 루트 `package.json`, 잠금 파일, `api/news-collect.mjs`, `vercel.json`을 포함하여 배포합니다. 프레임워크는 기존 정적 사이트 설정을 유지하고, 설치는 루트 `npm ci`를 사용합니다. 수집 함수는 `.mjs`를 사용하며 `api`에 별도 `package.json`을 두지 않습니다.
 5. `analytics/wrangler.jsonc`의 수집기 주소와 허용 홈페이지 주소가 실제 배포와 같은지 확인하고 `npx wrangler deploy`합니다. 예약식 `0 22 * * *`는 UTC 기준이며 한국 시간 다음 날 오전 7시입니다.
 6. 실제 관리자 화면에 연결해 기관별 ‘지금 확인’을 실행합니다. 대기 글의 날짜·장소·이미지 조건을 원문과 비교합니다. 원격 네트워크에서는 기관이 서버 접근을 차단할 수 있으므로 로컬 검증만으로 운영 수집 성공을 확정하지 않습니다.
 7. 최소 여러 번의 정상 수집을 확인한 뒤 사이트별 자동 게시를 켭니다. 마지막 성공 시각과 오류가 관리자 화면에 표시됩니다.
