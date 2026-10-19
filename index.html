@@ -478,6 +478,37 @@
       background: #256638;
     }
 
+    .poll-app-card {
+      border: 1px solid #f0d7e3;
+      background: linear-gradient(180deg, #fff8fc 0%, #ffffff 34%);
+    }
+
+    .poll-app-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #e982ad, #f3b0ca);
+      content: "";
+    }
+
+    .poll-app-card .usage-guide {
+      background: #fff0f6;
+    }
+
+    .poll-app-card .usage-guide-title {
+      color: #bd4c7b;
+    }
+
+    .poll-app-card .button {
+      background: #d96f9f;
+    }
+
+    .poll-app-card .button:hover {
+      background: #c85b8d;
+    }
+
     .work-plan-card {
       border: 1px solid #cfe7e3;
       background: linear-gradient(180deg, #f5fffd 0%, #ffffff 34%);
@@ -765,6 +796,12 @@
 
       .category-tools {
         grid-template-columns: repeat(2, minmax(0, 302px));
+      }
+    }
+
+    @media (min-width: 1000px) {
+      .category-etc .category-tools {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
 
