@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo} from '../src/news-collectors.js';
+import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo,venueGroup} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
+import {siteVisitors,cleanupVisitors} from '../src/site-visitors.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -20,6 +21,33 @@ const collectSource=(e,s,fetcher)=>collectSite(s,async data=>{
 },fetcher);
 const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',config:'{}'};
 const detail=(date='2026-10-21',title='가을 음악회')=>`<html><body><div class="skinveiw-detail"><div class="sktit">${title}</div><div class="skinlist"><p>기간</p><p>${date}~${date}</p></div><div class="skinlist"><p>시간</p><p>19:30</p></div><div class="skinlist"><p>장소</p><p>연지홀</p></div></div><div class="notboximg"><img src="/poster.jpg"></div></body></html>`;
+
+test('같은 건물의 홀·회의실·층을 한 장소로 묶고 원래 장소는 보존한다',async()=>{
+  for(const name of ['한국소리문화의전당 모악당','한국소리문화의 전당 연지홀','소리문화의전당 국제회의장'])assert.equal(venueGroup(name),'한국소리문화의전당');
+  assert.equal(venueGroup('국립극장 해오름극장'),'국립극장');assert.equal(venueGroup('전주 우진문화공간 예술극장'),'우진문화공간');
+  assert.equal(venueGroup('1층 동아리실','[완산]완산독서','library'),'완산도서관');
+  assert.equal(venueGroup('지하 강당','[문화가 있는 날]강연','library'),'');
+  assert.equal(venueGroup('서학예술마을도서관 은행나무동 1층 강의실'),'서학예술마을도서관');
+  const e=env();for(const venue of ['한국소리문화의전당 모악당','한국소리문화의전당 연지홀'])await call(e,'/admin/post','POST',{title:'건물별 공연',venue,status:'published'});
+  const options=await(await call(e,'/venues')).json();assert.deepEqual(options.venues,['한국소리문화의전당']);
+  const filtered=await(await call(e,'?venue='+encodeURIComponent('소리문화의 전당'))).json();assert.equal(filtered.total,2);assert.ok(filtered.posts.every(p=>p.venueGroup==='한국소리문화의전당'));assert.ok(filtered.posts.some(p=>p.venue.endsWith('연지홀')));
+});
+
+test('방문자는 한국 날짜별 브라우저 중복을 막고 누적은 일별 합계로 보존한다',async()=>{
+  const e=env(),visitorId=crypto.randomUUID(),second=crypto.randomUUID();
+  const visit=async(id,stamp,method='POST')=>siteVisitors(new Request('https://api.example.org/site/visits',{method,...(method==='POST'?{body:JSON.stringify({visitorId:id})}:{})}),e,'https://example.org',new Date(stamp));
+  let data=await(await visit(visitorId,'2026-10-18T14:59:59Z')).json();assert.equal(data.total,0);
+  const day='2026-10-18T15:00:00Z';
+  await Promise.all(Array.from({length:8},()=>visit(visitorId,day)));
+  data=await(await visit(visitorId,day)).json();assert.deepEqual([data.today,data.total,data.date,data.startDate],[1,1,'2026-10-19','2026-10-19']);
+  data=await(await visit(second,day)).json();assert.equal(data.today,2);
+  data=await(await visit(null,day,'GET')).json();assert.equal(data.total,2);
+  data=await(await visit(visitorId,'2026-10-19T15:00:00Z')).json();assert.deepEqual([data.today,data.total],[1,3]);
+  assert.equal((await visit('invalid',day)).status,400);
+  const stored=e.DB.db.prepare('SELECT visitor_hash FROM site_visit_days').all();assert.ok(stored.every(x=>x.visitor_hash.length===64&&x.visitor_hash!==visitorId));assert.equal(new Set(stored.map(x=>x.visitor_hash)).size,3);
+  await cleanupVisitors(e,new Date('2026-11-01T00:00:00Z'));assert.equal(e.DB.db.prepare('SELECT COUNT(*) AS n FROM site_visit_days').get().n,0);
+  data=await(await visit(null,'2026-11-01T00:00:00Z','GET')).json();assert.deepEqual([data.today,data.total],[0,3]);
+});
 
 test('요금 검색은 무료·초대·유료·미정과 좌석별 금액을 구분하며 나이와 할인을 금액으로 삼지 않는다',()=>{
   for(const value of ['무료','전석 초대','0원','0'])assert.deepEqual(priceInfo(value),{type:'free',amounts:[0]});
@@ -52,7 +80,7 @@ test('제목·장소·요금 조합을 전체 글에서 검색하고 동일 좌�
   const page=await list({fee:'free',limit:'30',offset:'30'});assert.equal(page.posts.length,4);assert.ok(page.posts.every(p=>!result.posts.some(x=>x.id===p.id)));
   for(const q of ['%',"' OR 1=1 --",'非公開'])assert.equal((await list({q})).total,0);
   for(const query of [{minPrice:'-1'},{maxPrice:'NaN'},{minPrice:'2',maxPrice:'1'},{fee:'fake'},{minPrice:'100000001'}])assert.equal((await call(e,'?'+new URLSearchParams(query))).status,400);
-  const venues=await(await call(e,'/venues')).json();assert.ok(venues.venues.includes('소리문화의전당 연지홀'));assert.ok(!venues.venues.includes('비밀 장소'));assert.ok(!venues.venues.includes('삭제 장소'));
+  const venues=await(await call(e,'/venues')).json();assert.ok(venues.venues.includes('한국소리문화의전당'));assert.ok(!venues.venues.includes('비밀 장소'));assert.ok(!venues.venues.includes('삭제 장소'));
   await call(e,'/admin/post','POST',{id:paid,title:'가을 Jazz 음악회',venue:'소리문화의전당 연지홀',status:'published',category:'공연',price:'무료'});
   assert.equal((await list({q:'jazz',fee:'paid'})).total,0);assert.equal((await list({q:'jazz',fee:'free'})).total,1);
   await add({title:'지난 음악회',venue:'지난 공연장',price:'5000',startDate:'2020-01-01'});

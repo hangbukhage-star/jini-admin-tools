@@ -1,0 +1,10 @@
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {venueGroup} from '../src/news-core.js';
+if(!process.env.NEWS_ADMIN_KEY)throw new Error('NEWS_ADMIN_KEY 환경변수가 필요합니다.');
+const response=await fetch('https://jini-tool-stats.yjj32.workers.dev/news/admin/export',{headers:{Authorization:`Bearer ${process.env.NEWS_ADMIN_KEY}`}});
+if(!response.ok)throw new Error(`자료 확인 실패 (${response.status})`);
+const {posts}=await response.json(),quote=value=>`'${String(value).replace(/'/g,"''")}'`;
+const sql=posts.map(post=>{const p=JSON.parse(post.data);return `UPDATE news_posts SET venue_group=${quote(venueGroup(p.venue,p.title,post.source_id))} WHERE id=${quote(post.id)} AND COALESCE(json_extract(data,'$.venue'),'')=${quote(p.venue||'')} AND json_extract(data,'$.title')=${quote(p.title)};`;}).join('\n');
+mkdirSync(new URL('../../tmp/',import.meta.url),{recursive:true});
+writeFileSync(new URL('../../tmp/news-venue-backfill.sql',import.meta.url),sql);
+console.log(`${posts.length}개 글의 건물별 장소 검색 자료를 준비했습니다.`);

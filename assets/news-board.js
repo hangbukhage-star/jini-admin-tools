@@ -3,7 +3,7 @@
   let archive=false,offset=0,posts=[],generation=0;
   let filters={},venueGeneration=0;
   const searchForm=$('#news-search');
-  async function loadVenues(){const run=++venueGeneration;try{const data=await api(`/news/venues?archive=${archive?1:0}`);if(run!==venueGeneration)return;$('#venue-options').replaceChildren(...data.venues.map(value=>{const option=el('option');option.value=value;return option;}));}catch{/* Typing a place still works if suggestions are unavailable. */}}
+  async function loadVenues(){const run=++venueGeneration;try{const data=await api(`/news/venues?archive=${archive?1:0}`);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=[...new Set([...data.venues,...(selected?[selected]:[])])];select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=selected;}catch{/* Existing place choices remain available if suggestions fail. */}}
   let detailGeneration=0,visitorId='';
   function visitor(){
     if(visitorId)return visitorId;
@@ -48,7 +48,7 @@
       if(run!==detailGeneration)return;
       posts=posts.map(item=>item.id===p.id?{...item,views:p.views}:item);render();
       content.replaceChildren(el('p',`${p.category} · 조회 ${p.views.toLocaleString('ko-KR')}회`,'muted'),el('h2',`${p.cancelled?'[취소] ':''}${p.title}`));
-      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['어디서',p.venue],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])content.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
+      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['어디서',p.venueGroup],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])content.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
       if(p.description)content.append(el('p',p.description,'description'));
       content.append(reactions(p.id));
       for(const url of (p.images||[])){const src=imageURL(url);if(!src)continue;const img=el('img');img.src=src;img.alt=`${p.title} 안내 이미지`;img.loading='lazy';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>img.replaceWith(el('p','사진을 불러오지 못했어요. 공식 안내에서 확인해 주세요.','muted')));content.append(img);}
@@ -58,7 +58,7 @@
   $('#list').addEventListener('click',e=>{const a=e.target.closest('a.news-row');if(!a||e.ctrlKey||e.metaKey)return;e.preventDefault();const id=new URL(a.href).searchParams.get('post');history.replaceState(null,'',`?post=${encodeURIComponent(id)}`);detail(id);});
   $('#upcoming').onclick=()=>{archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();loadVenues();};
   $('#archive').onclick=()=>{archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
-  searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));if(values.minPrice!==''&&values.maxPrice!==''&&Number(values.minPrice)>Number(values.maxPrice)){status('최소 금액은 최대 금액보다 작거나 같게 입력해 주세요.');return;}filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
+  searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
   $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='';filters={};load();};
   $('#category').onchange=()=>load();$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname);});
   load();loadVenues();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);

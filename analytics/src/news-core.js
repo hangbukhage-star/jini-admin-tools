@@ -51,3 +51,17 @@ export function priceInfo(value) {
   const sorted=[...amounts].sort((a,b)=>a-b),paid=sorted.some(n=>n>0),free=sorted.includes(0);
   return {type:paid?(free?'mixed':'paid'):free?'free':/유료/.test(value)?'paid':'unknown',amounts:sorted};
 }
+
+export function venueGroup(value,title='',source='') {
+  const venue=clean(value),compact=venue.replace(/\s/g,'');
+  const known=[['소리문화의전당','한국소리문화의전당'],['덕진예술회관','덕진예술회관'],['국립무형유산원','국립무형유산원'],['우진문화공간','우진문화공간'],['우진예술극장','우진문화공간'],['완주향토예술문화회관','완주향토예술문화회관'],['완주문화예술회관','완주문화예술회관'],['전북예술회관','전북예술회관'],['국립극장','국립극장'],['로컬플랫폼모이장','로컬플랫폼 모이장'],['전주완산벙커','전주완산벙커 더 스페이스']];
+  for(const [match,name] of known)if(compact.includes(match))return name;
+  const library=venue.match(/^([^()\n]*?도서관)/);if(library)return clean(library[1]);
+  const short=venue.replace(/\([^)]*\)/g,'').replace(/\s*(?:지하\s*)?\d+층[\s\S]*$/,'').replace(/(회관|전당|센터|도서관|극장|아트홀|갤러리|문화공간|문화원|청사)\s+(?:대|소|중|야외)?(?:공연장|강당|회의실|강의실|로비|자료실)[\s\S]*$/,'$1').trim();
+  if(source==='library'&&(!short||/^(?:지하|강당|배움기지|동아리실|문화강의실)/.test(short))){
+    const branch=title.match(/^\[(완산|삼천|서신|평화|효자|송천|금암|인후|아중|쪽구름|건지|꽃심|한옥마을|서학예술마을|연화정|다가)\]/)?.[1];
+    return branch?(branch==='꽃심'?'전주시립도서관 꽃심':branch+'도서관'):'';
+  }
+  if(/^(?:지하\s*)?(?:강당|회의실|강의실|로비|자료실|배움기지|동아리실)$/.test(short))return '';
+  return short;
+}

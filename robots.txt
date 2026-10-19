@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /news/admin.html
+Disallow: /api/
+Disallow: /analytics/
+Disallow: /tmp/
+Disallow: /scripts/
+Disallow: /.git/
+Disallow: /.env
+
+Sitemap: https://jini-admin-tools.vercel.app/sitemap.xml
