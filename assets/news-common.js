@@ -12,6 +12,16 @@
     return /\d/.test(price)?`유료 · ${price}`:price;
   }
   async function api(path,options={}){if(!base)throw new Error('게시판 연결을 준비하고 있어요.');const r=await fetch(base+path,options);const data=await r.json();if(!r.ok)throw new Error(data.error||'요청을 처리하지 못했어요.');return data;}
-  function row(post,index){const a=el('a',null,'news-row');a.href=`/news/?post=${encodeURIComponent(post.id)}`;a.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${post.pinned?'📌 ':''}${post.cancelled?'[취소] ':''}${post.title}`),el('small',[post.startDate||'일정은 안내 참고',post.venueGroup||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;}
+  function row(post,index){
+    const a=el('a',null,'news-row'),main=el('span',null,'news-row-main');a.href=`/news/?post=${encodeURIComponent(post.id)}`;
+    main.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${post.pinned?'📌 ':''}${post.cancelled?'[취소] ':''}${post.title}`));
+    const reactions=el('span',null,'news-row-reactions');
+    for(const [kind,emoji,label] of [['like','👍','좋아요'],['thanks','🙏','고마워요'],['dislike','👎','싫어요'],['excited','😍','기대돼요'],['cheer','🎉','응원해요'],['sad','😢','아쉬워요']]){
+      const count=Number(post.reactions?.[kind])||0;if(!count)continue;
+      const badge=el('span',`${emoji} ${count.toLocaleString('ko-KR')}`,'news-reaction-badge');badge.title=`${label} ${count.toLocaleString('ko-KR')}명`;badge.setAttribute('aria-label',badge.title);reactions.append(badge);
+    }
+    if(reactions.childElementCount)main.append(reactions);
+    a.append(main,el('small',[post.startDate||'일정은 안내 참고',post.venueGroup||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
+  }
   window.JiniNews={base,el,safeURL,imageURL,api,row,priceLabel};
 })();

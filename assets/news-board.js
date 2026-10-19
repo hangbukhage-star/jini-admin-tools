@@ -1,6 +1,8 @@
 (()=>{
   const {api,el,row,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
   let archive=false,offset=0,posts=[],generation=0;
+  const reactionCounts=new Map();
+  function syncReactionCounts(id,counts){reactionCounts.set(id,counts);render();}
   let filters={},venueGeneration=0;
   const searchForm=$('#news-search');
   async function loadVenues(){const run=++venueGeneration;try{const data=await api(`/news/venues?archive=${archive?1:0}`);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=[...new Set([...data.venues,...(selected?[selected]:[])])];select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=selected;}catch{/* Existing place choices remain available if suggestions fail. */}}
@@ -22,7 +24,7 @@
       b.onclick=()=>update(selected===kind?null:kind);
       return {kind,label,b,count};
     });
-    function render(data){selected=data.selected;for(const {kind,label,b,count} of controls){count.textContent=Number(data.counts[kind]||0).toLocaleString('ko-KR');b.setAttribute('aria-pressed',String(selected===kind));b.setAttribute('aria-label',`${label} ${count.textContent}명${selected===kind?', 선택됨':''}`);}}
+    function render(data){selected=data.selected;syncReactionCounts(id,data.counts);for(const {kind,label,b,count} of controls){count.textContent=Number(data.counts[kind]||0).toLocaleString('ko-KR');b.setAttribute('aria-pressed',String(selected===kind));b.setAttribute('aria-label',`${label} ${count.textContent}명${selected===kind?', 선택됨':''}`);}}
     async function update(reaction){
       if(busy)return;busy=true;controls.forEach(({b})=>b.disabled=true);if(retry)retry.hidden=true;
       try{const data=await api(`/news/posts/${encodeURIComponent(id)}/reactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitorId:visitor(),...(reaction!==undefined?{reaction}:{})})});render(data);ready=true;message.textContent=reaction===undefined?'한 글에 하나씩 선택할 수 있어요. 다시 누르면 취소돼요.':selected?'반응을 남겼어요. 다시 누르면 취소할 수 있어요.':'반응을 취소했어요.';}
@@ -33,10 +35,10 @@
     section.append(heading,buttons,message,retry);update();return section;
   }
   const status=message=>{$('#status').textContent=message;};
-  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map(row));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
+  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map((p,index)=>row({...p,reactions:reactionCounts.get(p.id)||p.reactions},index)));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
   async function load(reset=true){
     const run=++generation;
-    if(reset){offset=0;posts=[];render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
+    if(reset){offset=0;posts=[];reactionCounts.clear();render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
     const params=new URLSearchParams({...filters,archive:archive?1:0,offset,limit:30,category:$('#category').value});
     try{const data=await api('/news?'+params);if(run!==generation)return;posts.push(...data.posts);offset+=data.posts.length;render();$('#more').hidden=!data.hasMore;status(`검색 결과 ${data.total.toLocaleString('ko-KR')}건 · ${posts.length}건 표시`);}catch(e){if(run===generation)status(e.message);}finally{if(run===generation){$('#more').disabled=false;$('#list').setAttribute('aria-busy','false');}}
   }

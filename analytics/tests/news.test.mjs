@@ -99,11 +99,27 @@ test('여섯 반응은 브라우저별 하나만 저장하고 재요청·변경�
     }
   }
   data=await react({visitorId:other,reaction:'sad'});assert.equal(data.counts.sad,2);
+  assert.equal((await(await call(e,'')).json()).posts.find(p=>p.id===id).reactions.sad,2);
   data=await react({visitorId});assert.equal(data.selected,'sad');assert.equal(data.counts.sad,2);
   const stored=e.DB.db.prepare('SELECT visitor_hash FROM news_reactions WHERE post_id=?').all(id);assert.ok(stored.every(x=>x.visitor_hash.length===64&&x.visitor_hash!==visitorId));
   const backup=await(await call(e,'/admin/export')).json();assert.equal(backup.reactions[0].count,2);assert.equal(JSON.stringify(backup.reactions).includes(visitorId),false);
   for(let i=0;i<2;i++){data=await react({visitorId,reaction:null});assert.equal(data.selected,null);assert.equal(data.counts.sad,1);}
+  const listed=(await(await call(e,'')).json()).posts.find(p=>p.id===id);assert.equal(listed.reactions.sad,1);assert.equal(Object.values(listed.reactions).reduce((a,b)=>a+b,0),1);
   assert.equal((await(await call(e,`/posts/${id}`)).json()).post.views,0);
+});
+
+test('목록 반응 집계는 글별·페이지별로 분리되고 숨긴 글을 노출하지 않는다',async()=>{
+  const e=env(),ids=[];
+  for(const title of ['첫 반응 소식','둘째 반응 소식'])ids.push((await(await call(e,'/admin/post','POST',{title,status:'published',category:'공연'})).json()).id);
+  for(const [id,reaction] of [[ids[0],'like'],[ids[0],'like'],[ids[0],'thanks'],[ids[1],'cheer']])await call(e,`/posts/${id}/reactions`,'POST',{visitorId:crypto.randomUUID(),reaction},false);
+  const all=(await(await call(e,'')).json()).posts;
+  assert.deepEqual(all.find(p=>p.id===ids[0]).reactions,{like:2,thanks:1,dislike:0,excited:0,cheer:0,sad:0});
+  assert.deepEqual(all.find(p=>p.id===ids[1]).reactions,{like:0,thanks:0,dislike:0,excited:0,cheer:1,sad:0});
+  const first=await(await call(e,'?limit=1')).json(),next=await(await call(e,'?limit=1&offset=1')).json();
+  assert.equal(first.posts.length,1);assert.equal(first.hasMore,true);assert.notEqual(first.posts[0].id,next.posts[0].id);
+  for(const post of [...first.posts,...next.posts])assert.deepEqual(post.reactions,all.find(p=>p.id===post.id).reactions);
+  await call(e,'/admin/bulk','POST',{ids:[ids[0]],action:'hide'});
+  const remaining=await(await call(e,'')).json();assert.equal(remaining.posts.length,1);assert.equal(remaining.posts[0].id,ids[1]);assert.equal(remaining.posts[0].reactions.like,0);
 });
 
 test('비공개 글의 반응을 읽거나 변경할 수 없고 편집·삭제·복구가 반응을 보존한다',async()=>{

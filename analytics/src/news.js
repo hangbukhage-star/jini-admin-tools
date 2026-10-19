@@ -42,6 +42,13 @@ function hydrate(row,admin=false) {
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
+async function withReactions(env,posts) {
+  if(!posts.length)return posts;
+  const counts=new Map(posts.map(post=>[post.id,{like:0,thanks:0,dislike:0,excited:0,cheer:0,sad:0}]));
+  const totals=await rows(env,'SELECT post_id,reaction,COUNT(*) AS count FROM news_reactions WHERE post_id IN (SELECT value FROM json_each(?)) GROUP BY post_id,reaction',JSON.stringify(posts.map(post=>post.id)));
+  for(const row of totals)counts.get(row.post_id)[row.reaction]=Number(row.count);
+  return posts.map(post=>({...post,reactions:counts.get(post.id)}));
+}
 export async function ingestPost(env,source,url,raw) {
   const data=validatePost(raw);
   const canonical=publicURL(url);
@@ -106,7 +113,7 @@ export async function newsRequest(request,env,origin) {
       const where=clauses.join(' AND ');
       const total=await env.DB.prepare(`SELECT COUNT(*) AS count FROM news_posts WHERE ${where}`).bind(...params).first();
       const posts=await rows(env,`SELECT * FROM news_posts WHERE ${where} ORDER BY pinned DESC, CASE WHEN start_date='' THEN 1 ELSE 0 END, start_date ${archive?'DESC':'ASC'},created_at DESC,id ASC LIMIT ? OFFSET ?`,...params,limit+1,offset);
-      return json({posts:posts.slice(0,limit).map(x=>hydrate(x)),hasMore:posts.length>limit,total:Number(total.count)});
+      return json({posts:await withReactions(env,posts.slice(0,limit).map(x=>hydrate(x))),hasMore:posts.length>limit,total:Number(total.count)});
     }
     const imageMatch=path.match(/^\/news\/images\/([a-f0-9-]+)$/);
     if(request.method==='GET' && imageMatch) {
