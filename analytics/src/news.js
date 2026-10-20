@@ -35,7 +35,7 @@ function hydrate(row,admin=false) {
   const out={...parse(row.data),id:row.id,pinned:!!row.pinned,views:Number(row.view_count)||0,venueGroup:row.venue_group||'',checkedAt:row.checked_at,updatedAt:row.updated_at};
   if(admin) {
     const candidate=row.candidate?parse(row.candidate):null;
-    Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,candidate,recommendation:recommendCategory(out.title,out.description,row.source_id)});
+    Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,feeType:parse(row.price_info).type||'unknown',candidate,recommendation:recommendCategory(out.title,out.description,row.source_id)});
     if(candidate)candidate.recommendation=recommendCategory(candidate.title,candidate.description,row.source_id);
   }
   return out;
@@ -161,10 +161,19 @@ export async function newsRequest(request,env,origin) {
       if(!['pending','published','hidden','deleted'].includes(status))fail('상태를 확인해 주세요.');
       const category=url.searchParams.get('category')||'';
       if(category&&!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(category))fail('분야를 확인해 주세요.');
+      const q=clean(url.searchParams.get('q')).slice(0,160),fee=url.searchParams.get('fee')||'';
+      if(!['','free','paid','unknown'].includes(fee))fail('금액 구분을 확인해 주세요.');
       const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
+      const clauses=status==='deleted'?['deleted_at IS NOT NULL']:['status=?','deleted_at IS NULL'];
+      const params=status==='deleted'?[]:[status];
+      if(category){clauses.push("json_extract(data,'$.category')=?");params.push(category);}
+      if(q){clauses.push("instr(lower(data),lower(?))>0");params.push(q);}
+      if(fee){clauses.push(`COALESCE(json_extract(price_info,'$.type'),'unknown') ${fee==='paid'?"IN ('paid','mixed')":'= ?'}`);if(fee!=='paid')params.push(fee);}
+      params.push(offset);
+      const where=clauses.join(' AND ');
       const posts=status==='deleted'
-        ? await rows(env,`SELECT * FROM news_posts WHERE deleted_at IS NOT NULL ${category?"AND json_extract(data,'$.category')=?":""} ORDER BY deleted_at DESC LIMIT 51 OFFSET ?`,...(category?[category,offset]:[offset]))
-        : await rows(env,`SELECT * FROM news_posts WHERE status=? AND deleted_at IS NULL ${category?"AND json_extract(data,'$.category')=?":""} ORDER BY updated_at DESC LIMIT 51 OFFSET ?`,...(category?[status,category,offset]:[status,offset]));
+        ? await rows(env,`SELECT * FROM news_posts WHERE ${where} ORDER BY deleted_at DESC LIMIT 51 OFFSET ?`,...params)
+        : await rows(env,`SELECT * FROM news_posts WHERE ${where} ORDER BY updated_at DESC LIMIT 51 OFFSET ?`,...params);
       const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' AND deleted_at IS NULL ORDER BY checked_at DESC LIMIT 50");
       const counts=await rows(env,"SELECT CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END AS status,COUNT(*) AS count FROM news_posts GROUP BY CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END");
       return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
