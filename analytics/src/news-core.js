@@ -27,6 +27,8 @@ export function horizon(now = new Date()) {
 }
 export function recommendCategory(title, context='', source='') {
   const rules=[
+    ['AI·디지털 교육',/인공지능|생성형\s*AI|AI\s*(?:교육|활용|강좌|특강|리터러시)|디지털\s*(?:배움|교육|문해)/i],
+    ['평생·문화교육',/평생학습|평생교육|교육생\s*모집|수강생\s*모집|강좌\s*모집|수강\s*신청|문화예술교육|문화강좌/],
     ['세미나',/세미나|포럼|심포지엄|학술대회|학술행사/],
     ['문화강좌',/강좌|워크[숍샵]|강연|특강|교실|수강|양성|교육(?!극)|배우기|만들기|체험|독서모임|책놀이|읽어주기/],
     ['전시',/전시|展|갤러리/],
@@ -34,7 +36,7 @@ export function recommendCategory(title, context='', source='') {
   ];
   for(const value of [clean(title),clean(context)])for(const [category,pattern] of rules){const match=value.match(pattern);if(match)return {category,reason:`‘${match[0]}’ 표현을 기준으로 추천했어요.`,needsReview:false};}
   if(source==='library')return {category:'문화강좌',reason:'도서관 프로그램으로 교육·강좌를 추천했어요. 행사 성격을 확인해 주세요.',needsReview:true};
-  if(['sori','kukak','naru','jjticket','wanju'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
+  if(['sori','culturePerform','kukak','naru','jjticket','wanju'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
   return {category:'기타 소식',reason:'분류할 단서가 부족해요. 원문을 보고 분류를 선택해 주세요.',needsReview:true};
 }
 export const category=(title,context='',source='')=>recommendCategory(title,context,source).category;

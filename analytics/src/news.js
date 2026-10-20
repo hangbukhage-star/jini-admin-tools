@@ -21,7 +21,7 @@ export function validatePost(input) {
   const data = {};
   for(const [key,max] of Object.entries({title:160,category:20,time:200,venue:200,price:200,audience:100,description:2000,sourceName:100,imageCredit:200})) data[key]=clean(input[key]).slice(0,max);
   if(!data.title) fail('제목을 입력해 주세요.');
-  if(!['공연','전시','세미나','문화강좌','기타 소식'].includes(data.category)) data.category='기타 소식';
+  if(!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(data.category)) data.category='기타 소식';
   for(const key of ['startDate','endDate']) { data[key]=day(input[key]);if(input[key] && !data[key])fail('날짜를 확인해 주세요.'); }
   if(data.startDate && !data.endDate)data.endDate=data.startDate;
   if(data.startDate && data.endDate && data.endDate<data.startDate)fail('종료일이 시작일보다 빠릅니다.');
@@ -239,7 +239,7 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','culturePerform','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();
