@@ -35,7 +35,7 @@ export function recommendCategory(title, context='', source='') {
   ];
   for(const value of [clean(title),clean(context)])for(const [category,pattern] of rules){const match=value.match(pattern);if(match)return {category,reason:`‘${match[0]}’ 표현을 기준으로 추천했어요.`,needsReview:false};}
   if(source==='library')return {category:'평생·문화교육',reason:'도서관 프로그램으로 평생·문화교육을 추천했어요. 행사 성격을 확인해 주세요.',needsReview:true};
-  if(['sori','culturePerform','kukak','naru','jjticket','wanju','woojin'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
+  if(['sori','ssac','nol-jeonbuk','culturePerform','kukak','naru','jjticket','wanju','woojin'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
   return {category:'평생·문화교육',reason:'분류 단서가 부족해 평생·문화교육으로 두었어요. 원문을 보고 분류를 확인해 주세요.',needsReview:true};
 }
 export const category=(title,context='',source='')=>recommendCategory(title,context,source).category;

@@ -43,6 +43,7 @@ function hydrate(row,admin=false) {
   return out;
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
+function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/\s*[-–—]\s*(?:전주|전북)\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
 async function withReactions(env,posts) {
   if(!posts.length)return posts;
@@ -71,7 +72,16 @@ export async function ingestPost(env,source,url,raw) {
       await env.DB.prepare('UPDATE news_posts SET data=?,start_date=?,end_date=?,fingerprint=?,checked_at=?,updated_at=?,price_info=?,venue_group=? WHERE id=?').bind(JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title,source.adapter),current.id).run();
     }else await env.DB.prepare('UPDATE news_posts SET checked_at=?,candidate=NULL WHERE id=?').bind(stamp,current.id).run();
   }else{
-    const duplicate=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? LIMIT 1').bind(fp).first();
+    let duplicate=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL LIMIT 1').bind(fp).first();
+    if(!duplicate && data.startDate){
+      const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL",data.startDate);
+      const title=duplicateTitle(data.title),venue=venueGroup(data.venue,data.title,source.adapter);
+      duplicate=candidates.find(row=>{
+        const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
+        return title && title===previousTitle && (!venue || !row.venue_group || venue===row.venue_group);
+      });
+    }
+    if(duplicate)return {skipped:true,duplicate:true};
     const ready=data.startDate&&data.endDate&&data.venue&&!data.cancelled&&!duplicate;
     const status=source.auto_publish&&ready?'published':'pending';
     await env.DB.prepare('INSERT INTO news_posts(id,source_id,source_url,status,data,start_date,end_date,fingerprint,checked_at,created_at,updated_at,price_info,venue_group) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),source.id,canonical,status,JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title,source.adapter)).run();
@@ -268,7 +278,7 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','culturePerform','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','ssac','nol','culturePerform','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();

@@ -1,0 +1,3 @@
+INSERT OR IGNORE INTO news_sources(id,name,url,adapter,config,enabled,auto_publish,images_allowed) VALUES
+('ssac','전북대학교 삼성문화회관','https://ssac.jbnu.ac.kr/main/menu?gc=Contot','ssac','{}',1,0,0),
+('nol-jeonbuk','NOL 티켓 · 전북','https://nol.yanolja.com/discovery/list/search/PRODUCT_CATEGORY_ENTERTAINMENT?q=%EC%A0%84%EC%A3%BC&filter=WTLYNT1USf4mpcd0xJIa0Ph5OJnwEBV8IXvg9yqHgXeLvZrgnjf4T9DidRJSpbQX1A7XhmYnw7XiUDu8qaCUGFXCf6sJx8PENNvimk7blOoK6lYPDyUsttk5naPy8WH64wnAPXIk1BKibGIhqDuefWWaOKNfN7b0wGML00gJrCF3lrj2rOWBXtZ8PX4fQLYaJxlTdEeOsmeOMF5F5iWkgCRDncOHgLRbl6TKvreuBV2NGiqBDml0l0Oac2EVaJDPOrNX4z1dreUZ2pNoEfPcdF5aKCwLim7oVQ7igsPna8C3XHb8e24oIfByOffQICBJcEvuByNEECx6yJck6lxOP9BdKsKGvfuH&sort=SORT_END_DATE_ASC','nol','{}',1,0,0);
