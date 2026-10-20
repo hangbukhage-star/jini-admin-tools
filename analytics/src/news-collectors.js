@@ -136,7 +136,7 @@ export function parseDetail(html, url, source, hint = '') {
   const [startDate,endDate] = dateRange(dateText);
   title = clean(title).slice(0,160);
   if(!title) throw new Error('제목을 읽지 못했습니다.');
-  return { title, category: category(title,'',source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
+  return { title, category: category(title,'',source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');

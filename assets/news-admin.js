@@ -14,12 +14,14 @@
     all.indeterminate=count>0&&count<posts.length;
     all.disabled=bulkBusy||!posts.length;
     $('#selection-count').textContent=`${count}개 선택`;
-    for(const [id,show] of [['bulk-publish',!deleted],['bulk-hide',!deleted],['bulk-delete',!deleted],['bulk-restore',deleted]]){
+    for(const [id,show] of [['bulk-publish',!deleted],['bulk-hide',!deleted],['bulk-delete',!deleted],['bulk-category',!deleted],['bulk-category-apply',!deleted],['bulk-restore',deleted]]){
       $(('#'+id)).hidden=!show;$(('#'+id)).disabled=bulkBusy||count===0;
     }
+    $('#bulk-category').disabled=bulkBusy||count===0;
+    $('#bulk-category-apply').disabled=bulkBusy||count===0||!$('#bulk-category').value;
     for(const input of $('#posts').querySelectorAll('input[type=checkbox]')){input.checked=selected.has(input.value);input.disabled=bulkBusy;input.closest('.post-summary').classList.toggle('is-selected',input.checked);}
     for(const b of document.querySelectorAll('#tabs button,#posts button,#more,#refresh,#new-post'))b.disabled=bulkBusy;
-    $('#bulk-help').textContent=deleted?'삭제한 글은 자동 수집으로 다시 게시되지 않습니다. 선택 복구하면 확인 대기 목록으로 돌아갑니다.':'체크한 글만 한 번에 처리합니다. 전체 선택은 현재 불러온 목록에 적용됩니다.';
+    $('#bulk-help').textContent=deleted?'삭제한 글은 자동 수집으로 다시 게시되지 않습니다. 선택 복구하면 확인 대기 목록으로 돌아갑니다.':'체크한 글은 게시·숨김·삭제하거나 분야를 한 번에 바꿀 수 있어요. 전체 선택은 현재 분야 필터와 불러온 목록에 적용됩니다.';
   }
   async function processBulk(action,ids=[...selected]){
     if(bulkBusy||!ids.length)return;
@@ -28,8 +30,8 @@
     status(`${ids.length}개 글을 처리하고 있어요.`);
     let completed=0;
     try{
-      for(let start=0;start<ids.length;start+=100){const result=await send('/bulk',{action,ids:ids.slice(start,start+100)});completed+=result.count;status(`${completed}/${ids.length}개 글을 처리했어요.`);}
-      await load();status(`${completed}개 글을 ${names[action]}했습니다.${action==='restore'?' 확인 대기 목록에서 확인하세요.':''}`);
+      for(let start=0;start<ids.length;start+=100){const result=await send('/bulk',{action,ids:ids.slice(start,start+100),category:action==='category'?$('#bulk-category').value:undefined});completed+=result.count;status(`${completed}/${ids.length}개 글을 처리했어요.`);}
+      await load();status(action==='category'?`${completed}개 글을 ‘${$('#bulk-category').value}’ 분야로 바꿨어요.`:`${completed}개 글을 ${names[action]}했습니다.${action==='restore'?' 확인 대기 목록에서 확인하세요.':''}`);
     }
     catch(e){if(completed){try{await load();}catch{}status(`${completed}개 처리 후 중단했습니다. ${e.message} 남은 글을 다시 선택해 주세요.`,true);}else status(e.message,true);}
     finally{bulkBusy=false;updateSelection();}
@@ -42,7 +44,8 @@
     row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
   }
   async function load(reset=true){
-    const data=await admin(`?status=${state}&offset=${reset?0:offset}`);
+    const category=$('#category-filter').value;
+    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&offset=${reset?0:offset}`);
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
     $('#posts').replaceChildren(...posts.map((p,index)=>postRow(p,false,index)));if(!posts.length)$('#posts').append(el('p','해당하는 글이 없어요.','muted'));
@@ -88,8 +91,10 @@
   $('#login').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;token=$('#key').value;try{await load();$('#key').value='';$('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;status('관리자 연결이 완료됐어요.');}catch(err){token='';status(err.message,true);}finally{b.disabled=false;}};
   $('#logout').onclick=()=>{token='';location.reload();};
   $('#tabs').onclick=async e=>{if(!e.target.dataset.status)return;state=e.target.dataset.status;try{await load();}catch(err){status(err.message,true);}};
+  $('#category-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#select-all').onchange=e=>{selected.clear();if(e.target.checked)posts.forEach(p=>selected.add(p.id));updateSelection();};
   for(const [id,action] of [['bulk-publish','publish'],['bulk-hide','hide'],['bulk-delete','delete'],['bulk-restore','restore']])$('#'+id).onclick=()=>processBulk(action);
+  $('#bulk-category').onchange=updateSelection;$('#bulk-category-apply').onclick=()=>processBulk('category');
   $('#new-post').onclick=()=>editPost();$('#new-source').onclick=()=>editSource();
   $('#refresh').onclick=async()=>{try{await load();status('목록을 새로 불러왔어요.');}catch(e){status(e.message,true);}};
   $('#more').onclick=async()=>{try{await load(false);}catch(e){status(e.message,true);}};

@@ -159,8 +159,12 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='GET' && path==='/news/admin') {
       const status=url.searchParams.get('status')||'pending';
       if(!['pending','published','hidden','deleted'].includes(status))fail('상태를 확인해 주세요.');
+      const category=url.searchParams.get('category')||'';
+      if(category&&!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(category))fail('분야를 확인해 주세요.');
       const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
-      const posts=status==='deleted'?await rows(env,'SELECT * FROM news_posts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 51 OFFSET ?',offset):await rows(env,'SELECT * FROM news_posts WHERE status=? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 51 OFFSET ?',status,offset);
+      const posts=status==='deleted'
+        ? await rows(env,`SELECT * FROM news_posts WHERE deleted_at IS NOT NULL ${category?"AND json_extract(data,'$.category')=?":""} ORDER BY deleted_at DESC LIMIT 51 OFFSET ?`,...(category?[category,offset]:[offset]))
+        : await rows(env,`SELECT * FROM news_posts WHERE status=? AND deleted_at IS NULL ${category?"AND json_extract(data,'$.category')=?":""} ORDER BY updated_at DESC LIMIT 51 OFFSET ?`,...(category?[status,category,offset]:[status,offset]));
       const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' AND deleted_at IS NULL ORDER BY checked_at DESC LIMIT 50");
       const counts=await rows(env,"SELECT CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END AS status,COUNT(*) AS count FROM news_posts GROUP BY CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END");
       return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
@@ -170,13 +174,19 @@ export async function newsRequest(request,env,origin) {
     }
     if(admin && request.method==='POST' && path==='/news/admin/bulk') {
       const b=await body(request);
-      if(!['publish','hide','delete','restore'].includes(b.action))fail('처리 방법을 선택해 주세요.');
+      if(!['publish','hide','delete','restore','category'].includes(b.action))fail('처리 방법을 선택해 주세요.');
       if(!Array.isArray(b.ids)||!b.ids.length||b.ids.length>100||b.ids.some(id=>typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id)))fail('게시글을 1~100개 선택해 주세요.');
+      const allowedCategories=['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'];
+      if(b.action==='category'&&!allowedCategories.includes(b.category))fail('변경할 분야를 선택해 주세요.');
       const ids=[...new Set(b.ids)],encodedIds=JSON.stringify(ids),stamp=nowISO();
       const records=await rows(env,'SELECT id,deleted_at FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
       if(records.length!==ids.length)fail('일부 글을 찾을 수 없습니다. 목록을 새로고침해 주세요.',409);
       const restoring=b.action==='restore';
       if(records.some(r=>restoring?!r.deleted_at:!!r.deleted_at))fail('글 상태가 바뀌었습니다. 목록을 새로고침해 주세요.',409);
+      if(b.action==='category'){
+        const updated=await rows(env,"UPDATE news_posts SET data=json_set(data,'$.category',?),locked=1,updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NULL RETURNING id",b.category,stamp,encodedIds);
+        return json({ok:true,count:updated.length});
+      }
       const changes={publish:"status='published',locked=1",hide:"status='hidden',locked=1",delete:'deleted_at=?,locked=1',restore:"deleted_at=NULL,status='pending',locked=1"};
       const values=b.action==='delete'?[stamp,stamp,encodedIds]:[stamp,encodedIds];
       const updated=await rows(env,`UPDATE news_posts SET ${changes[b.action]},updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS ${restoring?'NOT ':''}NULL RETURNING id`,...values);

@@ -26,6 +26,7 @@ export function horizon(now = new Date()) {
   return d.toISOString().slice(0,10);
 }
 export function recommendCategory(title, context='', source='') {
+  if(source==='sori-exhibition')return {category:'전시',reason:'전시 전용 수집 사이트의 글입니다.',needsReview:false};
   const rules=[
     ['AI·디지털 교육',/인공지능|생성형\s*AI|AI\s*(?:교육|활용|강좌|특강|리터러시)|디지털\s*(?:배움|교육|문해)/i],
     ['평생·문화교육',/평생학습|평생교육|교육생\s*모집|수강생\s*모집|강좌\s*모집|수강\s*신청|문화예술교육|문화강좌/],
