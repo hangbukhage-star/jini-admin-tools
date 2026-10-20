@@ -47,8 +47,8 @@
   }
   async function load(reset=true){
     const category=$('#category-filter').value;
-    const q=$('#post-search').value.trim(),fee=$('#price-filter').value;
-    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&offset=${reset?0:offset}`);
+    const q=$('#post-search').value.trim(),fee=$('#price-filter').value,month=$('#event-month').value;
+    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
     $('#posts').replaceChildren(...posts.map((p,index)=>postRow(p,false,index)));if(!posts.length)$('#posts').append(el('p','해당하는 글이 없어요.','muted'));
@@ -96,6 +96,7 @@
   $('#tabs').onclick=async e=>{if(!e.target.dataset.status)return;state=e.target.dataset.status;try{await load();}catch(err){status(err.message,true);}};
   $('#category-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#price-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
+  $('#event-month').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#post-search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{try{await load();}catch(err){status(err.message,true);}},250);};
   $('#select-all').onchange=e=>{selected.clear();if(e.target.checked)posts.forEach(p=>selected.add(p.id));updateSelection();};
   for(const [id,action] of [['bulk-publish','publish'],['bulk-hide','hide'],['bulk-delete','delete'],['bulk-restore','restore']])$('#'+id).onclick=()=>processBulk(action);

@@ -163,12 +163,15 @@ export async function newsRequest(request,env,origin) {
       if(category&&!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(category))fail('분야를 확인해 주세요.');
       const q=clean(url.searchParams.get('q')).slice(0,160),fee=url.searchParams.get('fee')||'';
       if(!['','free','paid','unknown'].includes(fee))fail('금액 구분을 확인해 주세요.');
+      const month=url.searchParams.get('month')||'';
+      if(month&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))fail('월별 검색 기간을 확인해 주세요.');
       const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
       const clauses=status==='deleted'?['deleted_at IS NOT NULL']:['status=?','deleted_at IS NULL'];
       const params=status==='deleted'?[]:[status];
       if(category){clauses.push("json_extract(data,'$.category')=?");params.push(category);}
       if(q){clauses.push("instr(lower(data),lower(?))>0");params.push(q);}
       if(fee){clauses.push(`COALESCE(json_extract(price_info,'$.type'),'unknown') ${fee==='paid'?"IN ('paid','mixed')":'= ?'}`);if(fee!=='paid')params.push(fee);}
+      if(month){const [year,monthNumber]=month.split('-').map(Number),lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),first=`${month}-01`,last=`${month}-${String(lastDay).padStart(2,'0')}`;clauses.push("COALESCE(NULLIF(start_date,''),NULLIF(end_date,''))<=? AND COALESCE(NULLIF(end_date,''),NULLIF(start_date,''))>=?");params.push(last,first);}
       params.push(offset);
       const where=clauses.join(' AND ');
       const posts=status==='deleted'
