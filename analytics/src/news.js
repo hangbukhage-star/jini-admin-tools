@@ -44,6 +44,18 @@ function hydrate(row,admin=false) {
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
 function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/\s*[-–—]\s*(?:전주|전북)\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
+async function findDuplicate(env,data,source,excludeId=''){
+  const fp=await fingerprint(data);
+  const exact=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
+  if(exact)return exact;
+  if(!data.startDate)return null;
+  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL AND id<>?",data.startDate,excludeId);
+  const title=duplicateTitle(data.title),venue=venueGroup(data.venue,data.title,source.adapter);
+  return candidates.find(row=>{
+    const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
+    return title && title===previousTitle && (!venue || !row.venue_group || venue===row.venue_group);
+  })||null;
+}
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
 async function withReactions(env,posts) {
   if(!posts.length)return posts;
@@ -65,6 +77,10 @@ export async function ingestPost(env,source,url,raw) {
   data.sourceName=source.name;data.link=canonical;
   if(!source.images_allowed)data.images=[];
   if(current) {
+    if(current.status==='pending'&&!current.locked){
+      const duplicate=await findDuplicate(env,data,source,current.id);
+      if(duplicate){await env.DB.prepare('UPDATE news_posts SET deleted_at=?,checked_at=? WHERE id=?').bind(stamp,stamp,current.id).run();return {skipped:true,duplicate:true};}
+    }
     const changed=JSON.stringify(parse(current.data))!==JSON.stringify(data);
     if(changed && (current.locked || current.status==='published')) {
       await env.DB.prepare('UPDATE news_posts SET candidate=?,checked_at=? WHERE id=?').bind(JSON.stringify(data),stamp,current.id).run();
@@ -72,15 +88,7 @@ export async function ingestPost(env,source,url,raw) {
       await env.DB.prepare('UPDATE news_posts SET data=?,start_date=?,end_date=?,fingerprint=?,checked_at=?,updated_at=?,price_info=?,venue_group=? WHERE id=?').bind(JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title,source.adapter),current.id).run();
     }else await env.DB.prepare('UPDATE news_posts SET checked_at=?,candidate=NULL WHERE id=?').bind(stamp,current.id).run();
   }else{
-    let duplicate=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL LIMIT 1').bind(fp).first();
-    if(!duplicate && data.startDate){
-      const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL",data.startDate);
-      const title=duplicateTitle(data.title),venue=venueGroup(data.venue,data.title,source.adapter);
-      duplicate=candidates.find(row=>{
-        const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
-        return title && title===previousTitle && (!venue || !row.venue_group || venue===row.venue_group);
-      });
-    }
+    const duplicate=await findDuplicate(env,data,source);
     if(duplicate)return {skipped:true,duplicate:true};
     const ready=data.startDate&&data.endDate&&data.venue&&!data.cancelled&&!duplicate;
     const status=source.auto_publish&&ready?'published':'pending';
