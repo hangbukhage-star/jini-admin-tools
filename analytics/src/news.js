@@ -50,10 +50,10 @@ async function findDuplicate(env,data,source,excludeId=''){
   if(exact)return exact;
   if(!data.startDate)return null;
   const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL AND id<>?",data.startDate,excludeId);
-  const title=duplicateTitle(data.title),venue=venueGroup(data.venue,data.title,source.adapter);
+  const title=duplicateTitle(data.title);
   return candidates.find(row=>{
     const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
-    return title && title===previousTitle && (!venue || !row.venue_group || venue===row.venue_group);
+    return title && title===previousTitle;
   })||null;
 }
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}

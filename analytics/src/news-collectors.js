@@ -63,6 +63,16 @@ function formattedField(root,names){
   }
   return '';
 }
+function ssacField(box, names){
+  const wanted=new Set(names.map(name=>name.replace(/\s/g,'')));
+  for(const row of box?.querySelectorAll('p.sub_list01')||[]){
+    const strong=row.querySelector('strong');
+    const key=clean(strong?.textContent).replace(/\s/g,'');
+    if(!wanted.has(key))continue;
+    return clean([...row.childNodes].filter(node=>node!==strong).map(node=>node.textContent).join(' '));
+  }
+  return '';
+}
 export function parseDetail(html, url, source, hint = '') {
   const root = documentOf(html);
   const config = JSON.parse(source.config || '{}');
@@ -82,15 +92,19 @@ export function parseDetail(html, url, source, hint = '') {
     price = label(box,['가격']); audience = label(box,['관람연령','연령']);
     pics = images(box,'img',url);
   } else if (source.adapter === 'ssac') {
-    const box = root.querySelector('.view_wrap,.view_con,.cont_view,#contents') || root.body;
-    title = text(root,'meta[property="og:title"]') || text(box,'h3,h2,h4,.title,.tit') || hint;
-    dateText = label(box,['기간','공연기간','전시기간','일정']);
-    time = label(box,['시간','공연시간']);
-    venue = label(box,['장소','공연장소','전시장소']);
-    price = label(box,['티켓','티켓가격','관람료','가격']);
-    audience = label(box,['관람연령','연령']);
+    const box = root.querySelector('main.sub_wrap dl') || root.querySelector('.sub_wrap dl');
+    if(!box)throw new Error('삼성문화회관 상세 구조를 확인해 주세요.');
+    const heading=box.querySelector(':scope > dt')||box.firstElementChild;
+    title = text(heading,'p') || hint;
+    dateText = ssacField(box,['기간','공연기간','전시기간','일정']);
+    time = ssacField(box,['시간','공연시간']);
+    venue = ssacField(box,['장소','공연장소','전시장소']);
+    price = ssacField(box,['티켓','티켓가격','관람료','가격']);
+    audience = ssacField(box,['관람연령','연령']);
+    const eventType=clean(heading.querySelector('span')?.textContent);
     if(venue) venue = `전북대학교 삼성문화회관 ${venue}`;
-    pics = images(box,'img',url);
+    pics = images(root,'main.sub_wrap img:not(.qr_imgs)',url);
+    if(eventType==='전시'&&!/전시|展|갤러리/.test(title))title=`${title} 전시`;
   } else if (source.adapter === 'nol') {
     const box = root.querySelector('main') || root.body;
     title = text(root,'h1') || root.querySelector('meta[property="og:title"]')?.getAttribute('content') || hint.split(/\s+전북\s*[·・]/)[0];
@@ -187,8 +201,11 @@ export function linksFrom(html, url, source) {
     if(source.adapter==='ssac')for(const k of [...u.searchParams.keys()])if(!['gc','concert_id','do'].includes(k))u.searchParams.delete(k);
     if(source.adapter==='nol')u.search='';
     u.searchParams.sort();
-    const key = u.href, hint = clean(a.textContent);
-    if(!found.has(key) || hint.length > found.get(key).hint.length) found.set(key,{url:key,hint});
+    const key = u.href;
+    const hint = source.adapter==='ssac'
+      ? clean(a.querySelector('dt')?.textContent || a.closest('li')?.querySelector('dl dt')?.textContent || a.querySelector('img')?.getAttribute('alt'))
+      : clean(a.textContent);
+    if(!found.has(key) || (source.adapter==='ssac' && hint.length>found.get(key).hint.length) || (source.adapter!=='ssac' && hint.length>found.get(key).hint.length)) found.set(key,{url:key,hint});
   }
   return [...found.values()];
 }
