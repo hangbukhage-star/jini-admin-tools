@@ -108,7 +108,7 @@ export function parseDetail(html, url, source, hint = '') {
   } else if (source.adapter === 'nol') {
     const box = root.querySelector('main') || root.body;
     title = text(root,'h1') || root.querySelector('meta[property="og:title"]')?.getAttribute('content') || hint.split(/\s+전북\s*[·・]/)[0];
-    title = title.replace(/\s*(?:[-–—]\s*전주\s*)?(?:연극|뮤지컬|콘서트|클래식(?:\/무용)?|아동\/가족|전시(?:\/행사)?|스포츠|공연)(?:\s+일정 및 예매\s*\|\s*NOL(?:\([^)]*\))?)?$/,'').trim();
+    title = title.replace(/\s*(?:[-–—]\s*전주\s*)?(?:연극|뮤지컬|콘서트|클래식(?:\/무용)?|무용|아동\/가족|전시(?:\/행사)?|스포츠|공연)(?:\s+일정 및 예매\s*\|\s*NOL(?:\([^)]*\))?)?$/,'').trim();
     dateText = label(box,['기간','공연기간','이용기간']);
     time = label(box,['시간','공연시간']);
     venue = label(box,['장소','공연장소']);
