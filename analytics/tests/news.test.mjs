@@ -148,14 +148,14 @@ test('국악원 월별 목록과 도서관 접수 페이지를 행사 운영일�
   const blank=parseDetail(html.replace('<dt>관람료</dt>','<dt>관람연령</dt><dd></dd><dt>예약현황</dt><dd>잔여 1000석</dd><dt>관람료</dt>'),links[0].url,kukak);assert.equal(blank.audience,'');
   const library={id:'library',adapter:'library',name:'도서관',url:'https://lib.jeonju.go.kr/index.jeonju?menuCd=DOM_000000102002000000'};
   const l=parseDetail('<table class="bbs_write"><tr><th>과정명</th><td>그림책 읽어주기</td></tr><tr><th>운영기간</th><td>2026-12-15 ~ 2026-12-15</td><th>접수기간</th><td>2026-05-21 ~ 2026-12-14</td></tr><tr><th>운영시간</th><td>10:00~10:40</td><th>운영장소</th><td>송천도서관</td></tr><tr><th>신청대상</th><td>유아</td><th>수강료</th><td>0원</td></tr></table>',library.url,library);
-  assert.equal(l.startDate,'2026-12-15');assert.equal(l.endDate,'2026-12-15');assert.equal(l.venue,'송천도서관');assert.equal(l.price,'0원');assert.equal(l.category,'문화강좌');
+  assert.equal(l.startDate,'2026-12-15');assert.equal(l.endDate,'2026-12-15');assert.equal(l.venue,'송천도서관');assert.equal(l.price,'0원');assert.equal(l.category,'평생·문화교육');
   const list='<div class="lib_program_list"><a class="detail" href="?menuCd=DETAIL&reUniqId=RE1&searchWord=x">상세보기</a><a href="?menuCd=APPLY&reUniqId=RE1">신청</a></div>';
   const items=linksFrom(list,library.url,library);assert.equal(items.length,1);assert.equal(new URL(items[0].url).searchParams.has('searchWord'),false);
 });
 
 test('추천 분류는 근거와 불확실성을 표시하며 직접 저장한 분류를 덮어쓰지 않는다',async()=>{
-  for(const [title,value] of [['음악교육극','공연'],['정기 음악회','공연'],['사진 전시회','전시'],['전시 해설사 양성 교육','문화강좌'],['건축 세미나','세미나'],['그림책 읽어주기','문화강좌']])assert.equal(recommendCategory(title).category,value);
-  assert.equal(recommendCategory('알림').needsReview,true);assert.equal(recommendCategory('알림','','library').category,'문화강좌');
+  for(const [title,value] of [['음악교육극','공연'],['정기 음악회','공연'],['사진 전시회','전시'],['전시 해설사 양성 교육','평생·문화교육'],['건축 세미나','평생·문화교육'],['그림책 읽어주기','평생·문화교육']])assert.equal(recommendCategory(title).category,value);
+  assert.equal(recommendCategory('알림').needsReview,true);assert.equal(recommendCategory('알림','','library').category,'평생·문화교육');
   const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'사진 전시회',category:'공연',status:'pending'})).json();
   const post=(await(await call(e,'/admin')).json()).posts.find(x=>x.id===id);assert.equal(post.category,'공연');assert.equal(post.recommendation.category,'전시');assert.match(post.recommendation.reason,/전시/);
   const sql=readFileSync(new URL('../migrations/0008_add_kukak_library.sql',import.meta.url),'utf8');e.DB.db.exec(sql);e.DB.db.exec(sql);assert.equal(e.DB.db.prepare('SELECT COUNT(*) AS count FROM news_sources').get().count,5);

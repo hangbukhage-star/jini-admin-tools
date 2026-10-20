@@ -21,7 +21,9 @@ export function validatePost(input) {
   const data = {};
   for(const [key,max] of Object.entries({title:160,category:20,time:200,venue:200,price:200,audience:100,description:2000,sourceName:100,imageCredit:200})) data[key]=clean(input[key]).slice(0,max);
   if(!data.title) fail('제목을 입력해 주세요.');
-  if(!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(data.category)) data.category='기타 소식';
+  const allowedCategories=['공연','전시','AI·디지털 교육','평생·문화교육'];
+  if(['문화강좌','세미나'].includes(data.category))data.category='평생·문화교육';
+  else if(data.category==='기타 소식'||!allowedCategories.includes(data.category))data.category=recommendCategory(data.title,input.description,input.sourceId).category;
   for(const key of ['startDate','endDate']) { data[key]=day(input[key]);if(input[key] && !data[key])fail('날짜를 확인해 주세요.'); }
   if(data.startDate && !data.endDate)data.endDate=data.startDate;
   if(data.startDate && data.endDate && data.endDate<data.startDate)fail('종료일이 시작일보다 빠릅니다.');
@@ -165,7 +167,7 @@ export async function newsRequest(request,env,origin) {
       const status=url.searchParams.get('status')||'pending';
       if(!['pending','published','hidden','deleted'].includes(status))fail('상태를 확인해 주세요.');
       const category=url.searchParams.get('category')||'';
-      if(category&&!['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'].includes(category))fail('분야를 확인해 주세요.');
+      if(category&&!['공연','전시','AI·디지털 교육','평생·문화교육'].includes(category))fail('분야를 확인해 주세요.');
       const q=clean(url.searchParams.get('q')).slice(0,160),fee=url.searchParams.get('fee')||'';
       if(!['','free','paid','unknown'].includes(fee))fail('금액 구분을 확인해 주세요.');
       const month=url.searchParams.get('month')||'';
@@ -193,7 +195,7 @@ export async function newsRequest(request,env,origin) {
       const b=await body(request);
       if(!['publish','hide','delete','restore','category'].includes(b.action))fail('처리 방법을 선택해 주세요.');
       if(!Array.isArray(b.ids)||!b.ids.length||b.ids.length>100||b.ids.some(id=>typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id)))fail('게시글을 1~100개 선택해 주세요.');
-      const allowedCategories=['공연','전시','세미나','문화강좌','AI·디지털 교육','평생·문화교육','기타 소식'];
+      const allowedCategories=['공연','전시','AI·디지털 교육','평생·문화교육'];
       if(b.action==='category'&&!allowedCategories.includes(b.category))fail('변경할 분야를 선택해 주세요.');
       const ids=[...new Set(b.ids)],encodedIds=JSON.stringify(ids),stamp=nowISO();
       const records=await rows(env,'SELECT id,deleted_at FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
