@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   const {api,el,imageURL,safeURL,base}=window.JiniNews,$=s=>document.querySelector(s);
-  let token='',state='pending',offset=0,posts=[],images=[],current={};
+  let token='',state='pending',offset=0,posts=[],images=[],current={},trashCount=0;
   const selected=new Set();
   let bulkBusy=false;
   let searchTimer;
@@ -15,19 +15,21 @@
     all.indeterminate=count>0&&count<posts.length;
     all.disabled=bulkBusy||!posts.length;
     $('#selection-count').textContent=`${count}개 선택`;
-    for(const [id,show] of [['bulk-publish',!deleted],['bulk-hide',!deleted],['bulk-delete',!deleted],['bulk-category',!deleted],['bulk-category-apply',!deleted],['bulk-restore',deleted]]){
+    for(const [id,show] of [['bulk-publish',!deleted],['bulk-hide',!deleted],['bulk-delete',!deleted],['bulk-category',!deleted],['bulk-category-apply',!deleted],['bulk-restore',deleted],['bulk-erase',deleted],['empty-trash',deleted]]){
       $(('#'+id)).hidden=!show;$(('#'+id)).disabled=bulkBusy||count===0;
     }
+    $('#empty-trash').disabled=bulkBusy||trashCount===0;
     $('#bulk-category').disabled=bulkBusy||count===0;
     $('#bulk-category-apply').disabled=bulkBusy||count===0||!$('#bulk-category').value;
     for(const input of $('#posts').querySelectorAll('input[type=checkbox]')){input.checked=selected.has(input.value);input.disabled=bulkBusy;input.closest('.post-summary').classList.toggle('is-selected',input.checked);}
     for(const b of document.querySelectorAll('#tabs button,#posts button,#more,#refresh,#new-post'))b.disabled=bulkBusy;
-    $('#bulk-help').textContent=deleted?'삭제한 글은 자동 수집으로 다시 게시되지 않습니다. 선택 복구하면 확인 대기 목록으로 돌아갑니다.':'체크한 글은 게시·숨김·삭제하거나 분야를 한 번에 바꿀 수 있어요. 전체 선택은 현재 분야 필터와 불러온 목록에 적용됩니다.';
+    $('#bulk-help').textContent=deleted?'선택 복구는 대기 목록으로 돌아갑니다. 영구 삭제 후에도 재수집 방지용 주소·제목·행사일 기록은 남습니다.':'체크한 글은 게시·숨김·삭제하거나 분야를 한 번에 바꿀 수 있어요. 전체 선택은 현재 분야 필터와 불러온 목록에 적용됩니다.';
   }
   async function processBulk(action,ids=[...selected]){
     if(bulkBusy||!ids.length)return;
+    if(action==='erase'&&!confirm(`선택한 ${ids.length}개 글을 영구 삭제할까요? 글 내용은 지워지고 재수집 방지용 정보만 남습니다.`))return;
     bulkBusy=true;updateSelection();
-    const names={publish:'게시',hide:'숨김',delete:'삭제',restore:'복구'};
+    const names={publish:'게시',hide:'숨김',delete:'삭제',restore:'복구',erase:'영구 삭제'};
     status(`${ids.length}개 글을 처리하고 있어요.`);
     let completed=0;
     try{
@@ -49,6 +51,7 @@
     const category=$('#category-filter').value;
     const q=$('#post-search').value.trim(),fee=$('#price-filter').value,month=$('#event-month').value;
     const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
+    trashCount=Number(data.counts.find(x=>x.status==='deleted')?.count)||0;
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
     $('#posts').replaceChildren(...posts.map((p,index)=>postRow(p,false,index)));if(!posts.length)$('#posts').append(el('p','해당하는 글이 없어요.','muted'));
@@ -99,7 +102,14 @@
   $('#event-month').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#post-search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{try{await load();}catch(err){status(err.message,true);}},250);};
   $('#select-all').onchange=e=>{selected.clear();if(e.target.checked)posts.forEach(p=>selected.add(p.id));updateSelection();};
-  for(const [id,action] of [['bulk-publish','publish'],['bulk-hide','hide'],['bulk-delete','delete'],['bulk-restore','restore']])$('#'+id).onclick=()=>processBulk(action);
+  for(const [id,action] of [['bulk-publish','publish'],['bulk-hide','hide'],['bulk-delete','delete'],['bulk-restore','restore'],['bulk-erase','erase']])$('#'+id).onclick=()=>processBulk(action);
+  $('#empty-trash').onclick=async()=>{
+    if(bulkBusy||!trashCount||!confirm(`삭제함의 글 ${trashCount}개를 모두 영구 삭제할까요? 글 내용은 지워지고 재수집 방지용 정보만 남습니다.`))return;
+    bulkBusy=true;updateSelection();status(`${trashCount}개 글을 영구 삭제하고 있어요.`);
+    try{const result=await send('/trash/empty',{});await load();status(`삭제함의 글 ${result.count}개를 영구 삭제했습니다.`);}
+    catch(e){status(e.message,true);}
+    finally{bulkBusy=false;updateSelection();}
+  };
   $('#bulk-category').onchange=updateSelection;$('#bulk-category-apply').onclick=()=>processBulk('category');
   $('#new-post').onclick=()=>editPost();$('#new-source').onclick=()=>editSource();
   $('#refresh').onclick=async()=>{try{await load();status('목록을 새로 불러왔어요.');}catch(e){status(e.message,true);}};

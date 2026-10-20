@@ -44,19 +44,39 @@ function hydrate(row,admin=false) {
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
 function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/\s*[-–—]\s*(?:전주|전북)\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
-async function findDuplicate(env,data,source,excludeId=''){
+async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
+  const title=duplicateTitle(data.title);
+  const suppressed=await env.DB.prepare("SELECT source_url FROM news_suppressed WHERE source_url=? OR (start_date=? AND title_key=?) LIMIT 1").bind(sourceUrl,data.startDate||'',title).first();
+  if(suppressed)return {id:suppressed.source_url,suppressed:true};
   const fp=await fingerprint(data);
   const exact=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
   if(exact)return exact;
   if(!data.startDate)return null;
-  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL AND id<>?",data.startDate,excludeId);
-  const title=duplicateTitle(data.title);
+  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND id<>?",data.startDate,excludeId);
   return candidates.find(row=>{
     const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
     return title && title===previousTitle;
   })||null;
 }
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
+async function preserveSuppression(env,posts){
+  for(const post of posts){
+    const data=parse(post.data);
+    await env.DB.prepare('INSERT INTO news_suppressed(source_url,title_key,start_date,created_at) VALUES(?,?,?,?) ON CONFLICT(source_url) DO UPDATE SET title_key=excluded.title_key,start_date=excluded.start_date,created_at=excluded.created_at')
+      .bind(post.source_url,duplicateTitle(data.title||''),post.start_date||'',nowISO()).run();
+  }
+}
+async function removeOrphanedPostImages(env,posts){
+  const ids=new Set();
+  for(const post of posts){
+    const data=parse(post.data);
+    for(const image of Array.isArray(data.images)?data.images:[]){
+      const match=String(image).match(/^\/news\/images\/([a-f0-9-]+)$/i);
+      if(match)ids.add(match[1]);
+    }
+  }
+  for(const id of ids)await env.DB.prepare("DELETE FROM news_images WHERE id=? AND NOT EXISTS(SELECT 1 FROM news_posts WHERE data LIKE '%' || '/news/images/' || ? || '%' OR candidate LIKE '%' || '/news/images/' || ? || '%')").bind(id,id,id).run();
+}
 async function withReactions(env,posts) {
   if(!posts.length)return posts;
   const counts=new Map(posts.map(post=>[post.id,{like:0,thanks:0,dislike:0,excited:0,cheer:0,sad:0}]));
@@ -78,7 +98,7 @@ export async function ingestPost(env,source,url,raw) {
   if(!source.images_allowed)data.images=[];
   if(current) {
     if(current.status==='pending'&&!current.locked){
-      const duplicate=await findDuplicate(env,data,source,current.id);
+      const duplicate=await findDuplicate(env,data,source,current.id,canonical);
       if(duplicate){await env.DB.prepare('UPDATE news_posts SET deleted_at=?,checked_at=? WHERE id=?').bind(stamp,stamp,current.id).run();return {skipped:true,duplicate:true};}
     }
     const changed=JSON.stringify(parse(current.data))!==JSON.stringify(data);
@@ -88,7 +108,7 @@ export async function ingestPost(env,source,url,raw) {
       await env.DB.prepare('UPDATE news_posts SET data=?,start_date=?,end_date=?,fingerprint=?,checked_at=?,updated_at=?,price_info=?,venue_group=? WHERE id=?').bind(JSON.stringify(data),data.startDate,data.endDate,fp,stamp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title,source.adapter),current.id).run();
     }else await env.DB.prepare('UPDATE news_posts SET checked_at=?,candidate=NULL WHERE id=?').bind(stamp,current.id).run();
   }else{
-    const duplicate=await findDuplicate(env,data,source);
+    const duplicate=await findDuplicate(env,data,source,'',canonical);
     if(duplicate)return {skipped:true,duplicate:true};
     const ready=data.startDate&&data.endDate&&data.venue&&!data.cancelled&&!duplicate;
     const status=source.auto_publish&&ready?'published':'pending';
@@ -209,24 +229,47 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='GET' && path==='/news/admin/export') {
       return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images'),reactions:await rows(env,'SELECT post_id,reaction,COUNT(*) AS count FROM news_reactions GROUP BY post_id,reaction')});
     }
+    if(admin && request.method==='POST' && path==='/news/admin/trash/empty') {
+      let removed=0;
+      while(true){
+        const trash=await rows(env,'SELECT id,source_url,data,start_date FROM news_posts WHERE deleted_at IS NOT NULL ORDER BY deleted_at LIMIT 250');
+        if(!trash.length)break;
+        await preserveSuppression(env,trash);
+        const ids=JSON.stringify(trash.map(post=>post.id));
+        const result=await env.DB.prepare('DELETE FROM news_posts WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NOT NULL').bind(ids).run();
+        const count=Number(result.meta?.changes??trash.length);
+        await removeOrphanedPostImages(env,trash);
+        removed+=count;
+        if(!count)break;
+      }
+      return json({ok:true,count:removed});
+    }
     if(admin && request.method==='POST' && path==='/news/admin/bulk') {
       const b=await body(request);
-      if(!['publish','hide','delete','restore','category'].includes(b.action))fail('처리 방법을 선택해 주세요.');
+      if(!['publish','hide','delete','restore','category','erase'].includes(b.action))fail('처리 방법을 선택해 주세요.');
       if(!Array.isArray(b.ids)||!b.ids.length||b.ids.length>100||b.ids.some(id=>typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id)))fail('게시글을 1~100개 선택해 주세요.');
       const allowedCategories=['공연','전시','AI·디지털 교육','평생·문화교육'];
       if(b.action==='category'&&!allowedCategories.includes(b.category))fail('변경할 분야를 선택해 주세요.');
       const ids=[...new Set(b.ids)],encodedIds=JSON.stringify(ids),stamp=nowISO();
-      const records=await rows(env,'SELECT id,deleted_at FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
+      const records=await rows(env,'SELECT id,deleted_at,source_url,data,start_date FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
       if(records.length!==ids.length)fail('일부 글을 찾을 수 없습니다. 목록을 새로고침해 주세요.',409);
       const restoring=b.action==='restore';
-      if(records.some(r=>restoring?!r.deleted_at:!!r.deleted_at))fail('글 상태가 바뀌었습니다. 목록을 새로고침해 주세요.',409);
+      if(records.some(r=>restoring?!r.deleted_at:b.action==='erase'?!r.deleted_at:!!r.deleted_at))fail('글 상태가 바뀌었습니다. 목록을 새로고침해 주세요.',409);
+      if(b.action==='erase'){
+        await preserveSuppression(env,records);
+        const deleted=await env.DB.prepare('DELETE FROM news_posts WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NOT NULL RETURNING id').bind(encodedIds).all();
+        await removeOrphanedPostImages(env,records);
+        return json({ok:true,count:deleted.results?.length||0});
+      }
       if(b.action==='category'){
         const updated=await rows(env,"UPDATE news_posts SET data=json_set(data,'$.category',?),locked=1,updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NULL RETURNING id",b.category,stamp,encodedIds);
         return json({ok:true,count:updated.length});
       }
+      if(b.action==='delete')await preserveSuppression(env,records);
       const changes={publish:"status='published',locked=1",hide:"status='hidden',locked=1",delete:'deleted_at=?,locked=1',restore:"deleted_at=NULL,status='pending',locked=1"};
       const values=b.action==='delete'?[stamp,stamp,encodedIds]:[stamp,encodedIds];
       const updated=await rows(env,`UPDATE news_posts SET ${changes[b.action]},updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS ${restoring?'NOT ':''}NULL RETURNING id`,...values);
+      if(restoring&&updated.length)await env.DB.prepare('DELETE FROM news_suppressed WHERE source_url IN (SELECT source_url FROM news_posts WHERE id IN (SELECT value FROM json_each(?)))').bind(encodedIds).run();
       return json({ok:true,count:updated.length});
     }
     const backupImage=path.match(/^\/news\/admin\/backup-image\/([a-f0-9-]+)$/);
