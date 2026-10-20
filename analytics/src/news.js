@@ -102,10 +102,8 @@ export async function newsRequest(request,env,origin) {
       const filter=archive?"end_date<>'' AND end_date<?":"(end_date='' OR end_date>=?)";
       const category=clean(url.searchParams.get('category')).slice(0,20),q=clean(url.searchParams.get('q')).slice(0,160),venue=clean(url.searchParams.get('venue')).slice(0,200),fee=url.searchParams.get('fee')||'';
       if(!['','free','paid','unknown'].includes(fee))fail('요금 구분을 확인해 주세요.');
-      const month=url.searchParams.get('month')||'',date=url.searchParams.get('date')||'',sort=url.searchParams.get('sort')||'';
+      const month=url.searchParams.get('month')||'',sort=url.searchParams.get('sort')||'';
       if(month&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))fail('월별 검색 기간을 확인해 주세요.');
-      if(date&&day(date)!==date)fail('날짜 검색 기간을 확인해 주세요.');
-      if(month&&date)fail('월별 검색과 일자별 검색 중 하나만 선택해 주세요.');
       if(sort&&!['asc','desc'].includes(sort))fail('날짜 정렬 방법을 확인해 주세요.');
       const amount=name=>{const raw=url.searchParams.get(name);if(raw===null||raw==='')return null;if(!/^\d{1,9}$/.test(raw)||Number(raw)>100000000)fail('금액은 0~100,000,000원 사이의 정수로 입력해 주세요.');return Number(raw);};
       const min=amount('minPrice'),max=amount('maxPrice');if(min!==null&&max!==null&&min>max)fail('최소 금액이 최대 금액보다 큽니다.');
@@ -115,7 +113,6 @@ export async function newsRequest(request,env,origin) {
       if(venue){clauses.push("instr(replace(lower(venue_group),' ',''),replace(lower(?),' ',''))>0");params.push(venue);}
       if(fee){clauses.push(fee==='unknown'?"json_extract(price_info,'$.type')='unknown'":"json_extract(price_info,'$.type') IN (?, 'mixed')");if(fee!=='unknown')params.push(fee);}
       if(month){const [year,monthNumber]=month.split('-').map(Number),lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),first=`${month}-01`,last=`${month}-${String(lastDay).padStart(2,'0')}`;clauses.push("COALESCE(NULLIF(start_date,''),NULLIF(end_date,''))<=? AND COALESCE(NULLIF(end_date,''),NULLIF(start_date,''))>=?");params.push(last,first);}
-      if(date){clauses.push("COALESCE(NULLIF(start_date,''),NULLIF(end_date,''))<=? AND COALESCE(NULLIF(end_date,''),NULLIF(start_date,''))>=?");params.push(date,date);}
       if(min!==null||max!==null){clauses.push(`EXISTS(SELECT 1 FROM json_each(news_posts.price_info,'$.amounts') a WHERE CAST(a.value AS INTEGER) BETWEEN ? AND ?${fee==='free'?' AND CAST(a.value AS INTEGER)=0':fee==='paid'?' AND CAST(a.value AS INTEGER)>0':''})`);params.push(min??0,max??100000000);}
       const where=clauses.join(' AND ');
       const total=await env.DB.prepare(`SELECT COUNT(*) AS count FROM news_posts WHERE ${where}`).bind(...params).first();

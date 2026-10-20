@@ -35,8 +35,6 @@
     section.append(heading,buttons,message,retry);update();return section;
   }
   const status=message=>{$('#status').textContent=message;};
-  searchForm.elements.month.addEventListener('change',()=>{if(searchForm.elements.month.value)searchForm.elements.date.value='';});
-  searchForm.elements.date.addEventListener('change',()=>{if(searchForm.elements.date.value)searchForm.elements.month.value='';});
   function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map((p,index)=>row({...p,reactions:reactionCounts.get(p.id)||p.reactions},index)));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
   async function load(reset=true){
     const run=++generation;
