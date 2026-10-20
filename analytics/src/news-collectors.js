@@ -108,12 +108,11 @@ export function parseDetail(html, url, source, hint = '') {
   } else if (source.adapter === 'nol') {
     const box = root.querySelector('main') || root.body;
     title = text(root,'h1') || root.querySelector('meta[property="og:title"]')?.getAttribute('content') || hint.split(/\s+전북\s*[·・]/)[0];
-    title = title.replace(/\s*[-–—]\s*전주(?:\s+[^|]*)?(?:\s*\|\s*NOL(?:\([^)]*\))?)?$/,'').trim();
+    title = title.replace(/\s*(?:[-–—]\s*전주\s*)?(?:연극|뮤지컬|콘서트|클래식(?:\/무용)?|아동\/가족|전시(?:\/행사)?|스포츠|공연)(?:\s+일정 및 예매\s*\|\s*NOL(?:\([^)]*\))?)?$/,'').trim();
     dateText = label(box,['기간','공연기간','이용기간']);
     time = label(box,['시간','공연시간']);
     venue = label(box,['장소','공연장소']);
-    price = box.querySelector('#prices')?.textContent || '';
-    if(!price) price = [...box.querySelectorAll('dt')].filter(e=>/전석|좌석|티켓|성인|청소년|아동|가격/.test(clean(e.textContent))).map(e=>`${clean(e.textContent)} ${clean(e.nextElementSibling?.textContent)}`).join(' / ');
+    price = [...box.querySelectorAll('#prices dl[aria-label="티켓 가격 정보"] dt')].map(e=>`${clean(e.textContent)} ${clean(e.nextElementSibling?.textContent)}`).join(' / ');
     audience = label(box,['연령','관람연령']);
     pics = images(box,'img',url);
   } else if (source.adapter === 'nihc') {
