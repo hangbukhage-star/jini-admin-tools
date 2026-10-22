@@ -1,6 +1,6 @@
 import {clean,day,publicURL,koreaToday,horizon,recommendCategory,priceInfo,venueGroup} from './news-core.js';
 
-const MAX_SOURCES = 12;
+const MAX_SOURCES = 15;
 const nowISO = () => new Date().toISOString();
 const parse = value => JSON.parse(value || '{}');
 async function sha(value) {const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -92,6 +92,7 @@ export async function ingestPost(env,source,url,raw) {
   await env.DB.prepare('INSERT INTO news_seen VALUES(?,?,?) ON CONFLICT(url) DO UPDATE SET checked_at=excluded.checked_at').bind(canonical,source.id,stamp).run();
   const current=await env.DB.prepare('SELECT * FROM news_posts WHERE source_url=?').bind(canonical).first();
   if(current?.deleted_at)return {skipped:true};
+  if(['deureuri','historyMuseum','museumEs'].includes(source.adapter)&&!data.startDate)return {skipped:true,missingDate:true};
   if(!current && data.endDate && (data.endDate<koreaToday() || data.startDate>horizon()))return {skipped:true};
   const fp=await fingerprint(data);
   data.sourceName=source.name;data.link=canonical;
@@ -285,7 +286,7 @@ export async function newsRequest(request,env,origin) {
       const b=await body(request);
       if(b.action==='start') {
         const lock=await env.DB.prepare("INSERT INTO news_locks(id,expires_at) VALUES('collect',unixepoch()+900) ON CONFLICT(id) DO UPDATE SET expires_at=excluded.expires_at WHERE news_locks.expires_at<unixepoch()").run();
-        return json({busy:!lock.meta?.changes,sources:lock.meta?.changes?await rows(env,'SELECT * FROM news_sources WHERE enabled=1 ORDER BY name LIMIT 12'):[]});
+        return json({busy:!lock.meta?.changes,sources:lock.meta?.changes?await rows(env,'SELECT * FROM news_sources WHERE enabled=1 ORDER BY name LIMIT 15'):[]});
       }
       if(b.action==='finish'){await env.DB.prepare("DELETE FROM news_locks WHERE id='collect'").run();return json({ok:true});}
       const source=await env.DB.prepare('SELECT * FROM news_sources WHERE id=?').bind(clean(b.sourceId)).first();
@@ -329,11 +330,11 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','ssac','nol','culturePerform','nihc','jjticket','wanju','naru','kukak','library','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','ssac','nol','culturePerform','nihc','jjticket','wanju','naru','kukak','library','deureuri','museumEs','historyMuseum','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();
-      if(!previous && count.count>=MAX_SOURCES)fail('무료 운영을 위해 사이트는 최대 12곳까지 등록합니다. 더 늘릴 때 수집 용량을 점검해 주세요.');
+      if(!previous && count.count>=MAX_SOURCES)fail(`무료 운영을 위해 사이트는 최대 ${MAX_SOURCES}곳까지 등록합니다. 더 늘릴 때 수집 용량을 점검해 주세요.`);
       if(b.autoPublish && b.adapter==='generic' && (!config.links||!config.title||!config.date||!config.venue))fail('수집 항목 확인 후 자동 게시를 켤 수 있습니다.');
       await env.DB.prepare('INSERT INTO news_sources(id,name,url,adapter,config,enabled,auto_publish,images_allowed) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,url=excluded.url,adapter=excluded.adapter,config=excluded.config,enabled=excluded.enabled,auto_publish=excluded.auto_publish,images_allowed=excluded.images_allowed').bind(id,name,address,b.adapter,JSON.stringify(config),b.enabled?1:0,b.autoPublish?1:0,b.imagesAllowed?1:0).run();
       return json({ok:true,id});
