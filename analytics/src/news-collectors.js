@@ -25,8 +25,12 @@ function pairs(root) {
     const val = row.querySelector('dd,td');
     if (key && val) values[clean(key.textContent)] = clean(val.textContent);
   }
+  for (const list of root.querySelectorAll('dl')) {
+    const terms=[...list.querySelectorAll('dt')],definitions=[...list.querySelectorAll('dd')];
+    terms.forEach((term,index)=>{if(definitions[index])values[clean(term.textContent)]=clean(definitions[index].textContent);});
+  }
   // Some institutions use div/span rows instead of tables.
-  for (const e of root.querySelectorAll('dt,th,.label')) {
+  for (const e of root.querySelectorAll('.label')) {
     if(e.nextElementSibling) values[clean(e.textContent)] = clean(e.nextElementSibling.textContent);
   }
   return values;
@@ -58,8 +62,8 @@ export function dateRange(value) {
   return [dates[0],end&&end>=dates[0]?end:dates[0]];
 }
 function formattedField(root,names){
-  for(const name of names){const pattern=name.replace(/\s/g,'').split('').join('\\s*');const re=new RegExp(`^\\s*${pattern}\\s*[:：|｜]\\s*(.+)$`);
-    for(const row of root.querySelectorAll('li,p,tr')){const match=clean(row.textContent).match(re);if(match)return clean(match[1]);}
+  for(const name of names){const pattern=name.replace(/\s/g,'').split('').join('\\s*');const re=new RegExp(`(?:^|[^가-힣A-Za-z0-9])${pattern}\\s*[:：|｜]\\s*(.+)$`);
+    for(const row of root.querySelectorAll('p,tr,li')){const match=clean(row.textContent).match(re);if(match)return clean(match[1]);}
   }
   return '';
 }
@@ -161,6 +165,28 @@ export function parseDetail(html, url, source, hint = '') {
     title=label(box,['과정명']);dateText=label(box,['운영기간']);time=label(box,['운영시간']);venue=label(box,['운영장소']);
     price=label(box,['수강료']);audience=label(box,['신청대상']);
     pics=images(box,'td img:not([src*="btn_"])',url);
+  } else if(source.adapter==='deureuri') {
+    const box=root.querySelector('main')||root.querySelector('article')||root.body;
+    title=text(box,'h1')||root.querySelector('meta[property="og:title"]')?.getAttribute('content')||hint;
+    dateText=label(box,['수업','교육일정','일정','운영기간']);time=label(box,['시간','수업시간']);
+    venue=label(box,['장소']);price=label(box,['비용','수강료']);audience=label(box,['대상']);
+    pics=images(box,'img',url);
+  } else if(source.adapter==='museumEs') {
+    const box=root.querySelector('main')||root.querySelector('#contents')||root.body;
+    title=hint||root.querySelector('meta[property="og:title"]')?.getAttribute('content')||text(box,'h2,h3');
+    dateText=label(box,['행사일시','행사기간','기간']);time=dateText.match(/\d{1,2}:\d{2}[^\n]*/)?.[0]||'';
+    venue=label(box,['행사장소','장소']);
+    price=label(box,['참가비','관람료','체험비'])||formattedField(box,['참가비','체험비','참가비용']);
+    pics=images(box,'img',url);
+  } else if(source.adapter==='historyMuseum') {
+    const box=root.querySelector('.viewContents,.view_cont,.viewContent,.view')||root.body;
+    title=hint||text(root,'.viewTitle,.viewTit,h3');
+    dateText=label(box,['일시','행사일시','기간'])||formattedField(box,['일시','행사일시','날짜','기간']);
+    time=dateText.match(/\d{1,2}:\d{2}[^\n]*/)?.[0]||'';
+    venue=label(box,['장소','행사장소'])||formattedField(box,['장소','행사장소']);
+    price=label(box,['체험료','참가비','관람료','비용'])||formattedField(box,['체험료','참가비','관람료','비용']);
+    audience=label(box,['대상','참가대상'])||formattedField(box,['대상','참가대상']);
+    pics=images(box,'img',url);
   } else {
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
@@ -184,7 +210,7 @@ export function linksFrom(html, url, source) {
     })).values()];
   }
   const soriExhibition = source.adapter === 'sori' && /\/show\/exhibition(?:\/|$)/.test(new URL(source.url).pathname);
-  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]'}[source.adapter] || config.links;
+  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
@@ -199,6 +225,8 @@ export function linksFrom(html, url, source) {
     if(source.adapter==='library')for(const k of [...u.searchParams.keys()])if(!['menuCd','reUniqId'].includes(k))u.searchParams.delete(k);
     if(source.adapter==='ssac')for(const k of [...u.searchParams.keys()])if(!['gc','concert_id','do'].includes(k))u.searchParams.delete(k);
     if(source.adapter==='nol')u.search='';
+    if(source.adapter==='museumEs')for(const k of [...u.searchParams.keys()])if(!['mid','act','seq'].includes(k))u.searchParams.delete(k);
+    if(source.adapter==='historyMuseum')for(const k of [...u.searchParams.keys()])if(!['boardUid','contentUid','dataUid','subPath'].includes(k))u.searchParams.delete(k);
     u.searchParams.sort();
     const key = u.href;
     const hint = source.adapter==='ssac'
@@ -226,6 +254,8 @@ export function listingURLs(source, now = new Date()) {
     for(let i=1;i<=3;i++) {const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else if(source.adapter==='library'){
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);u.searchParams.set('orderField','RE_SDATE');u.searchParams.set('orderSort','desc');urls.push(u.href);}
+  } else if(source.adapter==='historyMuseum') {
+    urls.push(source.url);
   } else if(['jjticket','wanju'].includes(source.adapter)) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else urls.push(source.url);
