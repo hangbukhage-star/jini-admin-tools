@@ -210,7 +210,7 @@ export function linksFrom(html, url, source) {
     })).values()];
   }
   const soriExhibition = source.adapter === 'sori' && /\/show\/exhibition(?:\/|$)/.test(new URL(source.url).pathname);
-  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]'}[source.adapter] || config.links;
+  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"],a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
