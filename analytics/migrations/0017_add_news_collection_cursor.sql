@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS news_collection_cursor (
+  source_id TEXT PRIMARY KEY REFERENCES news_sources(id) ON DELETE CASCADE,
+  next_page TEXT NOT NULL DEFAULT '1',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

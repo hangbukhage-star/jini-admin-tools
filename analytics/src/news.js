@@ -293,11 +293,14 @@ export async function newsRequest(request,env,origin) {
       if(!source || !source.enabled)fail('수집할 사이트를 찾을 수 없습니다.',404);
       if(b.action==='state') {
         await env.DB.prepare('UPDATE news_sources SET last_attempt=? WHERE id=?').bind(nowISO(),source.id).run();
-        return json({source,seen:await rows(env,'SELECT url,checked_at FROM news_seen WHERE source_id=?',source.id)});
+        const cursor=await env.DB.prepare('SELECT next_page FROM news_collection_cursor WHERE source_id=?').bind(source.id).first();
+        return json({source,nextPage:cursor?.next_page,seen:await rows(env,'SELECT url,checked_at FROM news_seen WHERE source_id=?',source.id)});
       }
       if(b.action==='ingest')return json(await ingestPost(env,source,b.url,b.data));
       if(b.action==='result'){
         const error=clean(b.error).slice(0,500),count=Math.max(0,Number(b.count)||0);
+        const validCursor=(Number.isInteger(b.nextPage)&&b.nextPage>=0)||(typeof b.nextPage==='string'&&/^20\d{2}-\d{2}:\d+$/.test(b.nextPage));
+        if(validCursor)await env.DB.prepare('INSERT INTO news_collection_cursor(source_id,next_page,updated_at) VALUES(?,?,?) ON CONFLICT(source_id) DO UPDATE SET next_page=excluded.next_page,updated_at=excluded.updated_at').bind(source.id,String(b.nextPage),nowISO()).run();
         if(error)await env.DB.prepare('UPDATE news_sources SET last_error=?,last_count=? WHERE id=?').bind(error,count,source.id).run();
         else await env.DB.prepare('UPDATE news_sources SET last_success=?,last_error=NULL,last_count=? WHERE id=?').bind(nowISO(),count,source.id).run();
         return json({ok:true});
