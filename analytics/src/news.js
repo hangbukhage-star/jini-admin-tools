@@ -44,6 +44,10 @@ function hydrate(row,admin=false) {
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
 function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/\s*[-–—]\s*(?:전주|전북)\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
+function duplicateCore(value) {
+  const core=clean(value).replace(/^(?:\[[^\]]{1,20}\]\s*)+/,'').replace(/\s*[（(][^（）()]{12,}[）)]\s*$/,'');
+  return duplicateTitle(core);
+}
 async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
   const title=duplicateTitle(data.title);
   const suppressed=await env.DB.prepare("SELECT source_url FROM news_suppressed WHERE source_url=? OR (start_date=? AND title_key=?) LIMIT 1").bind(sourceUrl,data.startDate||'',title).first();
@@ -52,10 +56,13 @@ async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
   const exact=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
   if(exact)return exact;
   if(!data.startDate)return null;
-  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND id<>?",data.startDate,excludeId);
+  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL AND id<>?",data.startDate,excludeId);
+  const core=duplicateCore(data.title),group=venueGroup(data.venue,data.title,source.adapter);
   return candidates.find(row=>{
     const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
-    return title && title===previousTitle;
+    if(title&&title===previousTitle)return true;
+    const previousCore=duplicateCore(previous.title||'');
+    return group&&row.venue_group===group&&core.length>=16&&previousCore.length>=16&&(core.includes(previousCore)||previousCore.includes(core));
   })||null;
 }
 async function rows(env,sql,...values) {return (await env.DB.prepare(sql).bind(...values).all()).results || [];}
