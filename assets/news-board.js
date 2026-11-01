@@ -1,11 +1,11 @@
 (()=>{
-  const {api,el,row,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
+  const {api,el,renderListing,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
   let archive=false,offset=0,posts=[],generation=0;
   const reactionCounts=new Map();
   function syncReactionCounts(id,counts){reactionCounts.set(id,counts);render();}
   let filters={},venueGeneration=0;
   const searchForm=$('#news-search');
-  async function loadVenues(){const run=++venueGeneration;try{const data=await api(`/news/venues?archive=${archive?1:0}`);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=[...new Set([...data.venues,...(selected?[selected]:[])])];select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=selected;}catch{/* Existing place choices remain available if suggestions fail. */}}
+  async function loadVenues(){const run=++venueGeneration;try{const params=new URLSearchParams({archive:archive?1:0,region:$('#region-select').value});const data=await api(`/news/venues?${params}`);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=[...new Set([...data.venues,...(selected?[selected]:[])])];select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=selected;}catch{/* Existing place choices remain available if suggestions fail. */}}
   let detailGeneration=0,visitorId='';
   function visitor(){
     if(visitorId)return visitorId;
@@ -35,7 +35,7 @@
     section.append(heading,buttons,message,retry);update();return section;
   }
   const status=message=>{$('#status').textContent=message;};
-  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map((p,index)=>row({...p,reactions:reactionCounts.get(p.id)||p.reactions},index,true)));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
+  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);renderListing($('#list'),filtered.map(p=>({...p,reactions:reactionCounts.get(p.id)||p.reactions})),category);}
   async function load(reset=true){
     const run=++generation;
     if(reset){offset=0;posts=[];reactionCounts.clear();render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
@@ -52,7 +52,7 @@
       const summary=el('div',null,'detail-summary'),info=el('div',null,'detail-info'),posters=el('div',null,'detail-posters');
       info.append(el('p',`${p.category} · 조회 ${p.views.toLocaleString('ko-KR')}회`,'muted'),el('h2',`${p.cancelled?'[취소] ':''}${p.title}`));
       for(const url of (p.images||[])){const src=imageURL(url);if(!src)continue;const img=el('img',null,'detail-poster');img.src=src;img.alt=`${p.title} 포스터`;img.loading='eager';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{img.remove();if(!posters.childElementCount)summary.classList.remove('has-posters');});posters.append(img);}
-      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['어디서',p.venueGroup],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])info.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
+      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['지역',p.region],['어디서',p.venue||p.venueGroup],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])info.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
       summary.append(info);if(posters.childElementCount){summary.classList.add('has-posters');summary.append(posters);}content.replaceChildren(summary);
       if(p.description)content.append(el('p',p.description,'description'));
       content.append(reactions(p.id));
@@ -63,7 +63,8 @@
   $('#upcoming').onclick=()=>{archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();loadVenues();};
   $('#archive').onclick=()=>{archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
   searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
-  $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='공연';filters={};load();};
+  $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='공연';filters={};load();loadVenues();};
+  $('#region-select').onchange=()=>{$('#venue-select').value='';loadVenues();};
   $('#category').onchange=()=>load();$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname);});
   $('#category').value='공연';
   load();loadVenues();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);

@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo,venueGroup} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
+import {newsRegion} from '../src/news-regions.js';
 import {siteVisitors,cleanupVisitors} from '../src/site-visitors.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
@@ -339,4 +340,22 @@ test('다른 사이트의 지역표기·구두점이 다른 같은 행사는 중
   assert.equal(r.duplicate,true);assert.equal(r.skipped,true);
   const next=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/2',data:make('지브리＆디즈니 영화음악 오케스트라 콘서트',tomorrow)})).json();assert.equal(next.ok,true);
   const series=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/3',data:{...make('지브리＆디즈니 영화음악 오케스트라 콘서트',today),startDate:new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10),endDate:tomorrow}})).json();assert.equal(series.duplicate,true);
+});
+
+
+test('지역 검색은 실제 장소를 우선하고 전체 검색·건수·페이지·비공개 경계를 지킨다',async()=>{
+  assert.equal(newsRegion({venue:'전북도립미술관 본관',title:'전주 작가 초대전'}),'완주');
+  assert.equal(newsRegion({venue:'한국소리문화의전당 모악당'}),'전주');
+  assert.equal(newsRegion({venue:'국립민속국악원'}),'남원');
+  assert.equal(newsRegion({venue:'강의실'}),'');
+  const e=env(),today=koreaToday();
+  for(const [title,venue,status] of [['전주 공연1','한국소리문화의전당 모악당','published'],['전주 교육2','삼천생활문화센터','published'],['익산 공연','익산예술의전당','published'],['완주 전시','전북도립미술관 본관','published'],['부안 공연','부안예술회관','published'],['김제 공연','김제문화예술회관','published'],['군산 공연','군산예술의전당','published'],['미확인','장소 추후 공지','published'],['대기','전주시청','pending'],['숨김','전주시청','hidden']]){
+    const r=await call(e,'/admin/post','POST',{title,venue,status,category:'공연',startDate:today,endDate:today,price:'무료'});assert.equal(r.status,200);
+  }
+  const page=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1')).json();assert.equal(page.total,2);assert.equal(page.posts.length,1);assert.equal(page.hasMore,true);assert.equal(page.posts[0].region,'전주');
+  const next=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1&offset=1')).json();assert.equal(next.total,2);assert.notEqual(page.posts[0].id,next.posts[0].id);
+  for(const region of ['익산','완주','부안','김제','군산']){const result=await(await call(e,'?region='+encodeURIComponent(region))).json();assert.equal(result.total,1);assert.equal(result.posts[0].region,region);}
+  const venues=await(await call(e,'/venues?region='+encodeURIComponent('전주'))).json();assert.equal(venues.venues.length,2);assert(!venues.venues.includes('익산예술의전당'));
+  const combined=await(await call(e,'?region='+encodeURIComponent('전주')+'&q='+encodeURIComponent('교육')+'&fee=free')).json();assert.equal(combined.total,1);
+  assert.equal((await call(e,'?region=bad')).status,400);assert.equal((await call(e,'/venues?region=bad')).status,400);
 });

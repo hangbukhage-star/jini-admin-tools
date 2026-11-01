@@ -28,7 +28,24 @@
       if(src){const img=el('img');img.src=src;img.alt='';img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';img.addEventListener('error',fallback,{once:true});cover.append(img);}else fallback();
       cover.append(el('span',post.category||'소식','news-card-category'));a.append(cover);
     }
-    a.append(main,el('small',[post.startDate||'일정은 안내 참고',post.venueGroup||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
+    a.append(main,el('small',[post.startDate||'일정은 안내 참고',post.region,post.venueGroup||post.venue||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
   }
-  window.JiniNews={base,el,safeURL,imageURL,api,row,priceLabel};
+  function renderListing(container,posts,category){
+    const isCard=p=>['공연','전시'].includes(p.category);
+    container.replaceChildren();
+    if(category){
+      const cards=['공연','전시'].includes(category);
+      container.className=cards?'news-card-grid':'panel news-board-list';
+      container.append(...posts.map((post,index)=>row(post,index,cards)));
+    }else{
+      container.className='news-mixed-list';
+      for(const [heading,items,cards] of [['공연·전시',posts.filter(isCard),true],['평생·문화교육 / AI·디지털 교육',posts.filter(p=>!isCard(p)),false]]){
+        if(!items.length)continue;
+        const section=el('section',null,'news-list-section'),list=el('div',null,cards?'news-card-grid':'panel news-board-list');
+        section.append(el('h2',heading));list.append(...items.map((post,index)=>row(post,index,cards)));section.append(list);container.append(section);
+      }
+    }
+    if(!posts.length)container.append(el('p','표시할 소식이 없어요.','news-empty'));
+  }
+  window.JiniNews={base,el,safeURL,imageURL,api,row,priceLabel,renderListing};
 })();

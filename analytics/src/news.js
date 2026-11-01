@@ -1,4 +1,5 @@
 import {clean,day,publicURL,koreaToday,horizon,recommendCategory,priceInfo,venueGroup} from './news-core.js';
+import {NEWS_REGIONS,newsRegion,newsRegionSQL} from './news-regions.js';
 
 const MAX_SOURCES = 22;
 const nowISO = () => new Date().toISOString();
@@ -35,6 +36,7 @@ export function validatePost(input) {
 }
 function hydrate(row,admin=false) {
   const out={...parse(row.data),id:row.id,pinned:!!row.pinned,views:Number(row.view_count)||0,venueGroup:row.venue_group||'',checkedAt:row.checked_at,updatedAt:row.updated_at};
+  out.region=newsRegion(out);
   if(admin) {
     const candidate=row.candidate?parse(row.candidate):null;
     Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,feeType:parse(row.price_info).type||'unknown',candidate,recommendation:recommendCategory(out.title,out.description,row.source_id)});
@@ -148,7 +150,8 @@ export async function newsRequest(request,env,origin) {
     if(admin && !await authorized(request,env))return json({error:env.NEWS_ADMIN_KEY?'관리자 비밀번호를 확인해 주세요.':'관리자 연결 전입니다. 운영 안내에 따라 관리자 키를 설정해 주세요.'},401);
     if(request.method==='GET' && path==='/news/venues'){
       const archive=url.searchParams.get('archive')==='1';
-      const venues=await rows(env,`SELECT DISTINCT venue_group AS venue FROM news_posts WHERE status='published' AND deleted_at IS NULL AND ${archive?"end_date<>'' AND end_date<?":"(end_date='' OR end_date>=?)"} AND venue_group<>'' ORDER BY venue LIMIT 500`,koreaToday());
+      const region=clean(url.searchParams.get('region'));if(region&&!NEWS_REGIONS.includes(region))fail('지역을 확인해 주세요.');
+      const venues=await rows(env,`SELECT DISTINCT venue_group AS venue FROM news_posts WHERE status='published' AND deleted_at IS NULL AND ${archive?"end_date<>'' AND end_date<?":"(end_date='' OR end_date>=?)"} AND venue_group<>'' ${region?`AND ${newsRegionSQL()}=?`:''} ORDER BY venue LIMIT 500`,koreaToday(),...(region?[region]:[]));
       return json({venues:venues.map(x=>x.venue)});
     }
     if(request.method==='GET' && path==='/news') {
@@ -164,6 +167,8 @@ export async function newsRequest(request,env,origin) {
       const amount=name=>{const raw=url.searchParams.get(name);if(raw===null||raw==='')return null;if(!/^\d{1,9}$/.test(raw)||Number(raw)>100000000)fail('금액은 0~100,000,000원 사이의 정수로 입력해 주세요.');return Number(raw);};
       const min=amount('minPrice'),max=amount('maxPrice');if(min!==null&&max!==null&&min>max)fail('최소 금액이 최대 금액보다 큽니다.');
       const clauses=["status='published'","deleted_at IS NULL",filter],params=[today];
+      const region=clean(url.searchParams.get('region'));if(region&&!NEWS_REGIONS.includes(region))fail('지역을 확인해 주세요.');
+      if(region){clauses.push(`${newsRegionSQL()}=?`);params.push(region);}
       if(category){clauses.push("json_extract(data,'$.category')=?");params.push(category);}
       if(q){clauses.push("instr(lower(COALESCE(json_extract(data,'$.title'),'')),lower(?))>0");params.push(q);}
       if(venue){clauses.push("instr(replace(lower(venue_group),' ',''),replace(lower(?),' ',''))>0");params.push(venue);}
