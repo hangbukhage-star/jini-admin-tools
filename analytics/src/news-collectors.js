@@ -188,16 +188,32 @@ export function parseDetail(html, url, source, hint = '') {
     audience=label(box,['대상','참가대상'])||formattedField(box,['대상','참가대상']);
     pics=images(box,'img',url);
   } else {
+    if(config.community){
+      const box=root.querySelector(config.content);
+      if(!box)throw new Error('공식 공지의 본문을 찾지 못했습니다.');
+      title=hint||text(root,config.title);
+      if(config.community==='jjcf'){
+        const fields={};for(const row of box.querySelectorAll('dl')){const k=clean(row.querySelector('dt')?.textContent).replace(/\s/g,'');if(k)fields[k]=clean(row.querySelector('dd')?.textContent);}
+        title=text(root,config.title)||hint;dateText=fields['일정']||'';venue=fields['장소']||'';time=fields['시간']||'';price=fields['관람료']||'';
+      }else{
+        dateText=formattedField(box,['행사일정','운영기간','교육기간','행사일시','일시','일정','축제기간']);
+        venue=formattedField(box,['운영장소','행사장소','교육장소','장소']);price=formattedField(box,['관람료','수강료','참가비','체험비']);
+      }
+      pics=images(box,'img',url);
+    }else{
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
     time = config.time ? text(root,config.time) : ''; price = config.price ? text(root,config.price) : '';
     pics = config.images ? images(root,config.images,url) : [];
+    }
   }
   const [startDate,endDate] = dateRange(dateText);
   title = clean(title).slice(0,160);
   if(!title) throw new Error('제목을 읽지 못했습니다.');
   const exhibitVenue=/전시실|갤러리|전시장/.test(venue);
-  return { title, category: category(title,exhibitVenue?'전시':venue,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
+  const context=config.community==='jjcf'?text(root,'.eudcate'):exhibitVenue?'전시':venue;
+  const description=config.community?`${startDate?'':'일정·모집 가능 여부 확인 필요. 첨부 공고 및 공식 안내를 확인해 주세요.\n'}${clean(root.querySelector(config.content)?.textContent).slice(0,1700)}`:'';
+  return { title, category: category(title,context,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description, images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');
@@ -214,6 +230,10 @@ export function linksFrom(html, url, source) {
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
+    let hintText=clean(a.textContent)||clean(a.querySelector('img')?.getAttribute('alt'));
+    if(config.community==='jjcf')hintText=clean(a.closest('.listOutbox')?.querySelector('dt')?.textContent)||hintText;
+    if(config.include&&!new RegExp(config.include).test(hintText))continue;
+    if(config.exclude&&new RegExp(config.exclude).test(hintText))continue;
     const href = publicURL(a.getAttribute('href'),url);
     if(!href || new URL(href).hostname !== new URL(url).hostname) continue;
     if(source.adapter === 'sori' && !(soriExhibition ? /\/exhibition\/\d+$/.test(new URL(href).pathname) : /\/performance\/\d+$/.test(new URL(href).pathname))) continue;
@@ -231,7 +251,7 @@ export function linksFrom(html, url, source) {
     const key = u.href;
     const hint = source.adapter==='ssac'
       ? clean(a.querySelector('dt')?.textContent || a.closest('li')?.querySelector('dl dt')?.textContent || a.querySelector('img')?.getAttribute('alt'))
-      : clean(a.textContent);
+      : hintText;
     if(!found.has(key) || (source.adapter==='ssac' && hint.length>found.get(key).hint.length) || (source.adapter!=='ssac' && hint.length>found.get(key).hint.length)) found.set(key,{url:key,hint});
   }
   return [...found.values()];
