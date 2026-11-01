@@ -359,3 +359,36 @@ test('지역 검색은 실제 장소를 우선하고 전체 검색·건수·페�
   const combined=await(await call(e,'?region='+encodeURIComponent('전주')+'&q='+encodeURIComponent('교육')+'&fee=free')).json();assert.equal(combined.total,1);
   assert.equal((await call(e,'?region=bad')).status,400);assert.equal((await call(e,'/venues?region=bad')).status,400);
 });
+
+
+test('관리자가 직접 지정한 지역은 저장·공개 검색·관리자 필터에 함께 반영된다',async()=>{
+ const e=env(),today=koreaToday();
+ const saved=await(await call(e,'/admin/post','POST',{title:'교육 지역 지정',category:'AI·디지털 교육',status:'published',startDate:today,endDate:today,venue:'교육실',regionOverride:'김제'})).json();
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('김제'))).json()).posts[0].region,'김제');
+ const admin=await(await call(e,'/admin?status=published&region='+encodeURIComponent('김제'))).json();assert.equal(admin.filteredTotal,1);assert.equal(admin.posts[0].regionOverride,'김제');
+ assert.equal((await(await call(e,'/admin?status=published&region='+encodeURIComponent('전주'))).json()).posts.length,0);
+ assert.equal((await call(e,'/admin?region=bad')).status,400);
+ await call(e,'/admin/post','POST',{id:saved.id,title:'교육 지역 자동',category:'AI·디지털 교육',status:'published',venue:'익산예술의전당',startDate:today,endDate:today,regionOverride:''});
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('익산'))).json()).total,1);
+ assert.equal((await call(e,'/admin/post','POST',{title:'오류',status:'pending',regionOverride:'bad'})).status,400);
+});
+
+test('게시판 관리자 연결과 삭제는 인증을 요구하며 삭제함에서 복구할 수 있다',async()=>{
+ const e=env();assert.equal((await call(e,'/admin/session','GET',null,false)).status,401);assert.equal((await call(e,'/admin/session')).status,200);
+ const {id}=await(await call(e,'/admin/post','POST',{title:'삭제 확인',category:'공연',status:'published'})).json();
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',ids:[id]},false)).status,401);
+ assert.equal((await(await call(e,'')).json()).posts.length,1);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',ids:[id]})).status,200);
+ assert.equal((await(await call(e,'')).json()).posts.length,0);
+ assert.equal((await(await call(e,'/admin?status=deleted')).json()).posts[0].id,id);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[id]})).status,200);
+ assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,id);
+});
+
+test('같은 교육이라도 오전·오후와 별도 회차·시간은 중복 삭제하지 않는다',async()=>{
+ const e=env(),today=koreaToday();
+ const item=(title,time)=>({title,category:'AI·디지털 교육',venue:'한국소리문화의전당',startDate:today,endDate:today,time});
+ const ingest=(i,data)=>call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/session/'+i,data});
+ for(const [i,title,time] of [[1,'[오전] AI와 함께 쓰는 내 블로그',''],[2,'[오후] AI와 함께 쓰는 내 블로그',''],[3,'직조키링 만들기 (1회차)','14:00~14:30'],[4,'직조키링 만들기 (2회차)','14:30~15:00'],[5,'동일 제목 교육','10:00~11:00'],[6,'동일 제목 교육','14:00~15:00']])assert.equal((await(await ingest(i,item(title,time))).json()).ok,true);
+ const dup=await(await ingest(7,item('동일 제목 교육','14:00~15:00'))).json();assert.equal(dup.duplicate,true);
+});

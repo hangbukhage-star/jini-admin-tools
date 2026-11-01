@@ -1,6 +1,7 @@
 (()=>{
   const {api,el,renderListing,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
   let archive=false,offset=0,posts=[],generation=0;
+  let adminToken='',deleteBusy=false;
   const reactionCounts=new Map();
   function syncReactionCounts(id,counts){reactionCounts.set(id,counts);render();}
   let filters={},venueGeneration=0;
@@ -35,7 +36,16 @@
     section.append(heading,buttons,message,retry);update();return section;
   }
   const status=message=>{$('#status').textContent=message;};
-  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);renderListing($('#list'),filtered.map(p=>({...p,reactions:reactionCounts.get(p.id)||p.reactions})),category);}
+  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);renderListing($('#list'),filtered.map(p=>({...p,reactions:reactionCounts.get(p.id)||p.reactions})),category,adminToken?{onDelete:deletePost}:{});for(const b of $('#list').querySelectorAll('.news-delete'))b.disabled=deleteBusy;}
+  async function deletePost(post){
+    if(!adminToken||deleteBusy)return;
+    if(!confirm(`“${post.title}” 글을 삭제함으로 옮길까요? 관리자 화면에서 복구할 수 있습니다.`))return;
+    deleteBusy=true;render();
+    try{
+      await api('/news/admin/bulk',{method:'POST',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'delete',ids:[post.id]})});
+      if($('#detail').open)$('#detail').close();await load();status('삭제함으로 옮겼습니다. 관리자 화면에서 복구할 수 있어요.');
+    }catch(e){status(e.message);}finally{deleteBusy=false;render();}
+  }
   async function load(reset=true){
     const run=++generation;
     if(reset){offset=0;posts=[];reactionCounts.clear();render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
@@ -56,6 +66,7 @@
       summary.append(info);if(posters.childElementCount){summary.classList.add('has-posters');summary.append(posters);}content.replaceChildren(summary);
       if(p.description)content.append(el('p',p.description,'description'));
       content.append(reactions(p.id));
+      if(adminToken){const remove=el('button','이 글 삭제','news-delete');remove.type='button';remove.onclick=()=>deletePost(p);content.append(remove);}
       if(safeURL(p.link)){const a=el('a','공식 안내·예매 바로가기 ↗','button');a.href=safeURL(p.link);a.target='_blank';a.rel='noopener noreferrer';content.append(a);}
     }catch(e){if(run===detailGeneration)content.replaceChildren(el('p',e.message));}
   }
@@ -65,6 +76,17 @@
   searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
   $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='공연';filters={};load();loadVenues();};
   $('#region-select').onchange=()=>{$('#venue-select').value='';loadVenues();};
+  $('#quick-admin').onclick=()=>{
+    if(adminToken){adminToken='';$('#quick-admin').textContent='관리자 로그인';render();status('관리자 모드를 종료했습니다.');return;}
+    $('#quick-admin-status').textContent='';$('#quick-admin-dialog').showModal();$('#quick-admin-key').focus();
+  };
+  $('#quick-admin-close').onclick=()=>$('#quick-admin-dialog').close();
+  $('#quick-admin-dialog').addEventListener('close',()=>{$('#quick-admin-key').value='';});
+  $('#quick-admin-form').onsubmit=async e=>{
+    e.preventDefault();const button=e.submitter;button.disabled=true;const supplied=$('#quick-admin-key').value;
+    try{await api('/news/admin/session',{headers:{Authorization:`Bearer ${supplied}`}});adminToken=supplied;$('#quick-admin-key').value='';$('#quick-admin-dialog').close();$('#quick-admin').textContent='관리자 종료';render();status('관리자 모드입니다. 각 글의 삭제 버튼을 사용할 수 있어요.');}
+    catch(err){$('#quick-admin-key').value='';$('#quick-admin-status').textContent=err.message;}finally{button.disabled=false;}
+  };
   $('#category').onchange=()=>load();$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname);});
   $('#category').value='공연';
   load();loadVenues();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);

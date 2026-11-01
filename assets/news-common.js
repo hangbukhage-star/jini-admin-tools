@@ -30,19 +30,24 @@
     }
     a.append(main,el('small',[post.startDate||'일정은 안내 참고',post.region,post.venueGroup||post.venue||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
   }
-  function renderListing(container,posts,category){
+  function renderListing(container,posts,category,options={}){
     const isCard=p=>['공연','전시'].includes(p.category);
+    const item=(post,index,cards)=>{
+      const link=row(post,index,cards);if(!options.onDelete)return link;
+      const wrapper=el('article',null,cards?'news-entry news-card-entry':'news-entry news-board-entry'),button=el('button','삭제','news-delete');
+      button.type='button';button.setAttribute('aria-label',`${post.title} 삭제`);button.onclick=()=>options.onDelete(post);wrapper.append(link,button);return wrapper;
+    };
     container.replaceChildren();
     if(category){
       const cards=['공연','전시'].includes(category);
       container.className=cards?'news-card-grid':'panel news-board-list';
-      container.append(...posts.map((post,index)=>row(post,index,cards)));
+      container.append(...posts.map((post,index)=>item(post,index,cards)));
     }else{
       container.className='news-mixed-list';
       for(const [heading,items,cards] of [['공연·전시',posts.filter(isCard),true],['평생·문화교육 / AI·디지털 교육',posts.filter(p=>!isCard(p)),false]]){
         if(!items.length)continue;
         const section=el('section',null,'news-list-section'),list=el('div',null,cards?'news-card-grid':'panel news-board-list');
-        section.append(el('h2',heading));list.append(...items.map((post,index)=>row(post,index,cards)));section.append(list);container.append(section);
+        section.append(el('h2',heading));list.append(...items.map((post,index)=>item(post,index,cards)));section.append(list);container.append(section);
       }
     }
     if(!posts.length)container.append(el('p','표시할 소식이 없어요.','news-empty'));

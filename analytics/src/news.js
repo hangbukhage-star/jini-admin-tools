@@ -20,6 +20,9 @@ async function body(request) {
 }
 export function validatePost(input) {
   const data = {};
+  const regionOverride=clean(input.regionOverride);
+  if(regionOverride&&!NEWS_REGIONS.includes(regionOverride))fail('지역을 확인해 주세요.');
+  if(regionOverride)data.regionOverride=regionOverride;
   for(const [key,max] of Object.entries({title:160,category:20,time:200,venue:200,price:200,audience:100,description:2000,sourceName:100,imageCredit:200})) data[key]=clean(input[key]).slice(0,max);
   if(!data.title) fail('제목을 입력해 주세요.');
   const allowedCategories=['공연','전시','AI·디지털 교육','평생·문화교육'];
@@ -50,18 +53,26 @@ function duplicateCore(value) {
   const core=clean(value).replace(/^(?:\[[^\]]{1,20}\]\s*)+/,'').replace(/\s*[（(][^（）()]{12,}[）)]\s*$/,'');
   return duplicateTitle(core).replace(/^20\d{2}/,'').replace(/^(?:전북특별자치도립국악원|전북도립국악원)/,'').replace(/제(?=\d+회)/g,'');
 }
+function separateSessions(a,b){
+  const slots=post=>String(post.title||'').match(/오전|오후|야간/g)||[];
+  const rounds=post=>[...String(post.title||'').matchAll(/(?<![~～\d])(\d+)회차/g)].map(m=>m[1]);
+  const ages=post=>[...String(post.title||'').matchAll(/\d+\s*[~～-]\s*\d+\s*세/g)].map(m=>m[0].replace(/\s/g,''));
+  const starts=post=>[...String(post.time||'').replace(/\s/g,'').matchAll(/(?<![~～\d])(\d{1,2}):(\d{2})/g)].map(m=>`${Number(m[1])}:${m[2]}`);
+  return [slots,rounds,ages,starts].some(read=>{const x=read(a),y=read(b);return x.length&&y.length&&!x.some(value=>y.includes(value));});
+}
 async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
   const title=duplicateTitle(data.title);
   const suppressed=await env.DB.prepare("SELECT source_url FROM news_suppressed WHERE source_url=? OR (start_date=? AND title_key=?) LIMIT 1").bind(sourceUrl,data.startDate||'',title).first();
   if(suppressed)return {id:suppressed.source_url,suppressed:true};
   const fp=await fingerprint(data);
-  const exact=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
-  if(exact)return exact;
+  const exact=await env.DB.prepare('SELECT id,data FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
+  if(exact&&!separateSessions(data,parse(exact.data)))return exact;
   if(!data.startDate)return null;
   const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE (start_date=? OR (start_date<>'' AND end_date<>'' AND start_date<=? AND end_date>=?)) AND deleted_at IS NULL AND id<>?",data.startDate,data.endDate||data.startDate,data.startDate,excludeId);
   const core=duplicateCore(data.title),group=venueGroup(data.venue,data.title,source.adapter);
   return candidates.find(row=>{
     const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
+    if(separateSessions(data,previous))return false;
     const previousCore=duplicateCore(previous.title||'');
     if(previous.startDate!==data.startDate)return group&&row.venue_group===group&&((title&&title===previousTitle)||(core.length>=6&&core===previousCore));
     if(title&&title===previousTitle)return true;
@@ -148,6 +159,7 @@ export async function newsRequest(request,env,origin) {
   try{
     const admin=path.startsWith('/news/admin');
     if(admin && !await authorized(request,env))return json({error:env.NEWS_ADMIN_KEY?'관리자 비밀번호를 확인해 주세요.':'관리자 연결 전입니다. 운영 안내에 따라 관리자 키를 설정해 주세요.'},401);
+    if(admin && request.method==='GET' && path==='/news/admin/session')return json({ok:true});
     if(request.method==='GET' && path==='/news/venues'){
       const archive=url.searchParams.get('archive')==='1';
       const region=clean(url.searchParams.get('region'));if(region&&!NEWS_REGIONS.includes(region))fail('지역을 확인해 주세요.');
@@ -234,18 +246,21 @@ export async function newsRequest(request,env,origin) {
       const offset=Math.max(0,Number(url.searchParams.get('offset'))||0);
       const clauses=status==='deleted'?['deleted_at IS NOT NULL']:['status=?','deleted_at IS NULL'];
       const params=status==='deleted'?[]:[status];
+      const region=clean(url.searchParams.get('region'));if(region&&!NEWS_REGIONS.includes(region))fail('지역을 확인해 주세요.');
+      if(region){clauses.push(`${newsRegionSQL()}=?`);params.push(region);}
       if(category){clauses.push("json_extract(data,'$.category')=?");params.push(category);}
       if(q){clauses.push("instr(lower(data),lower(?))>0");params.push(q);}
       if(fee){clauses.push(`COALESCE(json_extract(price_info,'$.type'),'unknown') ${fee==='paid'?"IN ('paid','mixed')":'= ?'}`);if(fee!=='paid')params.push(fee);}
       if(month){const [year,monthNumber]=month.split('-').map(Number),lastDay=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),first=`${month}-01`,last=`${month}-${String(lastDay).padStart(2,'0')}`;clauses.push("COALESCE(NULLIF(start_date,''),NULLIF(end_date,''))<=? AND COALESCE(NULLIF(end_date,''),NULLIF(start_date,''))>=?");params.push(last,first);}
-      params.push(offset);
       const where=clauses.join(' AND ');
+      const total=await env.DB.prepare(`SELECT COUNT(*) AS count FROM news_posts WHERE ${where}`).bind(...params).first();
+      params.push(offset);
       const posts=status==='deleted'
         ? await rows(env,`SELECT * FROM news_posts WHERE ${where} ORDER BY deleted_at DESC LIMIT 51 OFFSET ?`,...params)
         : await rows(env,`SELECT * FROM news_posts WHERE ${where} ORDER BY updated_at DESC LIMIT 51 OFFSET ?`,...params);
-      const changes=await rows(env,"SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' AND deleted_at IS NULL ORDER BY checked_at DESC LIMIT 50");
+      const changes=await rows(env,`SELECT * FROM news_posts WHERE candidate IS NOT NULL AND status<>'hidden' AND deleted_at IS NULL ${region?`AND ${newsRegionSQL()}=?`:''} ORDER BY checked_at DESC LIMIT 50`,...(region?[region]:[]));
       const counts=await rows(env,"SELECT CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END AS status,COUNT(*) AS count FROM news_posts GROUP BY CASE WHEN deleted_at IS NOT NULL THEN 'deleted' ELSE status END");
-      return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts});
+      return json({sources:await rows(env,'SELECT * FROM news_sources ORDER BY name'),posts:posts.slice(0,50).map(x=>hydrate(x,true)),hasMore:posts.length>50,changes:changes.map(x=>hydrate(x,true)),counts,filteredTotal:Number(total.count)});
     }
     if(admin && request.method==='GET' && path==='/news/admin/export') {
       return json({version:1,exportedAt:nowISO(),sources:await rows(env,'SELECT * FROM news_sources'),posts:await rows(env,'SELECT * FROM news_posts'),images:await rows(env,'SELECT id,created_at FROM news_images'),reactions:await rows(env,'SELECT post_id,reaction,COUNT(*) AS count FROM news_reactions GROUP BY post_id,reaction')});

@@ -3,7 +3,7 @@
   const {api,el,imageURL,safeURL,base}=window.JiniNews,$=s=>document.querySelector(s);
   let token='',state='pending',offset=0,posts=[],images=[],current={},trashCount=0;
   const selected=new Set();
-  let bulkBusy=false;
+  let bulkBusy=false,loadGeneration=0;
   let searchTimer;
   const status=(message,error=false)=>{const e=$('#status');e.textContent=message;e.classList.toggle('news-error',error);};
   async function admin(path='',options={}){return api('/news/admin'+path,{...options,headers:{'Content-Type':'application/json',...options.headers,Authorization:`Bearer ${token}`}});}
@@ -43,14 +43,16 @@
     const row=el('div',null,'post-summary'),copy=el('div',null,'post-summary-copy');
     if(!changed){const checkbox=el('input');checkbox.type='checkbox';checkbox.value=p.id;checkbox.checked=selected.has(p.id);checkbox.setAttribute('aria-label',`${p.title} 선택`);checkbox.addEventListener('change',()=>{if(checkbox.checked)selected.add(p.id);else selected.delete(p.id);updateSelection();});row.append(checkbox);}
     const feeLabel={free:'무료',paid:'유료',mixed:'유료·무료 혼합',unknown:'금액 확인 필요'}[p.feeType]||'금액 확인 필요';
-    copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',p.price||'금액 확인 필요',feeLabel,`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
+    copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.region||'지역 확인 필요',p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',p.price||'금액 확인 필요',feeLabel,`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
     if(p.status==='pending'&&p.recommendation)copy.append(el('p',`추천 분류: ${p.recommendation.category}${p.recommendation.needsReview?' · 확인 필요':''}`,'category-recommendation'));
     row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
   }
   async function load(reset=true){
-    const category=$('#category-filter').value;
+    const run=++loadGeneration,category=$('#category-filter').value,region=$('#region-filter').value;
     const q=$('#post-search').value.trim(),fee=$('#price-filter').value,month=$('#event-month').value;
-    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
+    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&region=${encodeURIComponent(region)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
+    if(run!==loadGeneration)return;
+    $('#filtered-count').textContent=`검색 결과 ${Number(data.filteredTotal||0).toLocaleString('ko-KR')}건`;
     trashCount=Number(data.counts.find(x=>x.status==='deleted')?.count)||0;
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
@@ -98,6 +100,7 @@
   $('#logout').onclick=()=>{token='';location.reload();};
   $('#tabs').onclick=async e=>{if(!e.target.dataset.status)return;state=e.target.dataset.status;try{await load();}catch(err){status(err.message,true);}};
   $('#category-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
+  $('#region-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#price-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#event-month').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#post-search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{try{await load();}catch(err){status(err.message,true);}},250);};

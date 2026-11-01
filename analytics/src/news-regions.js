@@ -7,6 +7,7 @@ const VENUES={
 };
 const compact=value=>String(value||'').replace(/ /g,'');
 export function newsRegion(post){
+  if(NEWS_REGIONS.includes(post.regionOverride))return post.regionOverride;
   const venue=compact(post.venue),title=String(post.title||'');
   return NEWS_REGIONS.find(region=>venue.includes(region))
     ||NEWS_REGIONS.find(region=>VENUES[region]?.some(name=>venue.includes(name)))
@@ -19,5 +20,5 @@ export function newsRegionSQL(){
   const venue="replace(COALESCE(json_extract(data,'$.venue'),''),' ','')",title="COALESCE(json_extract(data,'$.title'),'')";
   const includes=(field,value)=>`instr(${field},'${value}')>0`;
   const rules=[...NEWS_REGIONS.map(region=>[includes(venue,region),region]),...NEWS_REGIONS.filter(region=>VENUES[region]).map(region=>[VENUES[region].map(name=>includes(venue,name)).join(' OR '),region]),...NEWS_REGIONS.map(region=>[[`[${region}]`,`(${region})`,`- ${region}`].map(name=>includes(title,name)).join(' OR ')+` OR substr(${title},-${region.length+1})='-${region}'`,region])];
-  return `(CASE ${rules.map(([condition,region])=>`WHEN ${condition} THEN '${region}'`).join(' ')} ELSE '' END)`;
+  return `(CASE WHEN json_extract(data,'$.regionOverride') IN (${NEWS_REGIONS.map(region=>`'${region}'`).join(',')}) THEN json_extract(data,'$.regionOverride') ${rules.map(([condition,region])=>`WHEN ${condition} THEN '${region}'`).join(' ')} ELSE '' END)`;
 }

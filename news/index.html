@@ -12,6 +12,7 @@
 </head>
 <body class="news-page"><header><h1>🌷 지니가 전하는 소식</h1><p>전북의 공연·전시·AI·평생학습·문화예술 교육 소식을 모아요.</p></header><main>
 <div class="news-toolbar"><a class="button" href="../">← 행정도구 만물상</a><button id="upcoming" aria-pressed="true">예정·진행 중</button><button id="archive" aria-pressed="false">지난 소식</button><label>분류 <select id="category"><option value="">전체</option><option>공연</option><option>전시</option><option>AI·디지털 교육</option><option>평생·문화교육</option></select></label></div>
+<div class="news-toolbar"><button id="quick-admin" type="button">관리자 로그인</button></div>
 <form id="news-search" class="panel news-search" role="search" aria-label="문화행사 검색"><h2>문화행사 찾기</h2><div class="search-fields">
 <label class="search-title">행사·교육명<input name="q" type="search" maxlength="160" placeholder="공연·전시·교육·모집 소식 검색"></label>
 <label>지역<select name="region" id="region-select"><option value="">전체 지역</option><option>전주</option><option>익산</option><option>부안</option><option>김제</option><option>군산</option><option>정읍</option><option>남원</option><option>완주</option><option>진안</option><option>무주</option><option>장수</option><option>임실</option><option>순창</option><option>고창</option></select></label>
@@ -24,5 +25,6 @@
 <p id="status" class="news-status" role="status">소식을 불러오고 있어요.</p><section id="list" class="news-card-grid" aria-label="소식 목록"></section><button id="more" hidden>더 보기</button>
 <p class="muted">전북의 공연·전시와 AI·평생학습·문화예술 교육 모집 소식을 모읍니다. 일정·신청 여부는 공식 안내에서 확인해 주세요.</p>
 <dialog id="detail"><form method="dialog"><button style="float:right" aria-label="닫기">닫기 ✕</button></form><article id="detail-content"></article></dialog>
+<dialog id="quick-admin-dialog"><form id="quick-admin-form"><h2>게시판 관리자 로그인</h2><label>관리자 비밀번호<input id="quick-admin-key" type="password" autocomplete="current-password" required minlength="32"></label><p class="muted">로그인하면 각 글에 삭제 버튼이 표시됩니다. 새로고침하면 관리자 모드가 종료됩니다.</p><p id="quick-admin-status" role="status" class="news-status news-error"></p><div class="actions"><button type="submit" class="primary">로그인</button><button type="button" id="quick-admin-close">닫기</button></div></form></dialog>
 </main><footer><div class="site-visitors" aria-label="방문자 현황" aria-live="polite"><span>오늘 방문자 <strong data-visit-today>집계 중</strong></span><span>누적 방문자 <strong data-visit-total>집계 중</strong> <small>(2026.10.19일이후)</small></span></div>지니의 행정도구 만물상 · <a href="admin.html">관리자</a></footer><script src="../assets/stats-config.js"></script><script src="../assets/news-common.js"></script><script src="../assets/news-board.js"></script><script src="/assets/site-visitors.js"></script>
 </body></html>
