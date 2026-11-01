@@ -10,3 +10,6 @@
 .news-page #category-filter{width:auto;min-width:180px}.news-page .news-bulk select{width:auto;min-width:150px}
 .news-page #post-search{width:min(100%,360px);flex:1 1 260px}.news-page #price-filter{width:auto;min-width:140px}
 .news-page #event-month{width:auto;min-width:160px;flex:0 1 170px}
+
+
+.news-page #detail:has(.has-posters){max-width:1040px}.news-page #detail>form{display:flex;justify-content:flex-end;margin-bottom:12px}.detail-summary.has-posters{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start}.detail-info{min-width:0}.detail-posters{width:360px;max-width:100%}.news-page dialog .detail-poster{display:block;width:360px;max-width:100%;height:auto;margin:0 0 14px;object-fit:contain}@media(max-width:800px){.detail-summary.has-posters{grid-template-columns:minmax(0,1fr)}.detail-posters{justify-self:end}}

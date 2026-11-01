@@ -47,7 +47,7 @@ function label(root, names) {
   return '';
 }
 function images(root, selector, url) {
-  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('src'), url)).filter(Boolean))].slice(0,3);
+  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('data-src')||e.getAttribute('data-original')||e.getAttribute('src'), url)).filter(Boolean))].slice(0,3);
 }
 export function dateRange(value) {
   const raw=String(value),matches=[...raw.matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)];

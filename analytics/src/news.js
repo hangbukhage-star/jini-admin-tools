@@ -103,7 +103,7 @@ export async function ingestPost(env,source,url,raw) {
   if(!current && data.endDate && (data.endDate<koreaToday() || data.startDate>horizon()))return {skipped:true};
   const fp=await fingerprint(data);
   data.sourceName=source.name;data.link=canonical;
-  if(!source.images_allowed)data.images=[];
+  if(!source.images_allowed&&!['공연','전시'].includes(data.category))data.images=[];
   if(current) {
     if(current.status==='pending'&&!current.locked){
       const duplicate=await findDuplicate(env,data,source,current.id,canonical);
