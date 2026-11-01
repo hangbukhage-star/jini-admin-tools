@@ -17,7 +17,7 @@
     const section=el('section',null,'news-reactions'),heading=el('p','이 소식, 어떠셨나요?','reaction-heading'),buttons=el('div',null,'reaction-buttons'),message=el('p','반응을 불러오고 있어요.','muted');
     section.setAttribute('aria-label','소식에 반응하기');message.setAttribute('role','status');message.setAttribute('aria-live','polite');
     let selected=null,busy=false,ready=false;
-    const kinds=[['like','👍','좋아요'],['thanks','🙏','고마워요'],['dislike','👎','싫어요'],['excited','😍','기대돼요'],['cheer','🎉','응원해요'],['sad','😢','아쉬워요']];
+    const kinds=[['like','👍','좋아요'],['dislike','👎','싫어요']];
     const controls=kinds.map(([kind,emoji,label])=>{
       const b=el('button',null,'reaction-button'),icon=el('span',emoji,'reaction-emoji'),count=el('span','0','reaction-count');b.type='button';icon.setAttribute('aria-hidden','true');b.setAttribute('aria-pressed','false');b.disabled=true;
       b.append(icon,el('span',label),count);buttons.append(b);
@@ -35,7 +35,7 @@
     section.append(heading,buttons,message,retry);update();return section;
   }
   const status=message=>{$('#status').textContent=message;};
-  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map((p,index)=>row({...p,reactions:reactionCounts.get(p.id)||p.reactions},index)));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
+  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);$('#list').replaceChildren(...filtered.map((p,index)=>row({...p,reactions:reactionCounts.get(p.id)||p.reactions},index,true)));if(!filtered.length)$('#list').append(el('p','표시할 소식이 없어요.','news-empty'));}
   async function load(reset=true){
     const run=++generation;
     if(reset){offset=0;posts=[];reactionCounts.clear();render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');

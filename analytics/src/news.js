@@ -1,6 +1,6 @@
 import {clean,day,publicURL,koreaToday,horizon,recommendCategory,priceInfo,venueGroup} from './news-core.js';
 
-const MAX_SOURCES = 15;
+const MAX_SOURCES = 20;
 const nowISO = () => new Date().toISOString();
 const parse = value => JSON.parse(value || '{}');
 async function sha(value) {const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -300,7 +300,7 @@ export async function newsRequest(request,env,origin) {
       const b=await body(request);
       if(b.action==='start') {
         const lock=await env.DB.prepare("INSERT INTO news_locks(id,expires_at) VALUES('collect',unixepoch()+900) ON CONFLICT(id) DO UPDATE SET expires_at=excluded.expires_at WHERE news_locks.expires_at<unixepoch()").run();
-        return json({busy:!lock.meta?.changes,sources:lock.meta?.changes?await rows(env,'SELECT * FROM news_sources WHERE enabled=1 ORDER BY name LIMIT 15'):[]});
+        return json({busy:!lock.meta?.changes,sources:lock.meta?.changes?await rows(env,`SELECT * FROM news_sources WHERE enabled=1 ORDER BY name LIMIT ${MAX_SOURCES}`):[]});
       }
       if(b.action==='finish'){await env.DB.prepare("DELETE FROM news_locks WHERE id='collect'").run();return json({ok:true});}
       const source=await env.DB.prepare('SELECT * FROM news_sources WHERE id=?').bind(clean(b.sourceId)).first();

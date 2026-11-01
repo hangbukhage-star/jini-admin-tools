@@ -9,7 +9,7 @@ import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql','0015_news_suppression_tombstones.sql','0017_add_news_collection_cursor.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -302,4 +302,20 @@ test('Vercel 수집 함수에서 저장 API와 연결해 수집·대기 저장·
     assert.equal(await e.DB.prepare('SELECT * FROM news_locks').first(),null);
     await handler({method:'POST',headers:{authorization:'Bearer wrong'},body:{}},res);assert.equal(status,401);
   }finally{globalThis.fetch=oldFetch;if(oldAdmin===undefined)delete process.env.NEWS_ADMIN_KEY;else process.env.NEWS_ADMIN_KEY=oldAdmin;if(oldCollector===undefined)delete process.env.NEWS_COLLECTOR_KEY;else process.env.NEWS_COLLECTOR_KEY=oldCollector;}
+});
+
+
+test('수집 사이트 20개를 등록하고 모두 수집 대상으로 반환하며 21번째는 제한한다',async()=>{
+  const e=env();
+  e.DB.db.exec('DELETE FROM news_sources');
+  for(let i=1;i<=20;i++){
+    const r=await call(e,'/admin/source','POST',{id:'site-'+i,name:'사이트 '+i,url:'https://example.org/list/'+i,adapter:'generic',enabled:true});
+    assert.equal(r.status,200);
+  }
+  const start=await(await call(e,'/admin/collection','POST',{action:'start'})).json();
+  assert.equal(start.sources.length,20);
+  const extra=await call(e,'/admin/source','POST',{id:'site-21',name:'추가 사이트',url:'https://example.org/list/21',adapter:'generic',enabled:true});
+  assert.equal(extra.status,400);
+  assert.match((await extra.json()).error,/20곳/);
+  assert.equal((await call(e,'/admin/source','POST',{id:'site-20',name:'수정 사이트',url:'https://example.org/list/20',adapter:'generic',enabled:true})).status,200);
 });

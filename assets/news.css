@@ -13,3 +13,17 @@
 
 
 .news-page #detail:has(.has-posters){max-width:1040px}.news-page #detail>form{display:flex;justify-content:flex-end;margin-bottom:12px}.detail-summary.has-posters{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start}.detail-info{min-width:0}.detail-posters{width:360px;max-width:100%}.news-page dialog .detail-poster{display:block;width:360px;max-width:100%;height:auto;margin:0 0 14px;object-fit:contain}@media(max-width:800px){.detail-summary.has-posters{grid-template-columns:minmax(0,1fr)}.detail-posters{justify-self:end}}
+
+/* Poster cards for the public board. */
+.news-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.news-page .news-card{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;padding:0;overflow:hidden;border:1px solid #eadbc9;border-radius:16px;background:#fffdfa;color:#38332f;transition:transform .18s,box-shadow .18s}
+.news-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px #58412d14}.news-card:focus-visible{outline:3px solid #2d736c;outline-offset:4px}
+.news-card-cover{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:3/4;background:#f1ece3;overflow:hidden}
+.news-card-cover img{width:100%;height:100%;object-fit:contain}.news-card-category{position:absolute;top:14px;left:14px;background:#fffdf5ed;color:#286a63;border-radius:20px;padding:6px 11px;font-size:12px;font-weight:bold}
+.news-card-placeholder{padding:24px;text-align:center;color:#7c8a7e;font-size:24px;letter-spacing:.08em}
+.news-card .news-row-main{flex:0;padding:18px 18px 10px;gap:10px}.news-card strong{font-size:17px;line-height:1.6;overflow-wrap:anywhere}
+.news-page .news-card small{display:block;max-width:none;text-align:left;padding:0 18px 20px;font-size:13px;line-height:1.9;color:#7c746e}
+.news-card-grid>.news-empty{grid-column:1/-1;padding:24px}.news-page .reaction-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:800px){.news-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}
+@media(max-width:480px){.news-card-grid{grid-template-columns:minmax(0,1fr)}.news-card-cover{aspect-ratio:4/3}.news-card-cover img{object-fit:contain}}
+@media(prefers-reduced-motion:reduce){.news-page .news-card{transition:none}.news-card:hover{transform:none}}
