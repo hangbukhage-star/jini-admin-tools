@@ -242,7 +242,7 @@ export function linksFrom(html, url, source) {
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
-    if(config.community==='jma'&&/서울분관/.test(a.textContent))continue;
+    if(config.community==='jma'&&/서울분관/.test(a.closest('li')?.textContent||a.textContent))continue;
     if(config.community==='jbct'){
       const dates=clean(a.closest('.evt_card_info')?.querySelector('.evt_card_date')?.textContent).replace(/(?<!\d)(\d{2})\.(\d{2})\.(\d{2})(?!\d)/g,'20$1-$2-$3');
       const [,end]=dateRange(dates);if(end&&end<koreaToday())continue;

@@ -325,7 +325,7 @@ test('도립미술관과 문화관광재단은 전북 행사와 운영일·요�
   const jma={id:'jma-exhibitions',adapter:'generic',name:'미술관',config:JSON.stringify({community:'jma',links:'a[href*="exhibit_code="]',title:'.tit',content:'.list_item_view',images:'.img img'})};
   const p=parseDetail('<div class="list_item_view"><p class="tit">참여의 미술</p><dl><dt>전시기간</dt><dd>2026-10-23 ~ 2027-02-14</dd><dt>전시장소</dt><dd>전북도립미술관 본관</dd></dl></div>','https://www.jma.go.kr/web/page.php?exhibit_code=1',jma);
   assert.equal(p.endDate,'2027-02-14');assert.equal(p.category,'전시');assert.equal(p.venue,'전북도립미술관 본관');
-  assert.equal(linksFrom('<a href="?exhibit_code=1">본관 전시</a><a href="?exhibit_code=2">서울분관 전시</a>', 'https://www.jma.go.kr/web/page.php',jma).length,1);
+  assert.equal(linksFrom('<ul><li><a href="?exhibit_code=1">전시1</a><div>본관</div></li><li><a href="?exhibit_code=2">전시2</a><div>서울분관</div></li></ul>', 'https://www.jma.go.kr/web/page.php',jma).length,1);
   const jbct={id:'jbct-events',adapter:'generic',name:'재단',config:JSON.stringify({community:'jbct',title:'.evt_view_title',content:'.evt_view_top',images:'.evt_view_top img'})};
   const q=parseDetail('<div class="evt_view_top"><p class="evt_view_tags"><span class="evt_cate">공연</span></p><h3 class="evt_view_title">[전주] 합창대제전</h3><dl><div><dt>기간</dt><dd>26.11.01(일) ~ 26.11.02(월)</dd></div><div><dt>장소</dt><dd>한국소리문화의전당<button>주소복사</button></dd></div><div><dt>가격</dt><dd>무료</dd></div></dl></div>','https://www.jbct.or.kr/portal/site/menu/MENU_000000000000376?id=1',jbct);
   assert.equal(q.startDate,'2026-11-01');assert.equal(q.endDate,'2026-11-02');assert.equal(q.title,'합창대제전');assert.equal(q.category,'공연');assert.equal(q.venue,'한국소리문화의전당');assert.equal(q.price,'무료');
