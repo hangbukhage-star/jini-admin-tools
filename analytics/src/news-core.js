@@ -25,8 +25,13 @@ export function horizon(now = new Date()) {
   d.setUTCDate(Math.min(d.getUTCDate(), last)); d.setUTCMonth(targetMonth);
   return d.toISOString().slice(0,10);
 }
+export function aiEducationMatch(title,context=''){
+  return `${clean(title)} ${clean(context)}`.match(/인공지능|생성형|(?<![a-z])ai(?![a-z])|chat\s*gpt|챗\s*(?:gpt|지피티)|제미나이|gemini|notebook\s*lm|노트북\s*lm|미드저니|midjourney|suno|수노|바이브\s*코딩|vibe\s*coding|코파일럿|copilot|퍼플렉시티|perplexity|프롬프트|(?:클로드|claude)\s*(?:ai|활용|사용|실습|기초|입문|자동화|로|와|를|for)/i);
+}
 export function recommendCategory(title, context='', source='') {
-  if(source==='sori-exhibition')return {category:'전시',reason:'전시 전용 수집 사이트의 글입니다.',needsReview:false};
+  if(['sori-exhibition','jma-exhibitions'].includes(source))return {category:'전시',reason:'전시 전용 수집 사이트의 글입니다.',needsReview:false};
+  const ai=aiEducationMatch(title,context);
+  if(ai&&(!/공연|콘서트|음악회|전시|개인전|展/.test(title)||/교육|강좌|특강|강연|워크숍|체험|프로그램/.test(`${title} ${context}`)))return {category:'AI·디지털 교육',reason:`‘${ai[0]}’ 활용 내용을 기준으로 추천했어요.`,needsReview:false};
   const rules=[
     ['AI·디지털 교육',/인공지능|생성형\s*AI|\bAI(?:\s*(?:교육|활용|강좌|특강|리터러시|강사|실전\s*과정|부트캠프|기초|입문)|로|[\s\S]{0,15}(?:교육|강좌|과정|부트캠프))|디지털\s*(?:배움|교육|문해|역량)/i],
     ['평생·문화교육',/평생학습|평생교육|교육생\s*모집|수강생\s*모집|강좌\s*모집|수강\s*신청|문화예술교육|문화강좌|강좌|워크[숍샵]|강연|특강|교실|수강|양성|교육(?!극)|배우기|만들기|체험|독서모임|책놀이|읽어주기|세미나|포럼|심포지엄|학술대회|학술행사/],

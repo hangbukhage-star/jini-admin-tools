@@ -427,3 +427,12 @@ test('교육으로 수집한 원본 사진은 보관하며 공연·전시로 변
  const converted=(await(await call(e,'/admin')).json()).posts.find(p=>p.id===second.id);assert.deepEqual(converted.images,raw2.images);assert.equal(converted.category,'전시');
  assert.equal(recommendCategory('비르투오조 시리즈2','','culture-jeonbuk-perform').category,'공연');
 });
+
+
+test('AI 활용 프로그램은 교육 제목·안내에서 우선 분류하고 화가 이름과 일반 단어는 오인하지 않는다',()=>{
+ for(const title of ['[오전] AI와 함께 쓰는 내 첫 블로그','2026 AI 시대, 개인정보 지키기','제미나이로 노래 만들기','ChatGPT 활용 강좌','클로드로 문서 작성하기','바이브코딩 실습','프롬프트 작성 워크숍'])assert.equal(recommendCategory(title).category,'AI·디지털 교육');
+ assert.equal(recommendCategory('보고서 작성 특강','생성형 AI를 활용하는 실습').category,'AI·디지털 교육');
+ assert.equal(recommendCategory('미술관 밖의 화가들: 클로드 모네').category,'평생·문화교육');
+ assert.equal(recommendCategory('공예 강좌','https://example.org/fair/').category,'평생·문화교육');
+ assert.equal(recommendCategory('AI 아트 전시','','jma-exhibitions').category,'전시');
+});

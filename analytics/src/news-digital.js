@@ -13,7 +13,7 @@ export async function digitalCourses(source,page=1,fetcher=fetch){
     const url=base+'/edc/crse/req/dtl_step1.do?edc_plan_id='+encodeURIComponent(x.edc_plan_id);
     const venue=x.real_edc_plc_cd==='WR'?[x.real_edc_plc,x.real_edc_plc_dtl].filter(Boolean).join(' '):[x.edc_plc_adres,x.edc_plc_adres_dtl].filter(Boolean).join(' ');
     const title=clean(x.edc_plan_nm);
-    return {url,hint:title,data:{title,category:category(title,'',source.id),startDate:day(x.edc_bgn_dt),endDate:day(x.edc_end_dt),venue:clean(venue),time:'',price:'',audience:clean(x.edc_trgter_ty_nm),description:`교육방식: ${clean(x.edc_mthd_se_nm)}\n접수기간: ${clean(x.rcept_bgn_dt)} ~ ${clean(x.rcept_end_dt)}\n교육 일정 및 접수 가능 여부는 공식 안내에서 확인해 주세요.`,images:[],sourceName:source.name,link:url,cancelled:false}};
+    return {url,hint:title,data:{title,category:category(title,clean(x.std_capa_nm),source.id),startDate:day(x.edc_bgn_dt),endDate:day(x.edc_end_dt),venue:clean(venue),time:'',price:'',audience:clean(x.edc_trgter_ty_nm),description:`교육방식: ${clean(x.edc_mthd_se_nm)}\n접수기간: ${clean(x.rcept_bgn_dt)} ~ ${clean(x.rcept_end_dt)}\n교육 일정 및 접수 가능 여부는 공식 안내에서 확인해 주세요.`,images:[],sourceName:source.name,link:url,cancelled:false}};
   });
   return {items,total:Number(result.RK_TOTAL)||0};
 }
