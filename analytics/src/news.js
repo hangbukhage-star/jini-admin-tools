@@ -287,8 +287,9 @@ export async function newsRequest(request,env,origin) {
       const allowedCategories=['공연','전시','AI·디지털 교육','평생·문화교육'];
       if(b.action==='category'&&!allowedCategories.includes(b.category))fail('변경할 분야를 선택해 주세요.');
       const ids=[...new Set(b.ids)],encodedIds=JSON.stringify(ids),stamp=nowISO();
-      const records=await rows(env,'SELECT id,deleted_at,source_url,data,start_date FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
+      const records=await rows(env,'SELECT id,status,end_date,deleted_at,source_url,data,start_date FROM news_posts WHERE id IN (SELECT value FROM json_each(?))',encodedIds);
       if(records.length!==ids.length)fail('일부 글을 찾을 수 없습니다. 목록을 새로고침해 주세요.',409);
+      if(b.pastOnly&&(b.action!=='delete'||records.some(r=>r.status!=='published'||!r.end_date||r.end_date>=koreaToday()||!['공연','전시'].includes(parse(r.data).category))))fail('종료된 공연·전시만 선택해 주세요. 목록을 새로고침해 주세요.',409);
       const restoring=b.action==='restore';
       if(records.some(r=>restoring?!r.deleted_at:b.action==='erase'?!r.deleted_at:!!r.deleted_at))fail('글 상태가 바뀌었습니다. 목록을 새로고침해 주세요.',409);
       if(b.action==='erase'){

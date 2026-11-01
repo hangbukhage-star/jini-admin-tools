@@ -24,6 +24,28 @@ test('공연·전시는 카드, 교육은 게시판, 전체는 두 영역으로 
   window.JiniNews.renderListing(list,[],'평생·문화교육');assert(list.querySelector('.news-empty'));
 });
 
+test('지난 공연을 먼저 체크하고 비밀번호 확인 후 선택한 글만 일괄 삭제한다',async()=>{
+  const {document}=parseHTML(readFileSync(new URL('../../news/index.html',import.meta.url),'utf8'));
+  for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,writable:true,value:''});
+  for(const dialog of document.querySelectorAll('dialog')){dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.dispatchEvent(new document.defaultView.Event('close'));};}
+  const context={window:{},document,URL,URLSearchParams,fetch,location:{search:'?cleanup=1',pathname:'/news/'},history:{replaceState(){}},confirm:()=>false};
+  vm.runInNewContext(readFileSync(new URL('../../assets/news-common.js',import.meta.url),'utf8'),context);
+  let failLogin=true,deleteCount=0,remaining=[{id:'one',title:'지난 공연1',category:'공연'},{id:'two',title:'지난 공연2',category:'공연'}];
+  context.window.JiniNews.api=async(path,options={})=>{
+    if(path.startsWith('/news/venues'))return {venues:[]};
+    if(path==='/news/admin/session'){if(failLogin)throw Error('비밀번호 오류');return {ok:true};}
+    if(path==='/news/admin/bulk'){deleteCount++;const body=JSON.parse(options.body);assert.deepEqual(body,{action:'delete',ids:['one','two'],pastOnly:true});remaining=[];return {ok:true,count:2};}
+    const params=new URL(path,'https://example.org').searchParams;assert.equal(params.get('archive'),'1');assert.equal(params.get('category'),'공연');return {posts:remaining,total:remaining.length,hasMore:false};
+  };
+  vm.runInNewContext(readFileSync(new URL('../../assets/news-board.js',import.meta.url),'utf8'),context);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(document.querySelectorAll('#list .news-select input').length,2);assert.equal(document.querySelector('#archive-bulk').hidden,false);
+  const all=document.querySelector('#archive-select-all');all.checked=true;all.onchange({target:all});assert.equal(document.querySelector('#archive-selection-count').textContent,'2개 선택');
+  await document.querySelector('#archive-delete-selected').onclick();assert.equal(document.querySelector('#quick-admin-dialog').open,true);assert.equal(deleteCount,0);
+  const form=document.querySelector('#quick-admin-form'),submitter={disabled:false};document.querySelector('#quick-admin-key').value='wrong';await form.onsubmit({preventDefault(){},submitter});assert.equal(document.querySelector('#archive-selection-count').textContent,'2개 선택');assert.equal(deleteCount,0);
+  failLogin=false;document.querySelector('#quick-admin-key').value='password';await form.onsubmit({preventDefault(){},submitter});assert.equal(deleteCount,0);assert.equal(document.querySelector('#archive-selection-count').textContent,'2개 선택');
+  context.confirm=()=>true;await document.querySelector('#archive-delete-selected').onclick();assert.equal(deleteCount,1);assert.equal(document.querySelectorAll('#list .news-select input').length,0);assert.equal(document.querySelector('#archive-selection-count').textContent,'0개 선택');assert(document.querySelector('#status').textContent.includes('2개 글을 삭제함으로'));
+});
+
 test('게시판 로그인 성공 후 삭제 버튼을 보이며 확인 취소·로그아웃·삭제 실패를 처리한다',async()=>{
   const {document}=parseHTML(readFileSync(new URL('../../news/index.html',import.meta.url),'utf8'));
   for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,writable:true,value:''});
@@ -39,12 +61,12 @@ test('게시판 로그인 성공 후 삭제 버튼을 보이며 확인 취소·�
   };
   vm.runInNewContext(readFileSync(new URL('../../assets/news-board.js',import.meta.url),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(document.querySelectorAll('.news-delete').length,0);
+  assert.equal(document.querySelectorAll('#list .news-delete').length,0);
   const submitter={disabled:false},form=document.querySelector('#quick-admin-form'),key=document.querySelector('#quick-admin-key');
-  failLogin=true;key.value='wrong';await form.onsubmit({preventDefault(){},submitter});assert.equal(document.querySelectorAll('.news-delete').length,0);assert.equal(key.value,'');
-  failLogin=false;key.value='test-password';await form.onsubmit({preventDefault(){},submitter});assert.equal(document.querySelectorAll('.news-delete').length,1);assert.equal(key.value,'');assert(!document.querySelector('a .news-delete'));
-  await document.querySelector('.news-delete').onclick();assert.equal(deleteCount,0);
-  context.confirm=()=>true;failDelete=true;await document.querySelector('.news-delete').onclick();assert.equal(deleteCount,1);assert(document.querySelector('.news-row'));assert.equal(document.querySelector('#status').textContent,'삭제 실패');
-  failDelete=false;await document.querySelector('.news-delete').onclick();assert.equal(deleteCount,2);assert(!document.querySelector('.news-row'));assert(document.querySelector('#status').textContent.includes('삭제함으로 옮겼습니다'));
-  document.querySelector('#quick-admin').onclick();assert.equal(document.querySelectorAll('.news-delete').length,0);
+  failLogin=true;key.value='wrong';await form.onsubmit({preventDefault(){},submitter});assert.equal(document.querySelectorAll('#list .news-delete').length,0);assert.equal(key.value,'');
+  failLogin=false;key.value='test-password';await form.onsubmit({preventDefault(){},submitter});assert.equal(document.querySelectorAll('#list .news-delete').length,1);assert.equal(key.value,'');assert(!document.querySelector('a .news-delete'));
+  await document.querySelector('#list .news-delete').onclick();assert.equal(deleteCount,0);
+  context.confirm=()=>true;failDelete=true;await document.querySelector('#list .news-delete').onclick();assert.equal(deleteCount,1);assert(document.querySelector('.news-row'));assert.equal(document.querySelector('#status').textContent,'삭제 실패');
+  failDelete=false;await document.querySelector('#list .news-delete').onclick();assert.equal(deleteCount,2);assert(!document.querySelector('.news-row'));assert(document.querySelector('#status').textContent.includes('삭제함으로 옮겼습니다'));
+  document.querySelector('#quick-admin').onclick();assert.equal(document.querySelectorAll('#list .news-delete').length,0);
 });

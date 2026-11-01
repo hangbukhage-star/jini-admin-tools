@@ -2,6 +2,7 @@
   'use strict';
   const {api,el,imageURL,safeURL,base}=window.JiniNews,$=s=>document.querySelector(s);
   let token='',state='pending',offset=0,posts=[],images=[],current={},trashCount=0;
+  if(new URLSearchParams(location.search).get('status')==='deleted')state='deleted';
   const selected=new Set();
   let bulkBusy=false,loadGeneration=0;
   let searchTimer;

@@ -12,7 +12,7 @@
 </head>
 <body class="news-page"><header><h1>🌷 지니가 전하는 소식</h1><p>전북의 공연·전시·AI·평생학습·문화예술 교육 소식을 모아요.</p></header><main>
 <div class="news-toolbar"><a class="button" href="../">← 행정도구 만물상</a><button id="upcoming" aria-pressed="true">예정·진행 중</button><button id="archive" aria-pressed="false">지난 소식</button><label>분류 <select id="category"><option value="">전체</option><option>공연</option><option>전시</option><option>AI·디지털 교육</option><option>평생·문화교육</option></select></label></div>
-<div class="news-toolbar"><button id="quick-admin" type="button">관리자 로그인</button></div>
+<div class="news-toolbar"><button id="archive-cleanup" type="button">지난 공연 삭제</button><button id="quick-admin" type="button">관리자 로그인</button><a class="button" href="admin.html?status=deleted">삭제함·복구</a></div>
 <form id="news-search" class="panel news-search" role="search" aria-label="문화행사 검색"><h2>문화행사 찾기</h2><div class="search-fields">
 <label class="search-title">행사·교육명<input name="q" type="search" maxlength="160" placeholder="공연·전시·교육·모집 소식 검색"></label>
 <label>지역<select name="region" id="region-select"><option value="">전체 지역</option><option>전주</option><option>익산</option><option>부안</option><option>김제</option><option>군산</option><option>정읍</option><option>남원</option><option>완주</option><option>진안</option><option>무주</option><option>장수</option><option>임실</option><option>순창</option><option>고창</option></select></label>
@@ -22,6 +22,7 @@
 <label>날짜 정렬<select name="sort"><option value="">기본순</option><option value="asc">날짜 가까운 순</option><option value="desc">날짜 늦은 순</option></select></label>
 
 </div><div class="actions"><button type="submit" class="primary" id="search-submit">검색하기</button><button type="button" id="search-reset">초기화</button></div><p class="muted">지역·장소·월·요금을 함께 골라 검색하세요. 공연·전시는 카드로, 교육 소식은 게시판으로 보여요.</p></form>
+<section id="archive-bulk" class="panel" hidden><h2>지난 공연 정리</h2><p class="muted">삭제할 글을 체크한 뒤 관리자 비밀번호를 입력하세요. 전시도 분류에서 선택할 수 있습니다.</p><div class="news-toolbar"><label><input id="archive-select-all" type="checkbox">현재 불러온 글 전체 선택</label><span id="archive-selection-count" role="status" aria-live="polite">0개 선택</span><button id="archive-delete-selected" type="button" class="news-delete" disabled>관리자 비밀번호 입력 후 삭제</button></div><p class="muted">더 보기로 추가한 글도 체크할 수 있습니다. 선택한 글은 삭제함으로 옮기며 복구할 수 있습니다.</p></section>
 <p id="status" class="news-status" role="status">소식을 불러오고 있어요.</p><section id="list" class="news-card-grid" aria-label="소식 목록"></section><button id="more" hidden>더 보기</button>
 <p class="muted">전북의 공연·전시와 AI·평생학습·문화예술 교육 모집 소식을 모읍니다. 일정·신청 여부는 공식 안내에서 확인해 주세요.</p>
 <dialog id="detail"><form method="dialog"><button style="float:right" aria-label="닫기">닫기 ✕</button></form><article id="detail-content"></article></dialog>

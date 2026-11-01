@@ -33,9 +33,11 @@
   function renderListing(container,posts,category,options={}){
     const isCard=p=>['공연','전시'].includes(p.category);
     const item=(post,index,cards)=>{
-      const link=row(post,index,cards);if(!options.onDelete)return link;
+      const link=row(post,index,cards);if(!options.onDelete&&!options.onSelect)return link;
       const wrapper=el('article',null,cards?'news-entry news-card-entry':'news-entry news-board-entry'),button=el('button','삭제','news-delete');
-      button.type='button';button.setAttribute('aria-label',`${post.title} 삭제`);button.onclick=()=>options.onDelete(post);wrapper.append(link,button);return wrapper;
+      if(options.onSelect){const label=el('label','선택','news-select'),checkbox=el('input');checkbox.type='checkbox';checkbox.value=post.id;checkbox.checked=!!options.isSelected?.(post);checkbox.disabled=!!options.disabled;checkbox.setAttribute('aria-label',`${post.title} 선택`);checkbox.onchange=()=>options.onSelect(post,checkbox.checked);label.prepend(checkbox);wrapper.append(label);}
+      wrapper.append(link);
+      if(options.onDelete){button.type='button';button.setAttribute('aria-label',`${post.title} 삭제`);button.onclick=()=>options.onDelete(post);wrapper.append(button);}return wrapper;
     };
     container.replaceChildren();
     if(category){
