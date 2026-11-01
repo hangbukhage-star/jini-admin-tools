@@ -105,6 +105,13 @@ export async function ingestPost(env,source,url,raw) {
   data.sourceName=source.name;data.link=canonical;
   if(!source.images_allowed&&!['공연','전시'].includes(data.category))data.images=[];
   if(current) {
+    const existing=parse(current.data);
+    // Enrich missing posters without replacing reviewed event details.
+    if(current.status==='published'&&['공연','전시'].includes(existing.category)&&!existing.images?.length&&data.images.length){
+      existing.images=data.images;existing.imageCredit=data.imageCredit||source.name;
+      await env.DB.prepare('UPDATE news_posts SET data=?,updated_at=? WHERE id=?').bind(JSON.stringify(existing),stamp,current.id).run();
+      current.data=JSON.stringify(existing);
+    }
     if(current.status==='pending'&&!current.locked){
       const duplicate=await findDuplicate(env,data,source,current.id,canonical);
       if(duplicate){await env.DB.prepare('UPDATE news_posts SET deleted_at=?,checked_at=? WHERE id=?').bind(stamp,stamp,current.id).run();return {skipped:true,duplicate:true};}

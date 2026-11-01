@@ -47,7 +47,7 @@ function label(root, names) {
   return '';
 }
 function images(root, selector, url) {
-  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('data-src')||e.getAttribute('data-original')||e.getAttribute('src'), url)).filter(Boolean))].slice(0,3);
+  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('data-src')||e.getAttribute('data-original')||e.getAttribute('src'), url)).filter(value=>value&&!/(?:kong_no|no[-_]?img|no[-_]?image|no[-_]?poster)\./i.test(value)))].slice(0,3);
 }
 export function dateRange(value) {
   const raw=String(value),matches=[...raw.matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)];
@@ -94,7 +94,7 @@ export function parseDetail(html, url, source, hint = '') {
     title = text(box, 'h3') || text(box, '.view-tit, .title') || hint;
     dateText = label(box,['기간','공연기간','공연일시']); time = label(box,['시간','공연시간']); venue = label(box,['장소','공연장소']);
     price = label(box,['가격']); audience = label(box,['관람연령','연령']);
-    pics = images(box,'img',url);
+    pics = images(root,'.view__img img',url);
   } else if (source.adapter === 'ssac') {
     const box = root.querySelector('main.sub_wrap dl') || root.querySelector('.sub_wrap dl');
     if(!box)throw new Error('삼성문화회관 상세 구조를 확인해 주세요.');
