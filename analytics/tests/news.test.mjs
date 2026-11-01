@@ -305,17 +305,37 @@ test('Vercel 수집 함수에서 저장 API와 연결해 수집·대기 저장·
 });
 
 
-test('수집 사이트 20개를 등록하고 모두 수집 대상으로 반환하며 21번째는 제한한다',async()=>{
+test('수집 사이트 22개를 등록하고 모두 수집 대상으로 반환하며 23번째는 제한한다',async()=>{
   const e=env();
   e.DB.db.exec('DELETE FROM news_sources');
-  for(let i=1;i<=20;i++){
+  for(let i=1;i<=22;i++){
     const r=await call(e,'/admin/source','POST',{id:'site-'+i,name:'사이트 '+i,url:'https://example.org/list/'+i,adapter:'generic',enabled:true});
     assert.equal(r.status,200);
   }
   const start=await(await call(e,'/admin/collection','POST',{action:'start'})).json();
-  assert.equal(start.sources.length,20);
-  const extra=await call(e,'/admin/source','POST',{id:'site-21',name:'추가 사이트',url:'https://example.org/list/21',adapter:'generic',enabled:true});
+  assert.equal(start.sources.length,22);
+  const extra=await call(e,'/admin/source','POST',{id:'site-23',name:'추가 사이트',url:'https://example.org/list/23',adapter:'generic',enabled:true});
   assert.equal(extra.status,400);
-  assert.match((await extra.json()).error,/20곳/);
+  assert.match((await extra.json()).error,/22곳/);
   assert.equal((await call(e,'/admin/source','POST',{id:'site-20',name:'수정 사이트',url:'https://example.org/list/20',adapter:'generic',enabled:true})).status,200);
+});
+
+
+test('도립미술관과 문화관광재단은 전북 행사와 운영일·요금을 추출한다',()=>{
+  const jma={id:'jma-exhibitions',adapter:'generic',name:'미술관',config:JSON.stringify({community:'jma',links:'a[href*="exhibit_code="]',title:'.tit',content:'.list_item_view',images:'.img img'})};
+  const p=parseDetail('<div class="list_item_view"><p class="tit">참여의 미술</p><dl><dt>전시기간</dt><dd>2026-10-23 ~ 2027-02-14</dd><dt>전시장소</dt><dd>전북도립미술관 본관</dd></dl></div>','https://www.jma.go.kr/web/page.php?exhibit_code=1',jma);
+  assert.equal(p.endDate,'2027-02-14');assert.equal(p.category,'전시');assert.equal(p.venue,'전북도립미술관 본관');
+  assert.equal(linksFrom('<a href="?exhibit_code=1">본관 전시</a><a href="?exhibit_code=2">서울분관 전시</a>', 'https://www.jma.go.kr/web/page.php',jma).length,1);
+  const jbct={id:'jbct-events',adapter:'generic',name:'재단',config:JSON.stringify({community:'jbct',title:'.evt_view_title',content:'.evt_view_top',images:'.evt_view_top img'})};
+  const q=parseDetail('<div class="evt_view_top"><p class="evt_view_tags"><span class="evt_cate">공연</span></p><h3 class="evt_view_title">[전주] 합창대제전</h3><dl><div><dt>기간</dt><dd>26.11.01(일) ~ 26.11.02(월)</dd></div><div><dt>장소</dt><dd>한국소리문화의전당<button>주소복사</button></dd></div><div><dt>가격</dt><dd>무료</dd></div></dl></div>','https://www.jbct.or.kr/portal/site/menu/MENU_000000000000376?id=1',jbct);
+  assert.equal(q.startDate,'2026-11-01');assert.equal(q.endDate,'2026-11-02');assert.equal(q.title,'합창대제전');assert.equal(q.category,'공연');assert.equal(q.venue,'한국소리문화의전당');assert.equal(q.price,'무료');
+});
+
+test('다른 사이트의 지역표기·구두점이 다른 같은 행사는 중복 제외하고 다른 회차는 보존한다',async()=>{
+  const e=env(),today=koreaToday(),tomorrow=new Date(Date.parse(today+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+  const make=(title,date)=>({title,category:'공연',startDate:date,endDate:date,venue:'한국소리문화의전당',price:'무료'});
+  await call(e,'/admin/post','POST',{...make('지브리 & 디즈니 영화음악 오케스트라 콘서트 - 익산',today),status:'published'});
+  const r=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/1',data:make('[익산] 지브리＆디즈니 영화음악 오케스트라 콘서트',today)})).json();
+  assert.equal(r.duplicate,true);assert.equal(r.skipped,true);
+  const next=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/2',data:make('지브리＆디즈니 영화음악 오케스트라 콘서트',tomorrow)})).json();assert.equal(next.ok,true);
 });

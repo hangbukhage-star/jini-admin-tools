@@ -1,6 +1,6 @@
 import {clean,day,publicURL,koreaToday,horizon,recommendCategory,priceInfo,venueGroup} from './news-core.js';
 
-const MAX_SOURCES = 20;
+const MAX_SOURCES = 22;
 const nowISO = () => new Date().toISOString();
 const parse = value => JSON.parse(value || '{}');
 async function sha(value) {const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -43,7 +43,7 @@ function hydrate(row,admin=false) {
   return out;
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
-function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/\s*[-–—]\s*(?:전주|전북)\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
+function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/^\[(?:전주|군산|익산|정읍|남원|김제|완주|진안|무주|장수|임실|순창|고창|부안)\]\s*/,'').replace(/\s*[-–—_]\s*(?:전주|전북|익산|군산)\s*$/,'').replace(/\s*[（(](?:전주|전북|익산|군산)[）)]\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
 function duplicateCore(value) {
   const core=clean(value).replace(/^(?:\[[^\]]{1,20}\]\s*)+/,'').replace(/\s*[（(][^（）()]{12,}[）)]\s*$/,'');
   return duplicateTitle(core);

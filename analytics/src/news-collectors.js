@@ -192,14 +192,26 @@ export function parseDetail(html, url, source, hint = '') {
       const box=root.querySelector(config.content);
       if(!box)throw new Error('공식 공지의 본문을 찾지 못했습니다.');
       title=hint||text(root,config.title);
-      if(config.community==='jjcf'){
+      if(['jma','jbct'].includes(config.community)){
+        box.querySelectorAll('button').forEach(e=>e.remove());
+        const fields={};for(const dt of box.querySelectorAll('dt')){const dd=dt.nextElementSibling;if(dd?.tagName==='DD')fields[clean(dt.textContent).replace(/\s/g,'')]=clean(dd.textContent);}
+        title=text(root,config.title)||hint;
+        if(config.community==='jma'){
+          dateText=fields['전시기간']||'';venue=fields['전시장소']||'';
+        }else{
+          dateText=(fields['기간']||'').replace(/(?<!\d)(\d{2})\.(\d{2})\.(\d{2})(?!\d)/g,'20$1-$2-$3');
+          title=title.replace(/^\[(?:전주|군산|익산|정읍|남원|김제|완주|진안|무주|장수|임실|순창|고창|부안)\]\s*/,'');
+          venue=fields['장소']||'';time=fields['소요시간']||'';price=fields['가격']||'';audience=fields['연령제한']||'';
+        }
+        pics=images(root,config.images||'img',url);
+      }else if(config.community==='jjcf'){
         const fields={};for(const row of box.querySelectorAll('dl')){const k=clean(row.querySelector('dt')?.textContent).replace(/\s/g,'');if(k)fields[k]=clean(row.querySelector('dd')?.textContent);}
         title=text(root,config.title)||hint;dateText=fields['일정']||'';venue=fields['장소']||'';time=fields['시간']||'';price=fields['관람료']||'';
       }else{
         dateText=formattedField(box,['행사일정','운영기간','교육기간','행사일시','일시','일정','축제기간']);
         venue=formattedField(box,['운영장소','행사장소','교육장소','장소']);price=formattedField(box,['관람료','수강료','참가비','체험비']);
       }
-      pics=images(box,'img',url);
+      if(!['jma','jbct'].includes(config.community))pics=images(box,'img',url);
     }else{
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
@@ -211,9 +223,9 @@ export function parseDetail(html, url, source, hint = '') {
   title = clean(title).slice(0,160);
   if(!title) throw new Error('제목을 읽지 못했습니다.');
   const exhibitVenue=/전시실|갤러리|전시장/.test(venue);
-  const context=config.community==='jjcf'?text(root,'.eudcate'):exhibitVenue?'전시':venue;
+  const context=config.community==='jma'?'전시':config.community==='jbct'?text(root,'.evt_view_tags .evt_cate'):config.community==='jjcf'?text(root,'.eudcate'):exhibitVenue?'전시':venue;
   const description=config.community?`${startDate?'':'일정·모집 가능 여부 확인 필요. 첨부 공고 및 공식 안내를 확인해 주세요.\n'}${clean(root.querySelector(config.content)?.textContent).slice(0,1700)}`:'';
-  return { title, category: category(title,context,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description, images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
+  return { title, category: config.community==='jbct'&&context==='공연'?'공연':config.community==='jbct'&&context==='전시'?'전시':category(title,context,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description, images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');
@@ -230,6 +242,11 @@ export function linksFrom(html, url, source) {
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
+    if(config.community==='jma'&&/서울분관/.test(a.textContent))continue;
+    if(config.community==='jbct'){
+      const dates=clean(a.closest('.evt_card_info')?.querySelector('.evt_card_date')?.textContent).replace(/(?<!\d)(\d{2})\.(\d{2})\.(\d{2})(?!\d)/g,'20$1-$2-$3');
+      const [,end]=dateRange(dates);if(end&&end<koreaToday())continue;
+    }
     let hintText=clean(a.textContent)||clean(a.querySelector('img')?.getAttribute('alt'));
     if(config.community==='jjcf')hintText=clean(a.closest('.listOutbox')?.querySelector('dt')?.textContent)||hintText;
     if(config.include&&!new RegExp(config.include).test(hintText))continue;
@@ -238,6 +255,8 @@ export function linksFrom(html, url, source) {
     if(!href || new URL(href).hostname !== new URL(url).hostname) continue;
     if(source.adapter === 'sori' && !(soriExhibition ? /\/exhibition\/\d+$/.test(new URL(href).pathname) : /\/performance\/\d+$/.test(new URL(href).pathname))) continue;
     const u = new URL(href);
+    if(config.community==='jma')for(const k of [...u.searchParams.keys()])if(!['pcode','exhibit_code'].includes(k))u.searchParams.delete(k);
+    if(config.community==='jbct')for(const k of [...u.searchParams.keys()])if(k!=='id')u.searchParams.delete(k);
     if(source.adapter==='culturePerform')for(const k of [...u.searchParams.keys()])if(!['menuNo','pblprfrSn'].includes(k))u.searchParams.delete(k);
     if(source.adapter === 'woojin') ['page','div','key','sword'].forEach(k=>u.searchParams.delete(k));
     if(source.adapter === 'nihc') ['year','month','page','subPath'].forEach(k=>u.searchParams.delete(k));
@@ -258,6 +277,10 @@ export function linksFrom(html, url, source) {
 }
 export function listingURLs(source, now = new Date()) {
   const urls = [];
+  if(JSON.parse(source.config||'{}').community==='jma'){
+    const d=new Date(`${koreaToday(now)}T00:00:00Z`);d.setUTCDate(1);
+    for(let i=0;i<4;i++){const u=new URL(source.url);u.searchParams.set('sel_topyear',d.getUTCFullYear());u.searchParams.set('sel_topmonth',d.getUTCMonth()+1);urls.push(u.href);d.setUTCMonth(d.getUTCMonth()+1);}return urls;
+  }
   if(['nihc','kukak'].includes(source.adapter)) {
     const d = new Date(`${koreaToday(now)}T00:00:00Z`);
     for(let i=0;i<4;i++) { const u = new URL(source.url); if(source.adapter==='kukak'){u.searchParams.set('searchYearMonth',`${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}`);u.searchParams.set('showViewType','list');}else{u.searchParams.set('year',d.getUTCFullYear());u.searchParams.set('month',d.getUTCMonth()+1);}urls.push(u.href);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1); }
