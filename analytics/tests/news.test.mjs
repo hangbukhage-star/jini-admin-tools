@@ -338,4 +338,5 @@ test('다른 사이트의 지역표기·구두점이 다른 같은 행사는 중
   const r=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/1',data:make('[익산] 지브리＆디즈니 영화음악 오케스트라 콘서트',today)})).json();
   assert.equal(r.duplicate,true);assert.equal(r.skipped,true);
   const next=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/2',data:make('지브리＆디즈니 영화음악 오케스트라 콘서트',tomorrow)})).json();assert.equal(next.ok,true);
+  const series=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/3',data:{...make('지브리＆디즈니 영화음악 오케스트라 콘서트',today),startDate:new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10),endDate:tomorrow}})).json();assert.equal(series.duplicate,true);
 });

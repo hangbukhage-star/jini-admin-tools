@@ -46,7 +46,7 @@ async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.
 function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/^\[(?:전주|군산|익산|정읍|남원|김제|완주|진안|무주|장수|임실|순창|고창|부안)\]\s*/,'').replace(/\s*[-–—_]\s*(?:전주|전북|익산|군산)\s*$/,'').replace(/\s*[（(](?:전주|전북|익산|군산)[）)]\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
 function duplicateCore(value) {
   const core=clean(value).replace(/^(?:\[[^\]]{1,20}\]\s*)+/,'').replace(/\s*[（(][^（）()]{12,}[）)]\s*$/,'');
-  return duplicateTitle(core);
+  return duplicateTitle(core).replace(/^20\d{2}/,'').replace(/^(?:전북특별자치도립국악원|전북도립국악원)/,'').replace(/제(?=\d+회)/g,'');
 }
 async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
   const title=duplicateTitle(data.title);
@@ -56,12 +56,13 @@ async function findDuplicate(env,data,source,excludeId='',sourceUrl=''){
   const exact=await env.DB.prepare('SELECT id FROM news_posts WHERE fingerprint=? AND deleted_at IS NULL AND id<>? LIMIT 1').bind(fp,excludeId).first();
   if(exact)return exact;
   if(!data.startDate)return null;
-  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE start_date=? AND deleted_at IS NULL AND id<>?",data.startDate,excludeId);
+  const candidates=await rows(env,"SELECT id,data,venue_group FROM news_posts WHERE (start_date=? OR (start_date<>'' AND end_date<>'' AND start_date<=? AND end_date>=?)) AND deleted_at IS NULL AND id<>?",data.startDate,data.endDate||data.startDate,data.startDate,excludeId);
   const core=duplicateCore(data.title),group=venueGroup(data.venue,data.title,source.adapter);
   return candidates.find(row=>{
     const previous=parse(row.data),previousTitle=duplicateTitle(previous.title||'');
-    if(title&&title===previousTitle)return true;
     const previousCore=duplicateCore(previous.title||'');
+    if(previous.startDate!==data.startDate)return group&&row.venue_group===group&&((title&&title===previousTitle)||(core.length>=6&&core===previousCore));
+    if(title&&title===previousTitle)return true;
     return group&&row.venue_group===group&&core.length>=16&&previousCore.length>=16&&(core.includes(previousCore)||previousCore.includes(core));
   })||null;
 }
