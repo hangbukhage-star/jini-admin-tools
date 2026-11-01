@@ -178,13 +178,13 @@ export async function newsRequest(request,env,origin) {
     const imageMatch=path.match(/^\/news\/images\/([a-f0-9-]+)$/);
     if(request.method==='GET' && imageMatch) {
       // Uploaded drafts remain private until a published post references the image.
-      const row=await env.DB.prepare("SELECT i.body FROM news_images i WHERE i.id=? AND EXISTS(SELECT 1 FROM news_posts p WHERE p.status='published' AND p.deleted_at IS NULL AND p.data LIKE '%' || ? || '%')").bind(imageMatch[1],`/news/images/${imageMatch[1]}`).first();
+      const row=await env.DB.prepare("SELECT i.body FROM news_images i WHERE i.id=? AND EXISTS(SELECT 1 FROM news_posts p WHERE p.status='published' AND p.deleted_at IS NULL AND EXISTS(SELECT 1 FROM json_each(p.data,'$.images') image WHERE image.value=?))").bind(imageMatch[1],`/news/images/${imageMatch[1]}`).first();
       if(!row && await authorized(request,env)) {
         const draft=await env.DB.prepare('SELECT body FROM news_images WHERE id=?').bind(imageMatch[1]).first();
-        if(draft)return new Response(draft.body,{headers:{...headers,'Content-Type':'image/jpeg','Cache-Control':'no-store'}});
+        if(draft)return new Response(Array.isArray(draft.body)?new Uint8Array(draft.body):draft.body,{headers:{...headers,'Content-Type':'image/jpeg','Cache-Control':'no-store'}});
       }
       if(!row)return json({error:'사진을 찾을 수 없습니다.'},404);
-      return new Response(row.body,{headers:{...headers,'Content-Type':'image/jpeg','Content-Security-Policy':"default-src 'none'"}});
+      return new Response(Array.isArray(row.body)?new Uint8Array(row.body):row.body,{headers:{...headers,'Content-Type':'image/jpeg','Content-Security-Policy':"default-src 'none'"}});
     }
     const detail=path.match(/^\/news\/posts\/([a-f0-9-]+)$/);
     const view=path.match(/^\/news\/posts\/([a-f0-9-]+)\/view$/);
@@ -290,7 +290,7 @@ export async function newsRequest(request,env,origin) {
     const backupImage=path.match(/^\/news\/admin\/backup-image\/([a-f0-9-]+)$/);
     if(admin && request.method==='GET' && backupImage) {
       const row=await env.DB.prepare('SELECT body FROM news_images WHERE id=?').bind(backupImage[1]).first();
-      return row?new Response(row.body,{headers:{...headers,'Content-Type':'image/jpeg'}}):json({error:'사진을 찾을 수 없습니다.'},404);
+      return row?new Response(Array.isArray(row.body)?new Uint8Array(row.body):row.body,{headers:{...headers,'Content-Type':'image/jpeg'}}):json({error:'사진을 찾을 수 없습니다.'},404);
     }
     if(admin && request.method==='POST' && path==='/news/admin/cleanup-images') {
       const result=await env.DB.prepare("DELETE FROM news_images WHERE julianday(created_at)<julianday('now','-1 day') AND NOT EXISTS(SELECT 1 FROM news_posts WHERE data LIKE '%' || '/news/images/' || news_images.id || '%' OR candidate LIKE '%' || '/news/images/' || news_images.id || '%')").run();
