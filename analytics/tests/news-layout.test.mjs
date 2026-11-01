@@ -24,20 +24,22 @@ test('공연·전시는 카드, 교육은 게시판, 전체는 두 영역으로 
   window.JiniNews.renderListing(list,[],'평생·문화교육');assert(list.querySelector('.news-empty'));
 });
 
-test('지난 공연을 먼저 체크하고 비밀번호 확인 후 선택한 글만 일괄 삭제한다',async()=>{
+for(const entry of ['cleanup','archive-link','archive-tab'])test(`지난 소식 체크·로그인·선택 삭제: ${entry}`,async()=>{
   const {document}=parseHTML(readFileSync(new URL('../../news/index.html',import.meta.url),'utf8'));
   for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,writable:true,value:''});
   for(const dialog of document.querySelectorAll('dialog')){dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.dispatchEvent(new document.defaultView.Event('close'));};}
-  const context={window:{},document,URL,URLSearchParams,fetch,location:{search:'?cleanup=1',pathname:'/news/'},history:{replaceState(){}},confirm:()=>false};
+  let pastMode=entry!=='archive-tab';
+  const context={window:{},document,URL,URLSearchParams,fetch,location:{search:entry==='cleanup'?'?cleanup=1':entry==='archive-link'?'?archive=1':'',pathname:'/news/'},history:{replaceState(){}},confirm:()=>false};
   vm.runInNewContext(readFileSync(new URL('../../assets/news-common.js',import.meta.url),'utf8'),context);
   let failLogin=true,deleteCount=0,remaining=[{id:'one',title:'지난 공연1',category:'공연'},{id:'two',title:'지난 공연2',category:'공연'}];
   context.window.JiniNews.api=async(path,options={})=>{
     if(path.startsWith('/news/venues'))return {venues:[]};
     if(path==='/news/admin/session'){if(failLogin)throw Error('비밀번호 오류');return {ok:true};}
     if(path==='/news/admin/bulk'){deleteCount++;const body=JSON.parse(options.body);assert.deepEqual(body,{action:'delete',ids:['one','two'],pastOnly:true});remaining=[];return {ok:true,count:2};}
-    const params=new URL(path,'https://example.org').searchParams;assert.equal(params.get('archive'),'1');assert.equal(params.get('category'),'공연');return {posts:remaining,total:remaining.length,hasMore:false};
+    const params=new URL(path,'https://example.org').searchParams;assert.equal(params.get('archive'),pastMode?'1':'0');assert.equal(params.get('category'),'공연');return {posts:remaining,total:remaining.length,hasMore:false};
   };
   vm.runInNewContext(readFileSync(new URL('../../assets/news-board.js',import.meta.url),'utf8'),context);await new Promise(resolve=>setImmediate(resolve));
+  if(entry==='archive-tab'){assert.equal(document.querySelectorAll('#list .news-select input').length,0);pastMode=true;document.querySelector('#archive').onclick();await new Promise(resolve=>setImmediate(resolve));}
   assert.equal(document.querySelectorAll('#list .news-select input').length,2);assert.equal(document.querySelector('#archive-bulk').hidden,false);
   const all=document.querySelector('#archive-select-all');all.checked=true;all.onchange({target:all});assert.equal(document.querySelector('#archive-selection-count').textContent,'2개 선택');
   await document.querySelector('#archive-delete-selected').onclick();assert.equal(document.querySelector('#quick-admin-dialog').open,true);assert.equal(deleteCount,0);

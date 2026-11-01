@@ -394,16 +394,16 @@ test('같은 교육이라도 오전·오후와 별도 회차·시간은 중복 �
 });
 
 
-test('지난 공연 정리는 한국 날짜 기준 종료된 게시 공연·전시만 삭제하며 혼합 선택은 모두 거절한다',async()=>{
+test('지난 소식 정리는 한국 날짜 기준 종료된 게시글만 삭제하며 진행 중인 글이 섞이면 모두 거절한다',async()=>{
  const e=env(),today=koreaToday(),yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);
  const add=async(title,category,endDate,status='published')=>(await(await call(e,'/admin/post','POST',{title,category,status,startDate:endDate,endDate})).json()).id;
  const past=await add('종료 공연','공연',yesterday),exhibit=await add('종료 전시','전시',yesterday),ongoing=await add('오늘 공연','공연',today),education=await add('종료 교육','평생·문화교육',yesterday);
  const remove=ids=>call(e,'/admin/bulk','POST',{action:'delete',pastOnly:true,ids});
  assert.equal((await remove([past,ongoing])).status,409);assert.equal((await(await call(e,'/admin?status=deleted')).json()).posts.length,0);
- assert.equal((await remove([education])).status,409);
+ assert.equal((await remove([education])).status,200);
  assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',pastOnly:true,ids:[past]},false)).status,401);
  const result=await(await remove([past,exhibit])).json();assert.equal(result.count,2);
- const trash=await(await call(e,'/admin?status=deleted')).json();assert.equal(trash.posts.length,2);
+ const trash=await(await call(e,'/admin?status=deleted')).json();assert.equal(trash.posts.length,3);
  assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[past]})).status,200);
  assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,past);
 });

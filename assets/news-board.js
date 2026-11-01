@@ -2,7 +2,7 @@
   const {api,el,renderListing,safeURL,imageURL,priceLabel}=window.JiniNews,$=s=>document.querySelector(s);
   let archive=false,offset=0,posts=[],generation=0;
   let adminToken='',deleteBusy=false;
-  let cleanup=false,pendingBulk=false;
+  let pendingBulk=false;
   const selected=new Set();
   const reactionCounts=new Map();
   function syncReactionCounts(id,counts){reactionCounts.set(id,counts);render();}
@@ -39,7 +39,7 @@
   }
   const status=message=>{$('#status').textContent=message;};
   function updateBulk(){
-    $('#archive-bulk').hidden=!cleanup;
+    $('#archive-bulk').hidden=!archive;
     $('#archive-selection-count').textContent=`${selected.size}개 선택`;
     $('#archive-select-all').checked=posts.length>0&&selected.size===posts.length;
     $('#archive-select-all').indeterminate=selected.size>0&&selected.size<posts.length;
@@ -49,13 +49,13 @@
     for(const control of document.querySelectorAll('#upcoming,#archive,#archive-cleanup,#category,#quick-admin,#news-search input,#news-search select,#news-search button'))control.disabled=deleteBusy;
     for(const input of $('#list').querySelectorAll('.news-select input'))input.checked=selected.has(input.value);
   }
-  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);const options=adminToken?{onDelete:deletePost}:{};if(cleanup)Object.assign(options,{disabled:deleteBusy,isSelected:p=>selected.has(p.id),onSelect:(p,checked)=>{if(checked)selected.add(p.id);else selected.delete(p.id);updateBulk();}});renderListing($('#list'),filtered.map(p=>({...p,reactions:reactionCounts.get(p.id)||p.reactions})),category,options);for(const b of $('#list').querySelectorAll('.news-delete'))b.disabled=deleteBusy;updateBulk();}
+  function render(){const category=$('#category').value;const filtered=posts.filter(p=>!category||p.category===category);const options=adminToken?{onDelete:deletePost}:{};if(archive)Object.assign(options,{disabled:deleteBusy,isSelected:p=>selected.has(p.id),onSelect:(p,checked)=>{if(checked)selected.add(p.id);else selected.delete(p.id);updateBulk();}});renderListing($('#list'),filtered.map(p=>({...p,reactions:reactionCounts.get(p.id)||p.reactions})),category,options);for(const b of $('#list').querySelectorAll('.news-delete'))b.disabled=deleteBusy;updateBulk();}
   function loginForSelection(){pendingBulk=true;$('#quick-admin-status').textContent='';$('#quick-admin-dialog').showModal();$('#quick-admin-key').focus();}
   async function deleteSelected(){
-    if(deleteBusy||!cleanup||!selected.size)return;
+    if(deleteBusy||!archive||!selected.size)return;
     if(!adminToken){loginForSelection();return;}
     const ids=[...selected];
-    if(!confirm(`체크한 지난 공연·전시 ${ids.length}개를 삭제함으로 옮길까요? 삭제함에서 복구할 수 있습니다.`))return;
+    if(!confirm(`체크한 지난 소식 ${ids.length}개를 삭제함으로 옮길까요? 삭제함에서 복구할 수 있습니다.`))return;
     deleteBusy=true;render();let completed=0;
     try{
       for(let start=0;start<ids.length;start+=100){const chunk=ids.slice(start,start+100);const result=await api('/news/admin/bulk',{method:'POST',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'delete',ids:chunk,pastOnly:true})});completed+=result.count;chunk.forEach(id=>selected.delete(id));}
@@ -96,9 +96,9 @@
     }catch(e){if(run===detailGeneration)content.replaceChildren(el('p',e.message));}
   }
   $('#list').addEventListener('click',e=>{const a=e.target.closest('a.news-row');if(!a||e.ctrlKey||e.metaKey)return;e.preventDefault();const id=new URL(a.href).searchParams.get('post');history.replaceState(null,'',`?post=${encodeURIComponent(id)}`);detail(id);});
-  $('#upcoming').onclick=()=>{cleanup=false;archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();loadVenues();};
-  $('#archive').onclick=()=>{cleanup=false;archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
-  $('#archive-cleanup').onclick=()=>{cleanup=true;archive=true;$('#category').value='공연';$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
+  $('#upcoming').onclick=()=>{archive=false;$('#upcoming').setAttribute('aria-pressed','true');$('#archive').setAttribute('aria-pressed','false');load();loadVenues();};
+  $('#archive').onclick=()=>{archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
+  $('#archive-cleanup').onclick=()=>{archive=true;$('#category').value='공연';$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
   $('#archive-select-all').onchange=e=>{selected.clear();if(e.target.checked)posts.forEach(p=>selected.add(p.id));updateBulk();};
   $('#archive-delete-selected').onclick=deleteSelected;
   searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
@@ -115,8 +115,8 @@
     try{await api('/news/admin/session',{headers:{Authorization:`Bearer ${supplied}`}});adminToken=supplied;const continueBulk=pendingBulk;$('#quick-admin-key').value='';$('#quick-admin-dialog').close();$('#quick-admin').textContent='관리자 종료';render();status('관리자 모드입니다. 각 글의 삭제 버튼을 사용할 수 있어요.');if(continueBulk)await deleteSelected();}
     catch(err){$('#quick-admin-key').value='';$('#quick-admin-status').textContent=err.message;}finally{button.disabled=false;}
   };
-  $('#category').onchange=()=>{if(cleanup&&!['공연','전시'].includes($('#category').value))cleanup=false;load();};$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname);});
+  $('#category').onchange=()=>load();$('#more').onclick=()=>load(false);$('#detail').addEventListener('close',()=>{detailGeneration++;history.replaceState(null,'',location.pathname+(archive?'?archive=1':''));});
   $('#category').value='공연';
-  cleanup=new URLSearchParams(location.search).get('cleanup')==='1';if(cleanup){archive=true;$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');}
+  archive=['cleanup','archive'].some(name=>new URLSearchParams(location.search).get(name)==='1');if(archive){$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');}
   load();loadVenues();const id=new URLSearchParams(location.search).get('post');if(id)detail(id);
 })();
