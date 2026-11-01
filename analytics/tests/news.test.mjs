@@ -407,3 +407,23 @@ test('지난 소식 정리는 한국 날짜 기준 종료된 게시글만 삭제
  assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[past]})).status,200);
  assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,past);
 });
+
+
+test('교육으로 수집한 원본 사진은 보관하며 공연·전시로 변경하면 복구한다',async()=>{
+ const e=env(),today=koreaToday();
+ const raw={title:'문화강좌 사진 보관',category:'평생·문화교육',startDate:today,endDate:today,venue:'한국소리문화의전당',images:['https://www.sori21.co.kr/original-poster.jpg']};
+ const ingest=data=>call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/poster-conversion/1',data});
+ assert.equal((await ingest(raw)).status,200);
+ let stored=(await(await call(e,'/admin')).json()).posts[0];assert.equal(stored.images.length,0);assert.deepEqual(stored.sourceImages,raw.images);
+ await call(e,'/admin/post','POST',{...stored,category:'공연',images:[],status:'published'});
+ let published=(await(await call(e,'/posts/'+stored.id)).json()).post;assert.deepEqual(published.images,raw.images);assert.equal(published.sourceImages,undefined);
+ await call(e,'/admin/post','POST',{...published,category:'공연',images:[],title:'직접 확인한 비르투오조',status:'published'});
+ await ingest({...raw,title:'자동 수집 교육 제목'});
+ published=(await(await call(e,'/posts/'+stored.id)).json()).post;assert.equal(published.category,'공연');assert.equal(published.title,'직접 확인한 비르투오조');assert.deepEqual(published.images,raw.images);
+ const raw2={...raw,title:'별도 미술 프로그램',images:['https://www.sori21.co.kr/exhibition.jpg']};
+ await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/poster-conversion/2',data:raw2});
+ const second=(await(await call(e,'/admin')).json()).posts.find(p=>p.title===raw2.title);
+ assert(second);await call(e,'/admin/bulk','POST',{action:'category',category:'전시',ids:[second.id]});
+ const converted=(await(await call(e,'/admin')).json()).posts.find(p=>p.id===second.id);assert.deepEqual(converted.images,raw2.images);assert.equal(converted.category,'전시');
+ assert.equal(recommendCategory('비르투오조 시리즈2','','culture-jeonbuk-perform').category,'공연');
+});

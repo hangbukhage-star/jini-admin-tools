@@ -76,6 +76,11 @@
       $('#preview').append(img);
     }
   }
+  async function restorePosterPreview(){
+    if(images.length||!['공연','전시'].includes($('#post-form').elements.category.value))return;
+    const saved=[current.sourceImages,current.candidate?.sourceImages,current.candidate?.images].find(value=>Array.isArray(value)&&value.length);
+    if(saved){images=[...saved].slice(0,3);await preview();}
+  }
   function fill(form,data){form.reset();for(const [name,value] of Object.entries(data)){const input=form.elements.namedItem(name);if(!input)continue;if(input.type==='checkbox')input.checked=!!value;else input.value=value??'';}}
   async function editPost(p={},changed=false){
     current={...p};const value=changed?{...p,...p.candidate}:p;
@@ -87,7 +92,7 @@
     const suggestion=value.recommendation;
     $('#category-suggestion').hidden=!suggestion;
     $('#category-reason').textContent=suggestion?`추천 분류: ${suggestion.category} · ${suggestion.reason} 직접 수정한 분류는 그대로 유지됩니다.`:'';
-    $('#apply-category').onclick=()=>{if(suggestion){$('#post-form').elements.category.value=suggestion.category;$('#category-reason').textContent=`${suggestion.category} 추천을 적용했어요. 저장 버튼을 눌러 반영하세요.`;}};
+    $('#apply-category').onclick=()=>{if(suggestion){$('#post-form').elements.category.value=suggestion.category;restorePosterPreview();$('#category-reason').textContent=`${suggestion.category} 추천을 적용했어요. 저장 버튼을 눌러 반영하세요.`;}};
     $('#post-warning').textContent=changed?'아래는 새로 수집한 내용입니다. 기존 글과 비교해 확인한 후 게시하세요.':(!value.startDate||!value.venue)?'날짜·장소가 없는 항목은 원문을 확인해 채워주세요. 일반 소식은 비워둘 수 있어요.':'';
     $('#editor').showModal();await preview();
   }
@@ -119,6 +124,7 @@
   $('#refresh').onclick=async()=>{try{await load();status('목록을 새로 불러왔어요.');}catch(e){status(e.message,true);}};
   $('#more').onclick=async()=>{try{await load(false);}catch(e){status(e.message,true);}};
   $('#close-editor').onclick=()=>$('#editor').close();$('#close-source').onclick=()=>$('#source-editor').close();
+  $('#post-form').elements.category.addEventListener('change',restorePosterPreview);
   $('#clear-images').onclick=()=>{images=[];preview();};
   $('#upload').onchange=async e=>{const buttons=[...$('#post-form').querySelectorAll('button[type=submit]')];buttons.forEach(b=>b.disabled=true);try{const files=[...e.target.files];if(files.length+images.length>3)throw new Error('사진은 최대 3장까지 올릴 수 있어요.');for(const file of files){if(file.size>15000000)throw new Error('원본 사진은 15MB 이하로 선택해 주세요.');const blob=await compress(file);const result=await admin('/image',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});images.push(result.url);}await preview();}catch(err){alert(err.message);}finally{e.target.value='';buttons.forEach(b=>b.disabled=false);}};
   $('#post-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const values=Object.fromEntries(new FormData(e.target));await send('/post',{...values,images,status:b.value,pinned:e.target.elements.pinned.checked,cancelled:e.target.elements.cancelled.checked});$('#editor').close();await load();status('저장했어요.');}catch(err){alert(err.message);}finally{b.disabled=false;}};

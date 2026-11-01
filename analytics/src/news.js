@@ -40,12 +40,17 @@ export function validatePost(input) {
 function hydrate(row,admin=false) {
   const out={...parse(row.data),id:row.id,pinned:!!row.pinned,views:Number(row.view_count)||0,venueGroup:row.venue_group||'',checkedAt:row.checked_at,updatedAt:row.updated_at};
   out.region=newsRegion(out);
+  if(!admin)delete out.sourceImages;
   if(admin) {
     const candidate=row.candidate?parse(row.candidate):null;
     Object.assign(out,{status:row.status,locked:!!row.locked,sourceId:row.source_id,feeType:parse(row.price_info).type||'unknown',candidate,recommendation:recommendCategory(out.title,out.description,row.source_id)});
     if(candidate)candidate.recommendation=recommendCategory(candidate.title,candidate.description,row.source_id);
   }
   return out;
+}
+function savedSourceImages(row){
+  const stored=parse(row?.data),candidate=parse(row?.candidate);
+  return [...new Set([stored.sourceImages,candidate.sourceImages,candidate.images].flatMap(value=>Array.isArray(value)?value:[]))].filter(value=>typeof value==='string'&&(publicURL(value)||/^\/news\/images\/[a-f0-9-]+$/.test(value))).slice(0,3);
 }
 async function fingerprint(data) {return sha([data.title.replace(/\s/g,''),data.startDate,data.venue.replace(/\s/g,'')].join('|'));}
 function duplicateTitle(value) {return clean(value).normalize('NFKC').toLowerCase().replace(/^\[(?:전주|군산|익산|정읍|남원|김제|완주|진안|무주|장수|임실|순창|고창|부안)\]\s*/,'').replace(/\s*[-–—_]\s*(?:전주|전북|익산|군산)\s*$/,'').replace(/\s*[（(](?:전주|전북|익산|군산)[）)]\s*$/,'').replace(/[^\p{L}\p{N}]/gu,'');}
@@ -117,12 +122,21 @@ export async function ingestPost(env,source,url,raw) {
   if(!current && data.endDate && (data.endDate<koreaToday() || data.startDate>horizon()))return {skipped:true};
   const fp=await fingerprint(data);
   data.sourceName=source.name;data.link=canonical;
-  if(!source.images_allowed&&!['공연','전시'].includes(data.category))data.images=[];
+  const sourceImages=[...data.images];
+  data.sourceImages=sourceImages;
+  const currentCategory=current?parse(current.data).category:'';
+  if(!source.images_allowed&&!['공연','전시'].includes(data.category)&&!['공연','전시'].includes(currentCategory))data.images=[];
   if(current) {
     const existing=parse(current.data);
+    let enriched=false;
+    if(sourceImages.length){existing.sourceImages=sourceImages;enriched=JSON.stringify(sourceImages)!==JSON.stringify(parse(current.data).sourceImages||[]);}
+    else data.sourceImages=existing.sourceImages||[];
     // Enrich missing posters without replacing reviewed event details.
     if(current.status==='published'&&['공연','전시'].includes(existing.category)&&!existing.images?.length&&data.images.length){
       existing.images=data.images;existing.imageCredit=data.imageCredit||source.name;
+      enriched=true;
+    }
+    if(enriched){
       await env.DB.prepare('UPDATE news_posts SET data=?,updated_at=? WHERE id=?').bind(JSON.stringify(existing),stamp,current.id).run();
       current.data=JSON.stringify(existing);
     }
@@ -299,7 +313,7 @@ export async function newsRequest(request,env,origin) {
         return json({ok:true,count:deleted.results?.length||0});
       }
       if(b.action==='category'){
-        const updated=await rows(env,"UPDATE news_posts SET data=json_set(data,'$.category',?),locked=1,updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NULL RETURNING id",b.category,stamp,encodedIds);
+        const updated=await rows(env,"UPDATE news_posts SET data=json_set(data,'$.category',?,'$.images',json(CASE WHEN ? IN ('공연','전시') AND COALESCE(json_array_length(data,'$.images'),0)=0 THEN COALESCE(NULLIF(json_extract(data,'$.sourceImages'),'[]'),NULLIF(json_extract(candidate,'$.sourceImages'),'[]'),json_extract(candidate,'$.images'),'[]') ELSE COALESCE(json_extract(data,'$.images'),'[]') END)),locked=1,updated_at=? WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NULL RETURNING id",b.category,b.category,stamp,encodedIds);
         return json({ok:true,count:updated.length});
       }
       if(b.action==='delete')await preserveSuppression(env,records);
@@ -361,6 +375,10 @@ export async function newsRequest(request,env,origin) {
       const existing=b.id?await env.DB.prepare('SELECT * FROM news_posts WHERE id=?').bind(id).first():null;
       if(b.id && !existing)fail('게시글을 찾을 수 없습니다.',404);
       if(existing?.deleted_at)fail('삭제함에서 먼저 복구해 주세요.',409);
+      if(existing){
+        const previous=parse(existing.data);data.sourceImages=savedSourceImages(existing);
+        if(!['공연','전시'].includes(previous.category)&&['공연','전시'].includes(data.category)&&!data.images.length)data.images=[...data.sourceImages];
+      }
       const fp=await fingerprint(data);
       if(existing) await env.DB.prepare('UPDATE news_posts SET data=?,candidate=NULL,status=?,locked=1,pinned=?,start_date=?,end_date=?,fingerprint=?,updated_at=?,price_info=?,venue_group=? WHERE id=?').bind(JSON.stringify(data),b.status,b.pinned?1:0,data.startDate,data.endDate,fp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title,existing?.source_id),id).run();
       else await env.DB.prepare('INSERT INTO news_posts(id,status,data,locked,pinned,start_date,end_date,fingerprint,created_at,updated_at,price_info,venue_group) VALUES(?,?,?,1,?,?,?,?,?,?,?,?)').bind(id,b.status,JSON.stringify(data),b.pinned?1:0,data.startDate,data.endDate,fp,stamp,stamp,JSON.stringify(priceInfo(data.price)),venueGroup(data.venue,data.title)).run();
