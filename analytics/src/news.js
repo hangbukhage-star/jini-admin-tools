@@ -1,7 +1,7 @@
 import {clean,day,publicURL,koreaToday,horizon,recommendCategory,priceInfo,venueGroup} from './news-core.js';
 import {NEWS_REGIONS,newsRegion,newsRegionSQL} from './news-regions.js';
 
-const MAX_SOURCES = 22;
+const MAX_SOURCES = 25;
 const nowISO = () => new Date().toISOString();
 const parse = value => JSON.parse(value || '{}');
 async function sha(value) {const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -387,7 +387,7 @@ export async function newsRequest(request,env,origin) {
     if(admin && request.method==='POST' && path==='/news/admin/source') {
       const b=await body(request),id=b.id||crypto.randomUUID(),name=clean(b.name).slice(0,100),address=publicURL(b.url);
       if(!name || !address)fail('사이트 이름과 공개 주소를 입력해 주세요.');
-      if(!['woojin','sori','ssac','nol','culturePerform','nihc','jjticket','wanju','naru','kukak','library','deureuri','museumEs','historyMuseum','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
+      if(!['woojin','sori','ssac','nol','culturePerform','nihc','jjticket','wanju','naru','kukak','library','deureuri','museumEs','historyMuseum','iksanPerformance','iksanExhibition','gimje','generic'].includes(b.adapter))fail('수집 방식을 확인해 주세요.');
       let config;try{config=typeof b.config==='string'?JSON.parse(b.config):b.config||{};}catch{fail('수집 설정 JSON을 확인해 주세요.');}
       const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM news_sources').first();
       const previous=await env.DB.prepare('SELECT id FROM news_sources WHERE id=?').bind(id).first();

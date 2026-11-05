@@ -13,6 +13,9 @@ const PAGED_LISTS={
   nihc:{parameter:'page',first:1},
   museumEs:{parameter:'nPage',first:1},
   historyMuseum:{parameter:'page',first:1},
+  iksanPerformance:{parameter:'page',first:1},
+  iksanExhibition:{parameter:'page',first:1},
+  gimje:{parameter:'startPage',first:1},
 };
 const MAX_LIST_PAGES_PER_RUN=4;
 function pagedListURL(source,page){

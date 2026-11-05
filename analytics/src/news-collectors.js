@@ -49,6 +49,14 @@ function label(root, names) {
 function images(root, selector, url) {
   return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('data-src')||e.getAttribute('data-original')||e.getAttribute('src'), url)).filter(value=>value&&!/(?:kong_no|no[-_]?img|no[-_]?image|no[-_]?poster)\./i.test(value)))].slice(0,3);
 }
+function linkedImages(root,url) {
+  const found=images(root,'img',url);
+  for(const a of root.querySelectorAll('a[href]')){
+    const href=a.getAttribute('href')||'';
+    if(/\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(href)){const image=publicURL(href,url);if(image)found.push(image);}
+  }
+  return [...new Set(found)].slice(0,3);
+}
 export function dateRange(value) {
   const raw=String(value),matches=[...raw.matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)];
   const dates=matches.map(m=>day(m[0])).filter(Boolean);
@@ -81,7 +89,26 @@ export function parseDetail(html, url, source, hint = '') {
   const root = documentOf(html);
   const config = JSON.parse(source.config || '{}');
   let title = '', dateText = '', venue = '', time = '', price = '', audience = '', pics = [];
-  if (source.adapter === 'sori') {
+  if (['iksanPerformance','iksanExhibition'].includes(source.adapter)) {
+    const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
+    title=text(box,'h2,h3,h4,.tit,.title')||text(root,'.info-tit')||root.querySelector('meta[property="og:title"]')?.getAttribute('content')||hint;
+    dateText=label(box,['일정 기간','전시 기간','기간','일정']);
+    time=label(box,['시간','공연시간']);
+    venue=label(box,['장소','공연장소','전시장소']);
+    price=label(box,['관람료','가격']);
+    audience=label(box,['관람연령','연령']);
+    if(source.adapter==='iksanExhibition'&&!/전시/.test(title))title=`${title} 전시`;
+    pics=linkedImages(box,url);
+  } else if(source.adapter==='gimje') {
+    const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
+    title=text(box,'h2,h3,h4,.tit,.title')||label(box,['제목'])||hint;
+    dateText=label(box,['기간','행사기간','일정']);time=label(box,['시간','행사시간']);
+    venue=label(box,['장소','행사장소']);price=label(box,['관람료','참가비','가격']);audience=label(box,['대상','관람연령']);
+    const type=clean(box.textContent).match(/(?:구분|분류)\s*[:：]?\s*(공연|전시|교육)/)?.[1];
+    if(type==='전시'&&!/전시/.test(title))title=`${title} 전시`;
+    if(type==='교육'&&!/교육|강좌|체험/.test(title))title=`${title} 문화교육`;
+    pics=linkedImages(box,url);
+  } else if (source.adapter === 'sori') {
     const box = root.querySelector('.skinveiw-detail') || root.querySelector('.skinviewtop');
     if (!box) throw new Error('공연 상세 구조가 바뀌었습니다.');
     title = text(box, '.sktit,h2,h3,h4,.tit,.title') || hint;
@@ -238,7 +265,7 @@ export function linksFrom(html, url, source) {
     })).values()];
   }
   const soriExhibition = source.adapter === 'sori' && /\/show\/exhibition(?:\/|$)/.test(new URL(source.url).pathname);
-  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"],a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]'}[source.adapter] || config.links;
+  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"],a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]',iksanPerformance:'a[href*="/board/post/view.do"][href*="postUid="]',iksanExhibition:'a[href*="/board/post/view.do"][href*="postUid="]',gimje:'a[href*="/schedule/view.gimje"][href*="dataSid="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
@@ -266,6 +293,8 @@ export function linksFrom(html, url, source) {
     if(source.adapter==='nol')u.search='';
     if(source.adapter==='museumEs')for(const k of [...u.searchParams.keys()])if(!['mid','act','seq'].includes(k))u.searchParams.delete(k);
     if(source.adapter==='historyMuseum')for(const k of [...u.searchParams.keys()])if(!['boardUid','contentUid','dataUid','subPath'].includes(k))u.searchParams.delete(k);
+    if(['iksanPerformance','iksanExhibition'].includes(source.adapter))for(const k of [...u.searchParams.keys()])if(!['boardUid','codeUids','menuUid','postUid'].includes(k))u.searchParams.delete(k);
+    if(source.adapter==='gimje')for(const k of [...u.searchParams.keys()])if(!['boardId','dataSid','menuCd'].includes(k))u.searchParams.delete(k);
     u.searchParams.sort();
     const key = u.href;
     const hint = source.adapter==='ssac'
@@ -299,6 +328,8 @@ export function listingURLs(source, now = new Date()) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);u.searchParams.set('orderField','RE_SDATE');u.searchParams.set('orderSort','desc');urls.push(u.href);}
   } else if(source.adapter==='historyMuseum') {
     urls.push(source.url);
+  } else if(source.adapter==='gimje') {
+    for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);urls.push(u.href);}
   } else if(['jjticket','wanju'].includes(source.adapter)) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else urls.push(source.url);

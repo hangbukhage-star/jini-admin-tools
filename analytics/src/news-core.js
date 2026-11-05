@@ -29,7 +29,7 @@ export function aiEducationMatch(title,context=''){
   return `${clean(title)} ${clean(context)}`.match(/인공지능|생성형|(?<![a-z])ai(?![a-z])|chat\s*gpt|챗\s*(?:gpt|지피티)|제미나이|gemini|notebook\s*lm|노트북\s*lm|미드저니|midjourney|suno|수노|바이브\s*코딩|vibe\s*coding|코파일럿|copilot|퍼플렉시티|perplexity|프롬프트|(?:클로드|claude)\s*(?:ai|활용|사용|실습|기초|입문|자동화|로|와|를|for)/i);
 }
 export function recommendCategory(title, context='', source='') {
-  if(['sori-exhibition','jma-exhibitions'].includes(source))return {category:'전시',reason:'전시 전용 수집 사이트의 글입니다.',needsReview:false};
+  if(['sori-exhibition','jma-exhibitions','iksan-exhibition'].includes(source))return {category:'전시',reason:'전시 전용 수집 사이트의 글입니다.',needsReview:false};
   const ai=aiEducationMatch(title,context);
   if(ai&&(!/공연|콘서트|음악회|전시|개인전|展/.test(title)||/교육|강좌|특강|강연|워크숍|체험|프로그램/.test(`${title} ${context}`)))return {category:'AI·디지털 교육',reason:`‘${ai[0]}’ 활용 내용을 기준으로 추천했어요.`,needsReview:false};
   const rules=[
@@ -40,7 +40,7 @@ export function recommendCategory(title, context='', source='') {
   ];
   for(const value of [clean(title),clean(context)])for(const [category,pattern] of rules){const match=value.match(pattern);if(match)return {category,reason:`‘${match[0]}’ 표현을 기준으로 추천했어요.`,needsReview:false};}
   if(source==='library')return {category:'평생·문화교육',reason:'도서관 프로그램으로 평생·문화교육을 추천했어요. 행사 성격을 확인해 주세요.',needsReview:true};
-  if(['sori','ssac','nol-jeonbuk','culturePerform','culture-jeonbuk-perform','kukak','naru','jjticket','wanju','woojin'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
+  if(['sori','ssac','nol-jeonbuk','culturePerform','culture-jeonbuk-perform','kukak','naru','jjticket','wanju','woojin','iksan-performance'].includes(source))return {category:'공연',reason:'공연 안내 사이트의 글입니다. 제목만으로 확실하지 않아 확인이 필요해요.',needsReview:true};
   return {category:'평생·문화교육',reason:'분류 단서가 부족해 평생·문화교육으로 두었어요. 원문을 보고 분류를 확인해 주세요.',needsReview:true};
 }
 export const category=(title,context='',source='')=>recommendCategory(title,context,source).category;
