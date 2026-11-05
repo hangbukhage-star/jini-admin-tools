@@ -47,7 +47,15 @@ function label(root, names) {
   return '';
 }
 function images(root, selector, url) {
-  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('src'), url)).filter(Boolean))].slice(0,3);
+  return [...new Set([...root.querySelectorAll(selector)].map(e => publicURL(e.getAttribute('data-src')||e.getAttribute('data-original')||e.getAttribute('src'), url)).filter(value=>value&&!/(?:kong_no|no[-_]?img|no[-_]?image|no[-_]?poster)\./i.test(value)))].slice(0,3);
+}
+function linkedImages(root,url) {
+  const found=images(root,'img',url);
+  for(const a of root.querySelectorAll('a[href]')){
+    const href=a.getAttribute('href')||'';
+    if(/\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(href)){const image=publicURL(href,url);if(image)found.push(image);}
+  }
+  return [...new Set(found)].slice(0,3);
 }
 export function dateRange(value) {
   const raw=String(value),matches=[...raw.matchAll(/20\d{2}\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}/g)];
@@ -81,7 +89,26 @@ export function parseDetail(html, url, source, hint = '') {
   const root = documentOf(html);
   const config = JSON.parse(source.config || '{}');
   let title = '', dateText = '', venue = '', time = '', price = '', audience = '', pics = [];
-  if (source.adapter === 'sori') {
+  if (['iksanPerformance','iksanExhibition'].includes(source.adapter)) {
+    const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
+    title=text(box,'h2,h3,h4,.tit,.title')||text(root,'.info-tit')||root.querySelector('meta[property="og:title"]')?.getAttribute('content')||hint;
+    dateText=label(box,['일정 기간','전시 기간','기간','일정']);
+    time=label(box,['시간','공연시간']);
+    venue=label(box,['장소','공연장소','전시장소']);
+    price=label(box,['관람료','가격']);
+    audience=label(box,['관람연령','연령']);
+    if(source.adapter==='iksanExhibition'&&!/전시/.test(title))title=`${title} 전시`;
+    pics=linkedImages(box,url);
+  } else if(source.adapter==='gimje') {
+    const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
+    title=text(box,'h2,h3,h4,.tit,.title')||label(box,['제목'])||hint;
+    dateText=label(box,['기간','행사기간','일정']);time=label(box,['시간','행사시간']);
+    venue=label(box,['장소','행사장소']);price=label(box,['관람료','참가비','가격']);audience=label(box,['대상','관람연령']);
+    const type=clean(box.textContent).match(/(?:구분|분류)\s*[:：]?\s*(공연|전시|교육)/)?.[1];
+    if(type==='전시'&&!/전시/.test(title))title=`${title} 전시`;
+    if(type==='교육'&&!/교육|강좌|체험/.test(title))title=`${title} 문화교육`;
+    pics=linkedImages(box,url);
+  } else if (source.adapter === 'sori') {
     const box = root.querySelector('.skinveiw-detail') || root.querySelector('.skinviewtop');
     if (!box) throw new Error('공연 상세 구조가 바뀌었습니다.');
     title = text(box, '.sktit,h2,h3,h4,.tit,.title') || hint;
@@ -94,7 +121,7 @@ export function parseDetail(html, url, source, hint = '') {
     title = text(box, 'h3') || text(box, '.view-tit, .title') || hint;
     dateText = label(box,['기간','공연기간','공연일시']); time = label(box,['시간','공연시간']); venue = label(box,['장소','공연장소']);
     price = label(box,['가격']); audience = label(box,['관람연령','연령']);
-    pics = images(box,'img',url);
+    pics = images(root,'.view__img img',url);
   } else if (source.adapter === 'ssac') {
     const box = root.querySelector('main.sub_wrap dl') || root.querySelector('.sub_wrap dl');
     if(!box)throw new Error('삼성문화회관 상세 구조를 확인해 주세요.');
@@ -188,16 +215,44 @@ export function parseDetail(html, url, source, hint = '') {
     audience=label(box,['대상','참가대상'])||formattedField(box,['대상','참가대상']);
     pics=images(box,'img',url);
   } else {
+    if(config.community){
+      const box=root.querySelector(config.content);
+      if(!box)throw new Error('공식 공지의 본문을 찾지 못했습니다.');
+      title=hint||text(root,config.title);
+      if(['jma','jbct'].includes(config.community)){
+        box.querySelectorAll('button').forEach(e=>e.remove());
+        const fields={};for(const dt of box.querySelectorAll('dt')){const dd=dt.nextElementSibling;if(dd?.tagName==='DD')fields[clean(dt.textContent).replace(/\s/g,'')]=clean(dd.textContent);}
+        title=text(root,config.title)||hint;
+        if(config.community==='jma'){
+          dateText=fields['전시기간']||'';venue=fields['전시장소']||'';
+        }else{
+          dateText=(fields['기간']||'').replace(/(?<!\d)(\d{2})\.(\d{2})\.(\d{2})(?!\d)/g,'20$1-$2-$3');
+          title=title.replace(/^\[(?:전주|군산|익산|정읍|남원|김제|완주|진안|무주|장수|임실|순창|고창|부안)\]\s*/,'');
+          venue=fields['장소']||'';time=fields['소요시간']||'';price=fields['가격']||'';audience=fields['연령제한']||'';
+        }
+        pics=images(root,config.images||'img',url);
+      }else if(config.community==='jjcf'){
+        const fields={};for(const row of box.querySelectorAll('dl')){const k=clean(row.querySelector('dt')?.textContent).replace(/\s/g,'');if(k)fields[k]=clean(row.querySelector('dd')?.textContent);}
+        title=text(root,config.title)||hint;dateText=fields['일정']||'';venue=fields['장소']||'';time=fields['시간']||'';price=fields['관람료']||'';
+      }else{
+        dateText=formattedField(box,['행사일정','운영기간','교육기간','행사일시','일시','일정','축제기간']);
+        venue=formattedField(box,['운영장소','행사장소','교육장소','장소']);price=formattedField(box,['관람료','수강료','참가비','체험비']);
+      }
+      if(!['jma','jbct'].includes(config.community))pics=images(box,'img',url);
+    }else{
     if(!config.title || !config.date || !config.venue) throw new Error('새 사이트의 수집 항목 설정이 필요합니다.');
     title = text(root,config.title); dateText = text(root,config.date); venue = text(root,config.venue);
     time = config.time ? text(root,config.time) : ''; price = config.price ? text(root,config.price) : '';
     pics = config.images ? images(root,config.images,url) : [];
+    }
   }
   const [startDate,endDate] = dateRange(dateText);
   title = clean(title).slice(0,160);
   if(!title) throw new Error('제목을 읽지 못했습니다.');
   const exhibitVenue=/전시실|갤러리|전시장/.test(venue);
-  return { title, category: category(title,exhibitVenue?'전시':venue,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description:'', images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
+  const context=config.community==='jma'?'전시':config.community==='jbct'?text(root,'.evt_view_tags .evt_cate'):config.community==='jjcf'?text(root,'.eudcate'):exhibitVenue?'전시':venue;
+  const description=config.community?`${startDate?'':'일정·모집 가능 여부 확인 필요. 첨부 공고 및 공식 안내를 확인해 주세요.\n'}${clean(root.querySelector(config.content)?.textContent).slice(0,1700)}`:'';
+  return { title, category: config.community==='jbct'&&context==='공연'?'공연':config.community==='jbct'&&context==='전시'?'전시':category(title,context,source.id||source.adapter), startDate, endDate, time:time.slice(0,200), venue:venue.slice(0,200), price:price.slice(0,200), audience:audience.slice(0,100), description, images:pics, sourceName:source.name, link:url, imageCredit:source.name, cancelled:/\[취소\]|공연\s*취소|행사\s*취소/.test(title) };
 }
 export function linksFrom(html, url, source) {
   const root = documentOf(html), config = JSON.parse(source.config || '{}');
@@ -210,14 +265,25 @@ export function linksFrom(html, url, source) {
     })).values()];
   }
   const soriExhibition = source.adapter === 'sori' && /\/show\/exhibition(?:\/|$)/.test(new URL(source.url).pathname);
-  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"],a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]'}[source.adapter] || config.links;
+  const selector = {ssac:'a[href*="concert_id="][href*="do=view"]',nol:'a[href*="/ticket/places/"][href*="/products/"],a[href*="/ticket/products/"]',sori:soriExhibition?'a[href*="/show/exhibition/"]':'a[href*="/show/performance/"]',culturePerform:'a[href*="/localperform/amateur/perform/view.do"][href*="pblprfrSn="]',woojin:'a[href*="action=read"]',nihc:'a[href*="/board/view.9is"]',jjticket:'a[href*="/performance/"][href*="idx="]',wanju:'a[href*="dx="]',naru:'.eltd-post-text-inner a[href*="sub1_detail.html?concertid="]',library:'.lib_program_list a.detail[href*="reUniqId="]',deureuri:'a[href^="/c/"]',museumEs:'a[href*="act=view"][href*="seq="]',historyMuseum:'a[href*="/view.9is"][href*="dataUid="]',iksanPerformance:'a[href*="/board/post/view.do"][href*="postUid="]',iksanExhibition:'a[href*="/board/post/view.do"][href*="postUid="]',gimje:'a[href*="/schedule/view.gimje"][href*="dataSid="]'}[source.adapter] || config.links;
   if (!selector) throw new Error('새 사이트의 목록 링크 설정이 필요합니다.');
   const found = new Map();
   for(const a of root.querySelectorAll(selector)) {
+    if(config.community==='jma'&&/서울분관/.test(a.closest('li')?.textContent||a.textContent))continue;
+    if(config.community==='jbct'){
+      const dates=clean(a.closest('.evt_card_info')?.querySelector('.evt_card_date')?.textContent).replace(/(?<!\d)(\d{2})\.(\d{2})\.(\d{2})(?!\d)/g,'20$1-$2-$3');
+      const [,end]=dateRange(dates);if(end&&end<koreaToday())continue;
+    }
+    let hintText=clean(a.textContent)||clean(a.querySelector('img')?.getAttribute('alt'));
+    if(config.community==='jjcf')hintText=clean(a.closest('.listOutbox')?.querySelector('dt')?.textContent)||hintText;
+    if(config.include&&!new RegExp(config.include).test(hintText))continue;
+    if(config.exclude&&new RegExp(config.exclude).test(hintText))continue;
     const href = publicURL(a.getAttribute('href'),url);
     if(!href || new URL(href).hostname !== new URL(url).hostname) continue;
     if(source.adapter === 'sori' && !(soriExhibition ? /\/exhibition\/\d+$/.test(new URL(href).pathname) : /\/performance\/\d+$/.test(new URL(href).pathname))) continue;
     const u = new URL(href);
+    if(config.community==='jma')for(const k of [...u.searchParams.keys()])if(!['pcode','exhibit_code'].includes(k))u.searchParams.delete(k);
+    if(config.community==='jbct')for(const k of [...u.searchParams.keys()])if(k!=='id')u.searchParams.delete(k);
     if(source.adapter==='culturePerform')for(const k of [...u.searchParams.keys()])if(!['menuNo','pblprfrSn'].includes(k))u.searchParams.delete(k);
     if(source.adapter === 'woojin') ['page','div','key','sword'].forEach(k=>u.searchParams.delete(k));
     if(source.adapter === 'nihc') ['year','month','page','subPath'].forEach(k=>u.searchParams.delete(k));
@@ -227,17 +293,23 @@ export function linksFrom(html, url, source) {
     if(source.adapter==='nol')u.search='';
     if(source.adapter==='museumEs')for(const k of [...u.searchParams.keys()])if(!['mid','act','seq'].includes(k))u.searchParams.delete(k);
     if(source.adapter==='historyMuseum')for(const k of [...u.searchParams.keys()])if(!['boardUid','contentUid','dataUid','subPath'].includes(k))u.searchParams.delete(k);
+    if(['iksanPerformance','iksanExhibition'].includes(source.adapter))for(const k of [...u.searchParams.keys()])if(!['boardUid','codeUids','menuUid','postUid'].includes(k))u.searchParams.delete(k);
+    if(source.adapter==='gimje')for(const k of [...u.searchParams.keys()])if(!['boardId','dataSid','menuCd'].includes(k))u.searchParams.delete(k);
     u.searchParams.sort();
     const key = u.href;
     const hint = source.adapter==='ssac'
       ? clean(a.querySelector('dt')?.textContent || a.closest('li')?.querySelector('dl dt')?.textContent || a.querySelector('img')?.getAttribute('alt'))
-      : clean(a.textContent);
+      : hintText;
     if(!found.has(key) || (source.adapter==='ssac' && hint.length>found.get(key).hint.length) || (source.adapter!=='ssac' && hint.length>found.get(key).hint.length)) found.set(key,{url:key,hint});
   }
   return [...found.values()];
 }
 export function listingURLs(source, now = new Date()) {
   const urls = [];
+  if(JSON.parse(source.config||'{}').community==='jma'){
+    const d=new Date(`${koreaToday(now)}T00:00:00Z`);d.setUTCDate(1);
+    for(let i=0;i<4;i++){const u=new URL(source.url);u.searchParams.set('sel_topyear',d.getUTCFullYear());u.searchParams.set('sel_topmonth',d.getUTCMonth()+1);urls.push(u.href);d.setUTCMonth(d.getUTCMonth()+1);}return urls;
+  }
   if(['nihc','kukak'].includes(source.adapter)) {
     const d = new Date(`${koreaToday(now)}T00:00:00Z`);
     for(let i=0;i<4;i++) { const u = new URL(source.url); if(source.adapter==='kukak'){u.searchParams.set('searchYearMonth',`${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}`);u.searchParams.set('showViewType','list');}else{u.searchParams.set('year',d.getUTCFullYear());u.searchParams.set('month',d.getUTCMonth()+1);}urls.push(u.href);d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1); }
@@ -256,6 +328,8 @@ export function listingURLs(source, now = new Date()) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);u.searchParams.set('orderField','RE_SDATE');u.searchParams.set('orderSort','desc');urls.push(u.href);}
   } else if(source.adapter==='historyMuseum') {
     urls.push(source.url);
+  } else if(source.adapter==='gimje') {
+    for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('startPage',i);urls.push(u.href);}
   } else if(['jjticket','wanju'].includes(source.adapter)) {
     for(let i=1;i<=3;i++){const u=new URL(source.url);u.searchParams.set('page',i);urls.push(u.href);}
   } else urls.push(source.url);

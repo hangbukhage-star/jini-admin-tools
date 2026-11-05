@@ -4,12 +4,13 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo,venueGroup} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
+import {newsRegion} from '../src/news-regions.js';
 import {siteVisitors,cleanupVisitors} from '../src/site-visitors.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql','0015_news_suppression_tombstones.sql','0017_add_news_collection_cursor.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -302,4 +303,136 @@ test('Vercel 수집 함수에서 저장 API와 연결해 수집·대기 저장·
     assert.equal(await e.DB.prepare('SELECT * FROM news_locks').first(),null);
     await handler({method:'POST',headers:{authorization:'Bearer wrong'},body:{}},res);assert.equal(status,401);
   }finally{globalThis.fetch=oldFetch;if(oldAdmin===undefined)delete process.env.NEWS_ADMIN_KEY;else process.env.NEWS_ADMIN_KEY=oldAdmin;if(oldCollector===undefined)delete process.env.NEWS_COLLECTOR_KEY;else process.env.NEWS_COLLECTOR_KEY=oldCollector;}
+});
+
+
+test('수집 사이트 22개를 등록하고 모두 수집 대상으로 반환하며 23번째는 제한한다',async()=>{
+  const e=env();
+  e.DB.db.exec('DELETE FROM news_sources');
+  for(let i=1;i<=22;i++){
+    const r=await call(e,'/admin/source','POST',{id:'site-'+i,name:'사이트 '+i,url:'https://example.org/list/'+i,adapter:'generic',enabled:true});
+    assert.equal(r.status,200);
+  }
+  const start=await(await call(e,'/admin/collection','POST',{action:'start'})).json();
+  assert.equal(start.sources.length,22);
+  const extra=await call(e,'/admin/source','POST',{id:'site-23',name:'추가 사이트',url:'https://example.org/list/23',adapter:'generic',enabled:true});
+  assert.equal(extra.status,400);
+  assert.match((await extra.json()).error,/22곳/);
+  assert.equal((await call(e,'/admin/source','POST',{id:'site-20',name:'수정 사이트',url:'https://example.org/list/20',adapter:'generic',enabled:true})).status,200);
+});
+
+
+test('도립미술관과 문화관광재단은 전북 행사와 운영일·요금을 추출한다',()=>{
+  const jma={id:'jma-exhibitions',adapter:'generic',name:'미술관',config:JSON.stringify({community:'jma',links:'a[href*="exhibit_code="]',title:'.tit',content:'.list_item_view',images:'.img img'})};
+  const p=parseDetail('<div class="list_item_view"><p class="tit">참여의 미술</p><dl><dt>전시기간</dt><dd>2026-10-23 ~ 2027-02-14</dd><dt>전시장소</dt><dd>전북도립미술관 본관</dd></dl></div>','https://www.jma.go.kr/web/page.php?exhibit_code=1',jma);
+  assert.equal(p.endDate,'2027-02-14');assert.equal(p.category,'전시');assert.equal(p.venue,'전북도립미술관 본관');
+  assert.equal(linksFrom('<ul><li><a href="?exhibit_code=1">전시1</a><div>본관</div></li><li><a href="?exhibit_code=2">전시2</a><div>서울분관</div></li></ul>', 'https://www.jma.go.kr/web/page.php',jma).length,1);
+  const jbct={id:'jbct-events',adapter:'generic',name:'재단',config:JSON.stringify({community:'jbct',title:'.evt_view_title',content:'.evt_view_top',images:'.evt_view_top img'})};
+  const q=parseDetail('<div class="evt_view_top"><p class="evt_view_tags"><span class="evt_cate">공연</span></p><h3 class="evt_view_title">[전주] 합창대제전</h3><dl><div><dt>기간</dt><dd>26.11.01(일) ~ 26.11.02(월)</dd></div><div><dt>장소</dt><dd>한국소리문화의전당<button>주소복사</button></dd></div><div><dt>가격</dt><dd>무료</dd></div></dl></div>','https://www.jbct.or.kr/portal/site/menu/MENU_000000000000376?id=1',jbct);
+  assert.equal(q.startDate,'2026-11-01');assert.equal(q.endDate,'2026-11-02');assert.equal(q.title,'합창대제전');assert.equal(q.category,'공연');assert.equal(q.venue,'한국소리문화의전당');assert.equal(q.price,'무료');
+});
+
+test('다른 사이트의 지역표기·구두점이 다른 같은 행사는 중복 제외하고 다른 회차는 보존한다',async()=>{
+  const e=env(),today=koreaToday(),tomorrow=new Date(Date.parse(today+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+  const make=(title,date)=>({title,category:'공연',startDate:date,endDate:date,venue:'한국소리문화의전당',price:'무료'});
+  await call(e,'/admin/post','POST',{...make('지브리 & 디즈니 영화음악 오케스트라 콘서트 - 익산',today),status:'published'});
+  const r=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/1',data:make('[익산] 지브리＆디즈니 영화음악 오케스트라 콘서트',today)})).json();
+  assert.equal(r.duplicate,true);assert.equal(r.skipped,true);
+  const next=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/2',data:make('지브리＆디즈니 영화음악 오케스트라 콘서트',tomorrow)})).json();assert.equal(next.ok,true);
+  const series=await(await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/duplicate-check/3',data:{...make('지브리＆디즈니 영화음악 오케스트라 콘서트',today),startDate:new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10),endDate:tomorrow}})).json();assert.equal(series.duplicate,true);
+});
+
+
+test('지역 검색은 실제 장소를 우선하고 전체 검색·건수·페이지·비공개 경계를 지킨다',async()=>{
+  assert.equal(newsRegion({venue:'전북도립미술관 본관',title:'전주 작가 초대전'}),'완주');
+  assert.equal(newsRegion({venue:'한국소리문화의전당 모악당'}),'전주');
+  assert.equal(newsRegion({venue:'국립민속국악원'}),'남원');
+  assert.equal(newsRegion({venue:'강의실'}),'');
+  const e=env(),today=koreaToday();
+  for(const [title,venue,status] of [['전주 공연1','한국소리문화의전당 모악당','published'],['전주 교육2','삼천생활문화센터','published'],['익산 공연','익산예술의전당','published'],['완주 전시','전북도립미술관 본관','published'],['부안 공연','부안예술회관','published'],['김제 공연','김제문화예술회관','published'],['군산 공연','군산예술의전당','published'],['미확인','장소 추후 공지','published'],['대기','전주시청','pending'],['숨김','전주시청','hidden']]){
+    const r=await call(e,'/admin/post','POST',{title,venue,status,category:'공연',startDate:today,endDate:today,price:'무료'});assert.equal(r.status,200);
+  }
+  const page=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1')).json();assert.equal(page.total,2);assert.equal(page.posts.length,1);assert.equal(page.hasMore,true);assert.equal(page.posts[0].region,'전주');
+  const next=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1&offset=1')).json();assert.equal(next.total,2);assert.notEqual(page.posts[0].id,next.posts[0].id);
+  for(const region of ['익산','완주','부안','김제','군산']){const result=await(await call(e,'?region='+encodeURIComponent(region))).json();assert.equal(result.total,1);assert.equal(result.posts[0].region,region);}
+  const venues=await(await call(e,'/venues?region='+encodeURIComponent('전주'))).json();assert.equal(venues.venues.length,2);assert(!venues.venues.includes('익산예술의전당'));
+  const combined=await(await call(e,'?region='+encodeURIComponent('전주')+'&q='+encodeURIComponent('교육')+'&fee=free')).json();assert.equal(combined.total,1);
+  assert.equal((await call(e,'?region=bad')).status,400);assert.equal((await call(e,'/venues?region=bad')).status,400);
+});
+
+
+test('관리자가 직접 지정한 지역은 저장·공개 검색·관리자 필터에 함께 반영된다',async()=>{
+ const e=env(),today=koreaToday();
+ const saved=await(await call(e,'/admin/post','POST',{title:'교육 지역 지정',category:'AI·디지털 교육',status:'published',startDate:today,endDate:today,venue:'교육실',regionOverride:'김제'})).json();
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('김제'))).json()).posts[0].region,'김제');
+ const admin=await(await call(e,'/admin?status=published&region='+encodeURIComponent('김제'))).json();assert.equal(admin.filteredTotal,1);assert.equal(admin.posts[0].regionOverride,'김제');
+ assert.equal((await(await call(e,'/admin?status=published&region='+encodeURIComponent('전주'))).json()).posts.length,0);
+ assert.equal((await call(e,'/admin?region=bad')).status,400);
+ await call(e,'/admin/post','POST',{id:saved.id,title:'교육 지역 자동',category:'AI·디지털 교육',status:'published',venue:'익산예술의전당',startDate:today,endDate:today,regionOverride:''});
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('익산'))).json()).total,1);
+ assert.equal((await call(e,'/admin/post','POST',{title:'오류',status:'pending',regionOverride:'bad'})).status,400);
+});
+
+test('게시판 관리자 연결과 삭제는 인증을 요구하며 삭제함에서 복구할 수 있다',async()=>{
+ const e=env();assert.equal((await call(e,'/admin/session','GET',null,false)).status,401);assert.equal((await call(e,'/admin/session')).status,200);
+ const {id}=await(await call(e,'/admin/post','POST',{title:'삭제 확인',category:'공연',status:'published'})).json();
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',ids:[id]},false)).status,401);
+ assert.equal((await(await call(e,'')).json()).posts.length,1);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',ids:[id]})).status,200);
+ assert.equal((await(await call(e,'')).json()).posts.length,0);
+ assert.equal((await(await call(e,'/admin?status=deleted')).json()).posts[0].id,id);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[id]})).status,200);
+ assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,id);
+});
+
+test('같은 교육이라도 오전·오후와 별도 회차·시간은 중복 삭제하지 않는다',async()=>{
+ const e=env(),today=koreaToday();
+ const item=(title,time)=>({title,category:'AI·디지털 교육',venue:'한국소리문화의전당',startDate:today,endDate:today,time});
+ const ingest=(i,data)=>call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/session/'+i,data});
+ for(const [i,title,time] of [[1,'[오전] AI와 함께 쓰는 내 블로그',''],[2,'[오후] AI와 함께 쓰는 내 블로그',''],[3,'직조키링 만들기 (1회차)','14:00~14:30'],[4,'직조키링 만들기 (2회차)','14:30~15:00'],[5,'동일 제목 교육','10:00~11:00'],[6,'동일 제목 교육','14:00~15:00']])assert.equal((await(await ingest(i,item(title,time))).json()).ok,true);
+ const dup=await(await ingest(7,item('동일 제목 교육','14:00~15:00'))).json();assert.equal(dup.duplicate,true);
+});
+
+
+test('지난 소식 정리는 한국 날짜 기준 종료된 게시글만 삭제하며 진행 중인 글이 섞이면 모두 거절한다',async()=>{
+ const e=env(),today=koreaToday(),yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+ const add=async(title,category,endDate,status='published')=>(await(await call(e,'/admin/post','POST',{title,category,status,startDate:endDate,endDate})).json()).id;
+ const past=await add('종료 공연','공연',yesterday),exhibit=await add('종료 전시','전시',yesterday),ongoing=await add('오늘 공연','공연',today),education=await add('종료 교육','평생·문화교육',yesterday);
+ const remove=ids=>call(e,'/admin/bulk','POST',{action:'delete',pastOnly:true,ids});
+ assert.equal((await remove([past,ongoing])).status,409);assert.equal((await(await call(e,'/admin?status=deleted')).json()).posts.length,0);
+ assert.equal((await remove([education])).status,200);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'delete',pastOnly:true,ids:[past]},false)).status,401);
+ const result=await(await remove([past,exhibit])).json();assert.equal(result.count,2);
+ const trash=await(await call(e,'/admin?status=deleted')).json();assert.equal(trash.posts.length,3);
+ assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[past]})).status,200);
+ assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,past);
+});
+
+
+test('교육으로 수집한 원본 사진은 보관하며 공연·전시로 변경하면 복구한다',async()=>{
+ const e=env(),today=koreaToday();
+ const raw={title:'문화강좌 사진 보관',category:'평생·문화교육',startDate:today,endDate:today,venue:'한국소리문화의전당',images:['https://www.sori21.co.kr/original-poster.jpg']};
+ const ingest=data=>call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/poster-conversion/1',data});
+ assert.equal((await ingest(raw)).status,200);
+ let stored=(await(await call(e,'/admin')).json()).posts[0];assert.equal(stored.images.length,0);assert.deepEqual(stored.sourceImages,raw.images);
+ await call(e,'/admin/post','POST',{...stored,category:'공연',images:[],status:'published'});
+ let published=(await(await call(e,'/posts/'+stored.id)).json()).post;assert.deepEqual(published.images,raw.images);assert.equal(published.sourceImages,undefined);
+ await call(e,'/admin/post','POST',{...published,category:'공연',images:[],title:'직접 확인한 비르투오조',status:'published'});
+ await ingest({...raw,title:'자동 수집 교육 제목'});
+ published=(await(await call(e,'/posts/'+stored.id)).json()).post;assert.equal(published.category,'공연');assert.equal(published.title,'직접 확인한 비르투오조');assert.deepEqual(published.images,raw.images);
+ const raw2={...raw,title:'별도 미술 프로그램',images:['https://www.sori21.co.kr/exhibition.jpg']};
+ await call(e,'/admin/collection','POST',{action:'ingest',sourceId:'sori',url:'https://www.sori21.co.kr/poster-conversion/2',data:raw2});
+ const second=(await(await call(e,'/admin')).json()).posts.find(p=>p.title===raw2.title);
+ assert(second);await call(e,'/admin/bulk','POST',{action:'category',category:'전시',ids:[second.id]});
+ const converted=(await(await call(e,'/admin')).json()).posts.find(p=>p.id===second.id);assert.deepEqual(converted.images,raw2.images);assert.equal(converted.category,'전시');
+ assert.equal(recommendCategory('비르투오조 시리즈2','','culture-jeonbuk-perform').category,'공연');
+});
+
+
+test('AI 활용 프로그램은 교육 제목·안내에서 우선 분류하고 화가 이름과 일반 단어는 오인하지 않는다',()=>{
+ for(const title of ['[오전] AI와 함께 쓰는 내 첫 블로그','2026 AI 시대, 개인정보 지키기','제미나이로 노래 만들기','ChatGPT 활용 강좌','클로드로 문서 작성하기','바이브코딩 실습','프롬프트 작성 워크숍'])assert.equal(recommendCategory(title).category,'AI·디지털 교육');
+ assert.equal(recommendCategory('보고서 작성 특강','생성형 AI를 활용하는 실습').category,'AI·디지털 교육');
+ assert.equal(recommendCategory('미술관 밖의 화가들: 클로드 모네').category,'평생·문화교육');
+ assert.equal(recommendCategory('공예 강좌','https://example.org/fair/').category,'평생·문화교육');
+ assert.equal(recommendCategory('AI 아트 전시','','jma-exhibitions').category,'전시');
 });

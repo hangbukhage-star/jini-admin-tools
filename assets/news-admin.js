@@ -2,8 +2,9 @@
   'use strict';
   const {api,el,imageURL,safeURL,base}=window.JiniNews,$=s=>document.querySelector(s);
   let token='',state='pending',offset=0,posts=[],images=[],current={},trashCount=0;
+  if(new URLSearchParams(location.search).get('status')==='deleted')state='deleted';
   const selected=new Set();
-  let bulkBusy=false;
+  let bulkBusy=false,loadGeneration=0;
   let searchTimer;
   const status=(message,error=false)=>{const e=$('#status');e.textContent=message;e.classList.toggle('news-error',error);};
   async function admin(path='',options={}){return api('/news/admin'+path,{...options,headers:{'Content-Type':'application/json',...options.headers,Authorization:`Bearer ${token}`}});}
@@ -43,14 +44,16 @@
     const row=el('div',null,'post-summary'),copy=el('div',null,'post-summary-copy');
     if(!changed){const checkbox=el('input');checkbox.type='checkbox';checkbox.value=p.id;checkbox.checked=selected.has(p.id);checkbox.setAttribute('aria-label',`${p.title} 선택`);checkbox.addEventListener('change',()=>{if(checkbox.checked)selected.add(p.id);else selected.delete(p.id);updateSelection();});row.append(checkbox);}
     const feeLabel={free:'무료',paid:'유료',mixed:'유료·무료 혼합',unknown:'금액 확인 필요'}[p.feeType]||'금액 확인 필요';
-    copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',p.price||'금액 확인 필요',feeLabel,`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
+    copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.region||'지역 확인 필요',p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',p.price||'금액 확인 필요',feeLabel,`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
     if(p.status==='pending'&&p.recommendation)copy.append(el('p',`추천 분류: ${p.recommendation.category}${p.recommendation.needsReview?' · 확인 필요':''}`,'category-recommendation'));
     row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
   }
   async function load(reset=true){
-    const category=$('#category-filter').value;
+    const run=++loadGeneration,category=$('#category-filter').value,region=$('#region-filter').value;
     const q=$('#post-search').value.trim(),fee=$('#price-filter').value,month=$('#event-month').value;
-    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
+    const data=await admin(`?status=${state}&category=${encodeURIComponent(category)}&region=${encodeURIComponent(region)}&q=${encodeURIComponent(q)}&fee=${encodeURIComponent(fee)}&month=${encodeURIComponent(month)}&offset=${reset?0:offset}`);
+    if(run!==loadGeneration)return;
+    $('#filtered-count').textContent=`검색 결과 ${Number(data.filteredTotal||0).toLocaleString('ko-KR')}건`;
     trashCount=Number(data.counts.find(x=>x.status==='deleted')?.count)||0;
     if(reset){offset=0;posts=[];selected.clear();}
     posts.push(...data.posts);offset+=data.posts.length;
@@ -73,6 +76,11 @@
       $('#preview').append(img);
     }
   }
+  async function restorePosterPreview(){
+    if(images.length||!['공연','전시'].includes($('#post-form').elements.category.value))return;
+    const saved=[current.sourceImages,current.candidate?.sourceImages,current.candidate?.images].find(value=>Array.isArray(value)&&value.length);
+    if(saved){images=[...saved].slice(0,3);await preview();}
+  }
   function fill(form,data){form.reset();for(const [name,value] of Object.entries(data)){const input=form.elements.namedItem(name);if(!input)continue;if(input.type==='checkbox')input.checked=!!value;else input.value=value??'';}}
   async function editPost(p={},changed=false){
     current={...p};const value=changed?{...p,...p.candidate}:p;
@@ -84,7 +92,7 @@
     const suggestion=value.recommendation;
     $('#category-suggestion').hidden=!suggestion;
     $('#category-reason').textContent=suggestion?`추천 분류: ${suggestion.category} · ${suggestion.reason} 직접 수정한 분류는 그대로 유지됩니다.`:'';
-    $('#apply-category').onclick=()=>{if(suggestion){$('#post-form').elements.category.value=suggestion.category;$('#category-reason').textContent=`${suggestion.category} 추천을 적용했어요. 저장 버튼을 눌러 반영하세요.`;}};
+    $('#apply-category').onclick=()=>{if(suggestion){$('#post-form').elements.category.value=suggestion.category;restorePosterPreview();$('#category-reason').textContent=`${suggestion.category} 추천을 적용했어요. 저장 버튼을 눌러 반영하세요.`;}};
     $('#post-warning').textContent=changed?'아래는 새로 수집한 내용입니다. 기존 글과 비교해 확인한 후 게시하세요.':(!value.startDate||!value.venue)?'날짜·장소가 없는 항목은 원문을 확인해 채워주세요. 일반 소식은 비워둘 수 있어요.':'';
     $('#editor').showModal();await preview();
   }
@@ -98,6 +106,7 @@
   $('#logout').onclick=()=>{token='';location.reload();};
   $('#tabs').onclick=async e=>{if(!e.target.dataset.status)return;state=e.target.dataset.status;try{await load();}catch(err){status(err.message,true);}};
   $('#category-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
+  $('#region-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#price-filter').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#event-month').onchange=async()=>{try{await load();}catch(err){status(err.message,true);}};
   $('#post-search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{try{await load();}catch(err){status(err.message,true);}},250);};
@@ -115,6 +124,7 @@
   $('#refresh').onclick=async()=>{try{await load();status('목록을 새로 불러왔어요.');}catch(e){status(e.message,true);}};
   $('#more').onclick=async()=>{try{await load(false);}catch(e){status(e.message,true);}};
   $('#close-editor').onclick=()=>$('#editor').close();$('#close-source').onclick=()=>$('#source-editor').close();
+  $('#post-form').elements.category.addEventListener('change',restorePosterPreview);
   $('#clear-images').onclick=()=>{images=[];preview();};
   $('#upload').onchange=async e=>{const buttons=[...$('#post-form').querySelectorAll('button[type=submit]')];buttons.forEach(b=>b.disabled=true);try{const files=[...e.target.files];if(files.length+images.length>3)throw new Error('사진은 최대 3장까지 올릴 수 있어요.');for(const file of files){if(file.size>15000000)throw new Error('원본 사진은 15MB 이하로 선택해 주세요.');const blob=await compress(file);const result=await admin('/image',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});images.push(result.url);}await preview();}catch(err){alert(err.message);}finally{e.target.value='';buttons.forEach(b=>b.disabled=false);}};
   $('#post-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const values=Object.fromEntries(new FormData(e.target));await send('/post',{...values,images,status:b.value,pinned:e.target.elements.pinned.checked,cancelled:e.target.elements.cancelled.checked});$('#editor').close();await load();status('저장했어요.');}catch(err){alert(err.message);}finally{b.disabled=false;}};

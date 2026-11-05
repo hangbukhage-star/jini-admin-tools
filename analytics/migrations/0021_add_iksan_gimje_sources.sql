@@ -1,0 +1,4 @@
+INSERT OR IGNORE INTO news_sources(id,name,url,adapter,config,enabled,auto_publish,images_allowed) VALUES
+('iksan-performance','익산예술의전당 공연','https://arts.iksan.go.kr/board/post/list.do?boardUid=ff808081975e27c30197ee3f8d39037d&menuUid=ff808081975e27c30197cdb1749d00f4&codeUids=ff808081975e27c30197ee4276f1038d','iksanPerformance','{}',1,0,0),
+('iksan-exhibition','익산예술의전당 전시','https://arts.iksan.go.kr/board/post/list.do?boardUid=ff808081975e27c301986362f7220d57&menuUid=ff808081975e27c30197cdf39eeb019a&codeUids=ff808081975e27c3019863646e2c0d67&codeUids=ff808081975e27c301986364d1690d69','iksanExhibition','{}',1,0,0),
+('gimje-arts-center','김제문화예술회관 공연·전시','https://www.gimje.go.kr/art/schedule/list.gimje?boardId=BBS_0000068&menuCd=DOM_000001003001000000&contentsSid=903&cpath=%2Fart','gimje','{}',1,0,0);

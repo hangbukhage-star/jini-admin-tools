@@ -1,5 +1,6 @@
 import {fetchPage,linksFrom,listingURLs} from './news-collectors.js';
 import {parseDetail} from './news-collectors.js';
+import {digitalCourses} from './news-digital.js';
 
 const PAGED_LISTS={
   sori:{parameter:'page',first:0,pageSize:100},
@@ -12,6 +13,9 @@ const PAGED_LISTS={
   nihc:{parameter:'page',first:1},
   museumEs:{parameter:'nPage',first:1},
   historyMuseum:{parameter:'page',first:1},
+  iksanPerformance:{parameter:'page',first:1},
+  iksanExhibition:{parameter:'page',first:1},
+  gimje:{parameter:'startPage',first:1},
 };
 const MAX_LIST_PAGES_PER_RUN=4;
 function pagedListURL(source,page){
@@ -37,6 +41,12 @@ function pagedListURL(source,page){
   return url.href;
 }
 async function collectListingItems(source,fetcher,deadline,startAt){
+  const config=JSON.parse(source.config||'{}');
+  if(config.community==='digital'){
+    const page=Math.max(1,Number(startAt)||1);
+    const result=await digitalCourses(source,page);
+    return {items:result.items,nextPage:page*10>=result.total?1:page+1,startPage:page,firstPage:1};
+  }
   const found=new Map();
   let warning='';
   if(source.adapter==='nihc'){
@@ -139,7 +149,7 @@ export async function collectSite(source,client,fetcher=fetchPage,deadline=Date.
     for(const item of items){
       if(Date.now()>deadline)throw new Error('이번 수집 시간을 마쳤습니다. 다음 실행에서 이어 확인합니다.');
       try{
-        const data=parseDetail(await fetcher(item.url),item.url,source,item.hint);
+        const data=item.data||parseDetail(await fetcher(item.url),item.url,source,item.hint);
         const result=await client({action:'ingest',sourceId:source.id,url:item.url,data});
         if(!result.skipped)count++;
       }catch(e){errors.push(e.message);}
