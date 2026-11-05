@@ -91,7 +91,7 @@ export function parseDetail(html, url, source, hint = '') {
   let title = '', dateText = '', venue = '', time = '', price = '', audience = '', pics = [];
   if (['iksanPerformance','iksanExhibition'].includes(source.adapter)) {
     const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
-    title=text(box,'h2,h3,h4,.tit,.title')||text(root,'.info-tit')||root.querySelector('meta[property="og:title"]')?.getAttribute('content')||hint;
+    title=text(box,'.st3_tit,.info-tit')||label(box,['제목'])||hint;
     dateText=label(box,['일정 기간','전시 기간','기간','일정']);
     time=label(box,['시간','공연시간']);
     venue=label(box,['장소','공연장소','전시장소']);
@@ -101,7 +101,7 @@ export function parseDetail(html, url, source, hint = '') {
     pics=linkedImages(box,url);
   } else if(source.adapter==='gimje') {
     const box=root.querySelector('#contents')||root.querySelector('.view')||root.querySelector('.board_view')||root.body;
-    title=text(box,'h2,h3,h4,.tit,.title')||label(box,['제목'])||hint;
+    title=label(box,['제목'])||text(box,'#bbs_table tr th')||hint;
     dateText=label(box,['기간','행사기간','일정']);time=label(box,['시간','행사시간']);
     venue=label(box,['장소','행사장소']);price=label(box,['관람료','참가비','가격']);audience=label(box,['대상','관람연령']);
     const type=clean(box.textContent).match(/(?:구분|분류)\s*[:：]?\s*(공연|전시|교육)/)?.[1];

@@ -101,6 +101,9 @@ async function collectListingItems(source,fetcher,deadline,startAt){
         if(current===first&&cursor!==first){warning='최신 목록 페이지에서 글을 찾지 못했습니다.';continue;}
         nextPage=first;ended=true;break;
       }
+      if(source.adapter==='gimje'&&items.every(item=>found.has(item.url))){
+        nextPage=first;ended=true;break;
+      }
       for(const item of items)if(!found.has(item.url))found.set(item.url,item);
       if(previousSequentialPage!==null&&current===previousSequentialPage+1&&previousPageItems&&items.every(item=>previousPageItems.has(item.url))){
         warning=`${current}페이지가 이전 페이지와 같습니다. 사이트의 페이지 넘김 방식을 확인해야 합니다.`;
