@@ -451,6 +451,31 @@
       background: #364fc7;
     }
 
+    .messenger-converter-card {
+      grid-column: 1;
+      grid-row: 2;
+      border: 1px solid #d7e4f1;
+      background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 34%);
+    }
+
+    .messenger-converter-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #3b82c4, #8fb8dc);
+      content: "";
+    }
+
+    .messenger-converter-card .usage-guide {
+      background: #f1f6ff;
+    }
+
+    .messenger-converter-card .usage-guide-title {
+      color: #2d65a0;
+    }
+
     .file-diet-card {
       border: 1px solid #dcebdc;
       background: linear-gradient(180deg, #fbfff9 0%, #ffffff 34%);
@@ -1032,6 +1057,32 @@
         >
           프로그램 실행
         </a>
+          </div>
+
+          <div class="tool-card messenger-converter-card" data-tool-id="messenger-converter">
+            <div class="tool-icon" aria-hidden="true">📎</div>
+            <h2>JB메신져 문서변환기</h2>
+
+            <div class="usage-guide">
+              <span class="usage-guide-title">📌 메신저 첨부용 문서 변환</span>
+              첨부할 수 없는 HWP·XLS·DOC·PPT를<br>
+              HWPX·XLSX·DOCX·PPTX로 변환합니다.
+              <span class="usage-guide-note">
+                ※ 여러 파일을 한 번에 변환해 현재 쪽지에 첨부<br>
+                ※ 원본 문서는 그대로 유지됩니다.<br>
+                ※ Windows 10·11용 무설치 프로그램<br>
+                ※ 한컴오피스 또는 MS Office 설치 필요
+              </span>
+            </div>
+
+            <span class="tool-stats" aria-hidden="true" hidden></span>
+            <a
+              class="button"
+              href="./downloads/문서변환기.exe"
+              download="문서변환기.exe"
+            >
+              프로그램 다운로드
+            </a>
           </div>
 
           <div class="tool-card file-diet-card" data-tool-id="file-compressor">
