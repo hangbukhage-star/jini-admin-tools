@@ -1,4 +1,5 @@
 export const NEWS_REGIONS=['전주','군산','익산','정읍','남원','김제','완주','진안','무주','장수','임실','순창','고창','부안'];
+export const NEWS_REGION_GROUPS=['전주','완주','그 외'];
 
 // Venue names without a city in their name still have a fixed, known location.
 const VENUES={
@@ -13,6 +14,10 @@ export function newsRegion(post){
     ||NEWS_REGIONS.find(region=>VENUES[region]?.some(name=>venue.includes(name)))
     ||NEWS_REGIONS.find(region=>title.includes(`[${region}]`)||title.includes(`(${region})`)||title.includes(`- ${region}`)||title.endsWith(`-${region}`))||'';
 }
+export function newsRegionGroup(post){
+  const region=newsRegion(post);
+  return region==='전주'?'전주':region==='완주'?'완주':'그 외';
+}
 
 // Keep filtering in the database, before counts and pagination are calculated.
 // All SQL literals here come from the fixed rules above, never request input.
@@ -21,4 +26,8 @@ export function newsRegionSQL(){
   const includes=(field,value)=>`instr(${field},'${value}')>0`;
   const rules=[...NEWS_REGIONS.map(region=>[includes(venue,region),region]),...NEWS_REGIONS.filter(region=>VENUES[region]).map(region=>[VENUES[region].map(name=>includes(venue,name)).join(' OR '),region]),...NEWS_REGIONS.map(region=>[[`[${region}]`,`(${region})`,`- ${region}`].map(name=>includes(title,name)).join(' OR ')+` OR substr(${title},-${region.length+1})='-${region}'`,region])];
   return `(CASE WHEN json_extract(data,'$.regionOverride') IN (${NEWS_REGIONS.map(region=>`'${region}'`).join(',')}) THEN json_extract(data,'$.regionOverride') ${rules.map(([condition,region])=>`WHEN ${condition} THEN '${region}'`).join(' ')} ELSE '' END)`;
+}
+export function newsRegionGroupSQL(){
+  const region=newsRegionSQL();
+  return `(CASE WHEN (${region})='전주' THEN '전주' WHEN (${region})='완주' THEN '완주' ELSE '그 외' END)`;
 }

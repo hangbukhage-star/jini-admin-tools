@@ -1,4 +1,4 @@
-import { newsRequest, runCollection } from './news.js';
+import { newsRequest, runCollection, expirePendingNews } from './news.js';
 import {siteVisitors,cleanupVisitors} from './site-visitors.js';
 
 const TOOL_IDS = Object.freeze([
@@ -185,7 +185,7 @@ async function deleteComment(request, env, toolId, commentId, origin) {
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([runCollection(env),cleanupVisitors(env)]));
+    ctx.waitUntil(Promise.all([runCollection(env),expirePendingNews(env),cleanupVisitors(env)]));
   },
   async fetch(request, env) {
     const origin = allowedOrigin(request, env);

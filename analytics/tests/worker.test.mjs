@@ -61,7 +61,7 @@ test("모든 도구의 초기 조회수를 0으로 반환한다", async () => {
   const response = await worker.fetch(request("/counts"), environment());
   const body = await response.json();
   assert.equal(response.status, 200);
-  assert.equal(Object.keys(body.counts).length, 7);
+  assert.equal(Object.keys(body.counts).length, 8);
   assert.equal(body.counts["work-plan"], 0);
 });
 

@@ -101,9 +101,9 @@
   $('#archive-cleanup').onclick=()=>{archive=true;$('#category').value='공연';$('#upcoming').setAttribute('aria-pressed','false');$('#archive').setAttribute('aria-pressed','true');load();loadVenues();};
   $('#archive-select-all').onchange=e=>{selected.clear();if(e.target.checked)posts.forEach(p=>selected.add(p.id));updateBulk();};
   $('#archive-delete-selected').onclick=deleteSelected;
-  searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();};
+  searchForm.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(searchForm));filters=Object.fromEntries(Object.entries(values).filter(([,value])=>String(value).trim()).map(([name,value])=>[name,String(value).trim()]));load();loadVenues();};
   $('#search-reset').onclick=()=>{searchForm.reset();$('#category').value='공연';filters={};load();loadVenues();};
-  $('#region-select').onchange=()=>{$('#venue-select').value='';loadVenues();};
+  $('#region-select').onchange=()=>{$('#venue-select').value='';load();loadVenues();};
   $('#quick-admin').onclick=()=>{
     if(adminToken){adminToken='';$('#quick-admin').textContent='관리자 로그인';render();status('관리자 모드를 종료했습니다.');return;}
     $('#quick-admin-status').textContent='';$('#quick-admin-dialog').showModal();$('#quick-admin-key').focus();

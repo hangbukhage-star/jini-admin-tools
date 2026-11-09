@@ -23,14 +23,14 @@
     $('#bulk-category').disabled=bulkBusy||count===0;
     $('#bulk-category-apply').disabled=bulkBusy||count===0||!$('#bulk-category').value;
     for(const input of $('#posts').querySelectorAll('input[type=checkbox]')){input.checked=selected.has(input.value);input.disabled=bulkBusy;input.closest('.post-summary').classList.toggle('is-selected',input.checked);}
-    for(const b of document.querySelectorAll('#tabs button,#posts button,#more,#refresh,#new-post'))b.disabled=bulkBusy;
+    for(const b of document.querySelectorAll('#tabs button,#posts button,#changes button,#more,#refresh,#new-post'))b.disabled=bulkBusy;
     $('#bulk-help').textContent=deleted?'선택 복구는 대기 목록으로 돌아갑니다. 영구 삭제 후에도 재수집 방지용 주소·제목·행사일 기록은 남습니다.':'체크한 글은 게시·숨김·삭제하거나 분야를 한 번에 바꿀 수 있어요. 전체 선택은 현재 분야 필터와 불러온 목록에 적용됩니다.';
   }
   async function processBulk(action,ids=[...selected]){
     if(bulkBusy||!ids.length)return;
     if(action==='erase'&&!confirm(`선택한 ${ids.length}개 글을 영구 삭제할까요? 글 내용은 지워지고 재수집 방지용 정보만 남습니다.`))return;
     bulkBusy=true;updateSelection();
-    const names={publish:'게시',hide:'숨김',delete:'삭제',restore:'복구',erase:'영구 삭제'};
+    const names={publish:'게시',hide:'숨김',delete:'삭제',restore:'복구',erase:'영구 삭제','ignore-change':'변경 무시'};
     status(`${ids.length}개 글을 처리하고 있어요.`);
     let completed=0;
     try{
@@ -46,7 +46,17 @@
     const feeLabel={free:'무료',paid:'유료',mixed:'유료·무료 혼합',unknown:'금액 확인 필요'}[p.feeType]||'금액 확인 필요';
     copy.append(el('strong',`${Number.isInteger(index)?`${index+1}. `:''}${p.title}`),el('p',[p.category,p.region||'지역 확인 필요',p.startDate||'일정 확인 필요',p.venue||'장소 확인 필요',p.price||'금액 확인 필요',feeLabel,`조회 ${(Number(p.views)||0).toLocaleString('ko-KR')}회`,p.locked?'직접 수정 보호':''].filter(Boolean).join(' · ')));
     if(p.status==='pending'&&p.recommendation)copy.append(el('p',`추천 분류: ${p.recommendation.category}${p.recommendation.needsReview?' · 확인 필요':''}`,'category-recommendation'));
-    row.append(copy,state==='deleted'&&!changed?button('복구',()=>processBulk('restore',[p.id])):button(changed?'변경 내용 확인':'확인·수정',()=>editPost(p,changed)));return row;
+    if(changed&&p.candidate){
+      const diff=el('div',null,'change-diff');
+      const labels=[['행사명','title'],['분류','category'],['시작일','startDate'],['종료일','endDate'],['시간·회차','time'],['장소','venue'],['요금','price'],['대상','audience'],['안내','description'],['공식 링크','link']];
+      for(const [label,key] of labels){const before=String(p[key]||'').trim(),after=String(p.candidate[key]||'').trim();if(before!==after){const short=value=>value?(key==='description'?value.slice(0,100)+(value.length>100?'…':''):value):'없음';diff.append(el('p',`${label}: ${short(before)} → ${short(after)}`));}}
+      const oldImages=JSON.stringify(p.sourceImages||p.images||[]),newImages=JSON.stringify(p.candidate.sourceImages||p.candidate.images||[]);if(oldImages!==newImages)diff.append(el('p','포스터·사진 원문이 바뀌었습니다.'));
+      copy.append(diff);
+    }
+    row.append(copy);
+    if(changed){const actions=el('div',null,'actions');actions.append(button('변경 내용 확인·반영',()=>editPost(p,true)),button('변경 무시',()=>processBulk('ignore-change',[p.id])));row.append(actions);}
+    else row.append(state==='deleted'?button('복구',()=>processBulk('restore',[p.id])):button('확인·수정',()=>editPost(p,false)));
+    return row;
   }
   async function load(reset=true){
     const run=++loadGeneration,category=$('#category-filter').value,region=$('#region-filter').value;
@@ -87,7 +97,8 @@
     fill($('#post-form'),{category:'공연',...value});images=[...(value.images||[])];$('#upload').value='';
     $('#editor-title').textContent=changed?'원문 변경 내용 확인':p.id?'소식 확인·수정':'직접 소식 올리기';
     $('#previous-value').hidden=!changed;
-    $('#previous-value').textContent=changed?`현재 게시 내용: ${p.title} / ${p.startDate||'일정 없음'} / ${p.time||''} / ${p.venue||'장소 없음'} / ${p.price||'가격 미정'}`:'';
+    if(changed&&p.candidate){const fields=[['행사명','title'],['분류','category'],['시작일','startDate'],['종료일','endDate'],['시간·회차','time'],['장소','venue'],['요금','price'],['대상','audience'],['안내','description'],['공식 링크','link']];const differences=fields.filter(([,key])=>String(p[key]||'').trim()!==String(p.candidate[key]||'').trim()).map(([label,key])=>`${label}: ${p[key]||'없음'} → ${p.candidate[key]||'없음'}`);$('#previous-value').textContent=['현재 저장된 내용:',...differences].join('\n');}
+    else $('#previous-value').textContent=changed?`현재 게시 내용: ${p.title} / ${p.startDate||'일정 없음'} / ${p.time||''} / ${p.venue||'장소 없음'} / ${p.price||'가격 미정'}`:'';
     $('#original-link').hidden=!safeURL(value.link);$('#original-link').href=safeURL(value.link)||'#';
     const suggestion=value.recommendation;
     $('#category-suggestion').hidden=!suggestion;

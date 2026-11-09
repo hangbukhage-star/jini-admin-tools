@@ -4,13 +4,13 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {day,publicURL,koreaToday,horizon,parseDetail,linksFrom,listingURLs,fetchPage,dateRange,recommendCategory,priceInfo,venueGroup} from '../src/news-collectors.js';
 import {newsRequest} from '../src/news.js';
-import {newsRegion} from '../src/news-regions.js';
+import {newsRegion,newsRegionGroup} from '../src/news-regions.js';
 import {siteVisitors,cleanupVisitors} from '../src/site-visitors.js';
 import {collectSite} from '../src/news-collection.js';
 import handler from '../../api/news-collect.mjs';
 
 export class TestD1 {
-  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql','0015_news_suppression_tombstones.sql','0017_add_news_collection_cursor.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
+  constructor(){this.db=new DatabaseSync(':memory:');for(const name of ['0004_create_news.sql','0005_news_views.sql','0006_news_bulk_management.sql','0009_news_reactions.sql','0010_news_price_search.sql','0011_venues_and_site_visitors.sql','0015_news_suppression_tombstones.sql','0017_add_news_collection_cursor.sql','0022_review_collected_changes.sql'])this.db.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));}
   prepare(sql){const stmt=this.db.prepare(sql);let args=[];const values=()=>args.map(x=>x instanceof ArrayBuffer?new Uint8Array(x):x);return {bind(...a){args=a;return this;},async first(){return stmt.get(...values())||null;},async all(){return {results:stmt.all(...values())};},async run(){const r=stmt.run(...values());return {meta:{changes:Number(r.changes)}};}};}
 }
 const key='local-test-admin-key-at-least-32-characters';
@@ -20,7 +20,7 @@ const call=(e,path,method='GET',body,auth=true)=>newsRequest(req(path,method,bod
 const collectSource=(e,s,fetcher)=>collectSite(s,async data=>{
   const response=await call(e,'/admin/collection','POST',data);const result=await response.json();if(!response.ok)throw new Error(result.error);return result;
 },fetcher);
-const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',config:'{}'};
+const source={id:'sori',adapter:'sori',name:'한국소리문화의전당',url:'https://www.sori21.co.kr/site/1/menu/8/show/performance',config:'{}'};
 const detail=(date='2026-10-21',title='가을 음악회')=>`<html><body><div class="skinveiw-detail"><div class="sktit">${title}</div><div class="skinlist"><p>기간</p><p>${date}~${date}</p></div><div class="skinlist"><p>시간</p><p>19:30</p></div><div class="skinlist"><p>장소</p><p>연지홀</p></div></div><div class="notboximg"><img src="/poster.jpg"></div></body></html>`;
 
 test('같은 건물의 홀·회의실·층을 한 장소로 묶고 원래 장소는 보존한다',async()=>{
@@ -32,6 +32,17 @@ test('같은 건물의 홀·회의실·층을 한 장소로 묶고 원래 장소
   const e=env();for(const venue of ['한국소리문화의전당 모악당','한국소리문화의전당 연지홀'])await call(e,'/admin/post','POST',{title:'건물별 공연',venue,status:'published'});
   const options=await(await call(e,'/venues')).json();assert.deepEqual(options.venues,['한국소리문화의전당']);
   const filtered=await(await call(e,'?venue='+encodeURIComponent('소리문화의 전당'))).json();assert.equal(filtered.total,2);assert.ok(filtered.posts.every(p=>p.venueGroup==='한국소리문화의전당'));assert.ok(filtered.posts.some(p=>p.venue.endsWith('연지홀')));
+});
+
+test('공개·관리 게시판은 전주·완주·그 외 세 지역으로 같은 기준에서 거른다',async()=>{
+  const e=env();
+  for(const [title,venue] of [['전주 글','전주한벽문화관'],['완주 글','완주문화예술회관'],['그 외 글','익산예술의전당'],['미분류 글','장소 확인 필요']])await call(e,'/admin/post','POST',{title,venue,status:'published',category:'공연'});
+  for(const region of ['전주','완주','그 외']){
+    const pub=await(await call(e,`?region=${encodeURIComponent(region)}`)).json();
+    const admin=await(await call(e,`/admin?status=published&region=${encodeURIComponent(region)}`)).json();
+    assert.deepEqual(pub.posts.map(p=>p.title).sort(),admin.posts.map(p=>p.title).sort());assert.ok(pub.posts.every(p=>p.region===region));
+  }
+  assert.equal((await call(e,'?region=익산')).status,400);assert.equal(newsRegionGroup({venue:'익산예술의전당'}),'그 외');
 });
 
 test('방문자는 한국 날짜별 브라우저 중복을 막고 누적은 일별 합계로 보존한다',async()=>{
@@ -200,7 +211,7 @@ test('일괄 요청에 없는 글이나 잘못된 선택이 있으면 일부만 
   const e=env(),{id}=await(await call(e,'/admin/post','POST',{title:'남길 글',status:'pending'})).json();
   assert.equal((await call(e,'/admin/bulk','POST',{action:'publish',ids:[id,crypto.randomUUID()]})).status,409);
   assert.equal((await(await call(e,'')).json()).posts.length,0);
-  for(const input of [{action:'publish',ids:[]},{action:'publish',ids:[id,...Array(100).fill(id)]},{action:'erase',ids:[id]},{action:'publish',ids:['invalid']}])assert.equal((await call(e,'/admin/bulk','POST',input)).status,400);
+  for(const [input,status] of [[{action:'publish',ids:[]},400],[{action:'publish',ids:[id,...Array(100).fill(id)]},400],[{action:'erase',ids:[id]},409],[{action:'publish',ids:['invalid']},400]])assert.equal((await call(e,'/admin/bulk','POST',input)).status,status);
   assert.equal((await(await call(e,'/admin/bulk','POST',{action:'publish',ids:[id,id]})).json()).count,1);
 });
 test('삭제한 수집 글은 재수집해도 되살아나지 않으며 원문 변경도 덮어쓰지 않는다',async()=>{
@@ -239,6 +250,10 @@ test('기관별 공연일을 추출하며 우진 게시일을 공연일로 사�
   const w=parseDetail('<td class="title"><b>공연</b>2026-10-01</td><td class="board1">시 : 2026. 10. 25 (일) pm4:00<br>장소 : 우진 예술극장</td>','https://www.woojin.or.kr/detail',{...source,adapter:'woojin'});assert.equal(w.startDate,'2026-10-25');assert.equal(w.venue,'우진 예술극장');
   const n=parseDetail('<div id="contents"><ul><li><strong>제목</strong><span class="info-tit">가을 전시</span></li><li><strong>일정</strong><span>2026-10-24 ~ 2026-10-25</span></li><li><strong>공연장소</strong><span>소공연장</span></li></ul></div>','https://www.nihc.go.kr/detail',{...source,adapter:'nihc'});assert.equal(n.endDate,'2026-10-25');assert.equal(n.category,'전시');
 });
+test('한 표 행에 여러 쌍으로 배치된 행사 장소·요금도 모두 읽는다',()=>{
+  const item=parseDetail('<div id="contents"><table><tr><th>제목</th><td>김제 가을 공연</td><th>기간</th><td>2026.11.20 ~ 2026.11.21</td><th>장소</th><td>김제문화예술회관</td><th>관람료</th><td>무료</td></tr></table></div>','https://www.gimje.go.kr/art/schedule/view.gimje?dataSid=1',{...source,adapter:'gimje'});
+  assert.equal(item.startDate,'2026-11-20');assert.equal(item.endDate,'2026-11-21');assert.equal(item.venue,'김제문화예술회관');assert.equal(item.price,'무료');
+});
 test('관리자 인증·대기 비공개·게시·숨김·기간 종료·백업을 실제 SQLite로 확인한다',async()=>{
   const e=env();assert.equal((await call(e,'/admin','GET',null,false)).status,401);
   const input={title:'테스트 소식',category:'공연',startDate:'2099-01-01',endDate:'2099-01-02',venue:'공연장',status:'pending'};
@@ -256,13 +271,28 @@ test('새 사이트 설정을 저장하고 기존 사이트와 독립적으로 �
 });
 test('수집 중복 방지·수정 보호·변경 대기·숨김 유지와 실패 상태를 기록한다',async()=>{
   const e=env(),s=await e.DB.prepare("SELECT * FROM news_sources WHERE id='sori'").first();const today=koreaToday();
-  let title='첫 공연';const fetcher=async u=>u.endsWith('/42')?detail(today,title):'<a href="/site/1/menu/8/show/performance/42">첫 공연</a>';
+  let title='첫 공연';const fetcher=async u=>u.endsWith('/42')?detail(today,title):new URL(u).searchParams.get('page')==='0'?'<a href="/site/1/menu/8/show/performance/42">첫 공연</a>':'';
   assert.equal((await collectSource(e,s,fetcher)).ok,true);await collectSource(e,s,fetcher);
-  let data=await (await call(e,'/admin')).json();assert.equal(data.posts.length,1);assert.equal(data.posts[0].images.length,0);
+  let data=await (await call(e,'/admin')).json();assert.equal(data.posts.length,1);assert.equal(data.posts[0].images.length,1);
   const p=data.posts[0];await call(e,'/admin/post','POST',{...p,title:'내가 고친 공연',status:'published'});
   title='원문 변경';await collectSource(e,s,fetcher);data=await (await call(e,'/admin?status=published')).json();assert.equal(data.posts[0].title,'내가 고친 공연');assert.equal(data.changes[0].candidate.title,'원문 변경');
   await call(e,'/admin/post','POST',{...data.posts[0],status:'hidden'});await collectSource(e,s,fetcher);assert.equal((await (await call(e,'')).json()).posts.length,0);
   const failed=await collectSource(e,s,async()=>{throw new Error('접속 실패');});assert.equal(failed.ok,false);const saved=await e.DB.prepare("SELECT * FROM news_sources WHERE id='sori'").first();assert.ok(saved.last_success);assert.match(saved.last_error,/접속 실패/);
+});
+test('목록에서 사라진 지난 미검토 대기글을 관리자 조회 시 삭제함으로 옮긴다',async()=>{
+  const e=env(),yesterday=new Date(`${koreaToday()}T00:00:00Z`);yesterday.setUTCDate(yesterday.getUTCDate()-1);const date=yesterday.toISOString().slice(0,10);
+  const created=await call(e,'/admin/post','POST',{title:'이미 끝난 행사',status:'pending',startDate:date,endDate:date,venue:'전주문화관'});assert.equal(created.status,200);
+  assert.equal((await(await call(e,'/admin?status=pending')).json()).posts.length,0);
+  const deleted=await(await call(e,'/admin?status=deleted')).json();assert.equal(deleted.posts.length,1);assert.equal(deleted.posts[0].title,'이미 끝난 행사');
+});
+test('원문 변경을 항목별 후보로 보이고 무시한 같은 내용은 재알림하지 않는다',async()=>{
+  const e=env(),s=await e.DB.prepare("SELECT * FROM news_sources WHERE id='sori'").first(),today=koreaToday();let title='처음 제목';
+  const fetcher=async u=>u.endsWith('/42')?detail(today,title):'<a href="/site/1/menu/8/show/performance/42">공연</a>';
+  await collectSource(e,s,fetcher);title='첫 변경';await collectSource(e,s,fetcher);
+  let data=await(await call(e,'/admin?status=pending')).json();assert.equal(data.posts[0].title,'처음 제목');assert.equal(data.changes[0].candidate.title,'첫 변경');
+  await call(e,'/admin/bulk','POST',{action:'ignore-change',ids:[data.posts[0].id]});await collectSource(e,s,fetcher);
+  data=await(await call(e,'/admin?status=pending')).json();assert.equal(data.changes.length,0);
+  title='두 번째 변경';await collectSource(e,s,fetcher);data=await(await call(e,'/admin?status=pending')).json();assert.equal(data.changes[0].candidate.title,'두 번째 변경');
 });
 test('예정 범위 밖의 글도 확인 시각을 기록해 이후 글의 수집을 막지 않는다',async()=>{
   const e=env(),s=await e.DB.prepare("SELECT * FROM news_sources WHERE id='sori'").first();
@@ -306,18 +336,18 @@ test('Vercel 수집 함수에서 저장 API와 연결해 수집·대기 저장·
 });
 
 
-test('수집 사이트 22개를 등록하고 모두 수집 대상으로 반환하며 23번째는 제한한다',async()=>{
+test('수집 사이트 25개까지 등록하고 모두 수집 대상으로 반환하며 26번째는 제한한다',async()=>{
   const e=env();
   e.DB.db.exec('DELETE FROM news_sources');
-  for(let i=1;i<=22;i++){
+  for(let i=1;i<=25;i++){
     const r=await call(e,'/admin/source','POST',{id:'site-'+i,name:'사이트 '+i,url:'https://example.org/list/'+i,adapter:'generic',enabled:true});
     assert.equal(r.status,200);
   }
   const start=await(await call(e,'/admin/collection','POST',{action:'start'})).json();
-  assert.equal(start.sources.length,22);
-  const extra=await call(e,'/admin/source','POST',{id:'site-23',name:'추가 사이트',url:'https://example.org/list/23',adapter:'generic',enabled:true});
+  assert.equal(start.sources.length,25);
+  const extra=await call(e,'/admin/source','POST',{id:'site-26',name:'추가 사이트',url:'https://example.org/list/26',adapter:'generic',enabled:true});
   assert.equal(extra.status,400);
-  assert.match((await extra.json()).error,/22곳/);
+  assert.match((await extra.json()).error,/25곳/);
   assert.equal((await call(e,'/admin/source','POST',{id:'site-20',name:'수정 사이트',url:'https://example.org/list/20',adapter:'generic',enabled:true})).status,200);
 });
 
@@ -354,7 +384,7 @@ test('지역 검색은 실제 장소를 우선하고 전체 검색·건수·페�
   }
   const page=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1')).json();assert.equal(page.total,2);assert.equal(page.posts.length,1);assert.equal(page.hasMore,true);assert.equal(page.posts[0].region,'전주');
   const next=await(await call(e,'?region='+encodeURIComponent('전주')+'&limit=1&offset=1')).json();assert.equal(next.total,2);assert.notEqual(page.posts[0].id,next.posts[0].id);
-  for(const region of ['익산','완주','부안','김제','군산']){const result=await(await call(e,'?region='+encodeURIComponent(region))).json();assert.equal(result.total,1);assert.equal(result.posts[0].region,region);}
+  for(const [region,count] of [['완주',1],['그 외',5]]){const result=await(await call(e,'?region='+encodeURIComponent(region))).json();assert.equal(result.total,count);assert.ok(result.posts.every(p=>p.region===region));}
   const venues=await(await call(e,'/venues?region='+encodeURIComponent('전주'))).json();assert.equal(venues.venues.length,2);assert(!venues.venues.includes('익산예술의전당'));
   const combined=await(await call(e,'?region='+encodeURIComponent('전주')+'&q='+encodeURIComponent('교육')+'&fee=free')).json();assert.equal(combined.total,1);
   assert.equal((await call(e,'?region=bad')).status,400);assert.equal((await call(e,'/venues?region=bad')).status,400);
@@ -364,12 +394,12 @@ test('지역 검색은 실제 장소를 우선하고 전체 검색·건수·페�
 test('관리자가 직접 지정한 지역은 저장·공개 검색·관리자 필터에 함께 반영된다',async()=>{
  const e=env(),today=koreaToday();
  const saved=await(await call(e,'/admin/post','POST',{title:'교육 지역 지정',category:'AI·디지털 교육',status:'published',startDate:today,endDate:today,venue:'교육실',regionOverride:'김제'})).json();
- assert.equal((await(await call(e,'?region='+encodeURIComponent('김제'))).json()).posts[0].region,'김제');
- const admin=await(await call(e,'/admin?status=published&region='+encodeURIComponent('김제'))).json();assert.equal(admin.filteredTotal,1);assert.equal(admin.posts[0].regionOverride,'김제');
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('그 외'))).json()).posts[0].region,'그 외');
+ const admin=await(await call(e,'/admin?status=published&region='+encodeURIComponent('그 외'))).json();assert.equal(admin.filteredTotal,1);assert.equal(admin.posts[0].regionOverride,'김제');
  assert.equal((await(await call(e,'/admin?status=published&region='+encodeURIComponent('전주'))).json()).posts.length,0);
  assert.equal((await call(e,'/admin?region=bad')).status,400);
  await call(e,'/admin/post','POST',{id:saved.id,title:'교육 지역 자동',category:'AI·디지털 교육',status:'published',venue:'익산예술의전당',startDate:today,endDate:today,regionOverride:''});
- assert.equal((await(await call(e,'?region='+encodeURIComponent('익산'))).json()).total,1);
+ assert.equal((await(await call(e,'?region='+encodeURIComponent('그 외'))).json()).total,1);
  assert.equal((await call(e,'/admin/post','POST',{title:'오류',status:'pending',regionOverride:'bad'})).status,400);
 });
 
@@ -405,7 +435,8 @@ test('지난 소식 정리는 한국 날짜 기준 종료된 게시글만 삭제
  const result=await(await remove([past,exhibit])).json();assert.equal(result.count,2);
  const trash=await(await call(e,'/admin?status=deleted')).json();assert.equal(trash.posts.length,3);
  assert.equal((await call(e,'/admin/bulk','POST',{action:'restore',ids:[past]})).status,200);
- assert.equal((await(await call(e,'/admin?status=pending')).json()).posts[0].id,past);
+ assert.equal((await(await call(e,'/admin?status=pending')).json()).posts.length,0);
+ assert.equal((await(await call(e,'/admin?status=deleted')).json()).posts.length,3);
 });
 
 

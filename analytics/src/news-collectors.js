@@ -24,6 +24,8 @@ function pairs(root) {
     const key = row.querySelector('dt,th,strong,span.tit,span.title');
     const val = row.querySelector('dd,td');
     if (key && val) values[clean(key.textContent)] = clean(val.textContent);
+    const cells=[...row.children];
+    for(let i=0;i<cells.length-1;i++)if(cells[i].tagName==='TH'&&cells[i+1].tagName==='TD')values[clean(cells[i].textContent)]=clean(cells[++i].textContent);
   }
   for (const list of root.querySelectorAll('dl')) {
     const terms=[...list.querySelectorAll('dt')],definitions=[...list.querySelectorAll('dd')];
