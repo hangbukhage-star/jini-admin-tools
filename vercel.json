@@ -1,7 +1,13 @@
 {
   "installCommand": "npm ci",
-  "regions": ["icn1"],
+  "regions": [
+    "icn1"
+  ],
   "functions": {
-    "api/news-collect.mjs": { "maxDuration": 300, "includeFiles": "node_modules/**" }
-  }
+    "api/news-collect.mjs": {
+      "maxDuration": 300,
+      "includeFiles": "node_modules/**"
+    }
+  },
+  "outputDirectory": "."
 }
