@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>교육공무직 근무계획표 사용 안내 | 지니의 행정도구 만물상</title>
+  <meta name="description" content="교육공무직 근무계획표를 처음 쓰는 분을 위한 화면별 이용 안내입니다. 근로자 정보 입력부터 PDF 저장까지 그림으로 설명합니다.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://jini-admin-tools.vercel.app/guide/">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18334b;
+      --muted: #5c7282;
+      --teal: #26756f;
+      --teal-dark: #155b56;
+      --paper: #fff;
+      --canvas: #f3f7f7;
+      --line: #dce6e7;
+      --soft: #e8f5f2;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; line-height: 1.65; }
+    a { color: inherit; }
+    .hero { padding: 42px 20px 38px; text-align: center; background: linear-gradient(110deg, #fff0c4, #fff6df 60%, #fff0dc); }
+    .hero-inner, main { width: min(1080px, calc(100% - 36px)); margin-inline: auto; }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-weight: 800; letter-spacing: .06em; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.25; letter-spacing: -.04em; }
+    .intro { max-width: 700px; margin: 16px auto 0; color: #536a78; font-size: 17px; }
+    .hero-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+    .button { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 12px; background: var(--teal); color: white; text-decoration: none; font-weight: 800; }
+    .button:hover { background: var(--teal-dark); }
+    .button.secondary { border: 1px solid #cbdcdd; background: white; color: var(--ink); }
+    main { padding: 30px 0 64px; }
+    .notice { margin-bottom: 24px; padding: 16px 18px; border: 1px solid #cfe5df; border-radius: 14px; background: var(--soft); color: #345c58; }
+    .steps { display: grid; gap: 22px; }
+    .step { overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: 0 10px 28px rgba(24,51,75,.055); }
+    .step-head { display: grid; grid-template-columns: 48px 1fr; gap: 14px; align-items: start; padding: 22px 24px 16px; }
+    .number { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 50%; background: var(--teal); color: white; font-size: 21px; font-weight: 800; }
+    h2 { margin: 0; font-size: 22px; line-height: 1.35; letter-spacing: -.025em; }
+    .step-copy { display: grid; gap: 4px; margin-top: 8px; color: var(--muted); }
+    .step-copy p { margin: 0; }
+    .step-copy strong { color: var(--ink); }
+    figure { margin: 0; padding: 0 20px 20px; }
+    figure img { display: block; width: 100%; height: auto; border: 1px solid #e0e8ea; border-radius: 12px; background: #eef2f3; }
+    figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .finish { margin-top: 24px; padding: 22px 24px; border-radius: 18px; background: #fff; border: 1px solid var(--line); }
+    .finish h2 { font-size: 20px; }
+    .finish p { margin: 8px 0 0; color: var(--muted); }
+    footer { padding: 22px; border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: 13px; }
+    @media (max-width: 640px) {
+      .hero { padding: 32px 16px; }
+      .intro { font-size: 15px; }
+      main { width: min(100% - 24px, 1080px); padding-top: 18px; }
+      .step-head { grid-template-columns: 38px 1fr; gap: 10px; padding: 18px 15px 13px; }
+      .number { width: 36px; height: 36px; font-size: 18px; }
+      h2 { font-size: 19px; }
+      figure { padding: 0 10px 12px; }
+      .notice { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">지니의 행정도구 만물상 · 처음 쓰는 분을 위한 안내</p>
+      <h1>교육공무직 근무계획표<br>이용 안내</h1>
+      <p class="intro">화면에 보이는 번호를 따라 눌러 보세요.<br>근로자 정보부터 연간 계획서 저장까지 차례대로 알려드립니다.</p>
+      <nav class="hero-actions" aria-label="관련 페이지">
+        <a class="button" href="/교육공무직근무계획표/index.html">근무계획표 열기</a>
+        <a class="button secondary" href="/">첫 화면으로</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <aside class="notice"><strong>참고하세요.</strong> 그림 속 학교 이름과 근로자 이름은 설명을 위한 예시입니다. 실제로 사용할 때는 본인의 학교와 근로자 정보를 입력하세요.</aside>
+    <section class="steps" aria-label="사용 순서">
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">1</span><div><h2>첫 화면에서 프로그램을 엽니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 「프로그램 실행」을 누릅니다.</p><p><strong>왜 하나요:</strong> 근무계획표를 작성하는 화면으로 들어갑니다.</p></div></div></div>
+        <figure><img src="/guide/01_첫화면.png" alt="첫 화면에서 교육공무직 근무계획표의 프로그램 실행 버튼을 누르는 위치"><figcaption>빨간 번호가 붙은 버튼을 눌러 시작하세요.</figcaption></figure>
+      </article>
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">2</span><div><h2>근로자 정보를 적습니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 기관 이름, 직종, 근로자 이름을 적습니다.</p><p><strong>왜 하나요:</strong> 계산표와 계획서에 누구의 자료인지 표시됩니다.</p></div></div></div>
+        <figure><img src="/guide/02_근로자정보.png" alt="근로자 정보 화면에서 소속 기관, 직종, 성명을 입력하는 위치"><figcaption>1번부터 기관 이름, 직종, 성명을 차례대로 적으세요.</figcaption></figure>
+      </article>
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">3</span><div><h2>방학 날짜와 근무기간을 정합니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 방학의 시작일과 끝날을 적고, 방학 중 일할 기간을 선택합니다.</p><p><strong>왜 하나요:</strong> 방학 중 근무일을 달력과 계산표에 반영합니다.</p></div></div></div>
+        <figure><img src="/guide/03_방학공휴일.png" alt="방학 공휴일 설정 화면에서 기관과 여름방학 시작일, 종료일을 입력하는 위치"><figcaption>학교 일정에 맞는 날짜를 입력하세요. 그림의 날짜는 예시입니다.</figcaption></figure>
+      </article>
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">4</span><div><h2>달력에서 근무일을 표시합니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 처리 종류를 「방학 중 근무일」로 고르고 날짜를 누릅니다.</p><p><strong>왜 하나요:</strong> 선택한 날짜가 근무일로 표시되어 계산에 들어갑니다.</p></div></div></div>
+        <figure><img src="/guide/04_달력입력.png" alt="달력 입력 화면에서 처리 종류, 사유, 근무 날짜를 선택하는 위치"><figcaption>같은 방법으로 필요한 날짜를 하나씩 표시할 수 있습니다.</figcaption></figure>
+      </article>
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">5</span><div><h2>산출표와 계획서를 살펴봅니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 「산출표·계획서」에서 계산 결과를 확인합니다.</p><p><strong>왜 하나요:</strong> 저장하기 전에 날짜와 일수가 맞는지 살펴봅니다.</p></div></div></div>
+        <figure><img src="/guide/05_산출표계획서.png" alt="산출표와 연간 근로계획서를 확인하고 엑셀 또는 PDF 미리보기를 고르는 위치"><figcaption>엑셀로 보관하려면 「엑셀 내보내기」를, 인쇄하거나 PDF로 저장하려면 「인쇄/PDF 미리보기」를 누르세요.</figcaption></figure>
+      </article>
+      <article class="step">
+        <div class="step-head"><span class="number" aria-hidden="true">6</span><div><h2>인쇄 화면에서 PDF로 저장합니다</h2><div class="step-copy"><p><strong>하는 일:</strong> 「인쇄 / PDF 저장」을 누릅니다.</p><p><strong>왜 하나요:</strong> 완성한 계획서를 파일로 남기거나 종이에 출력할 수 있습니다.</p></div></div></div>
+        <figure><img src="/guide/06_PDF저장.png" alt="인쇄 PDF 미리보기 화면에서 인쇄 PDF 저장 버튼을 누르는 위치"><figcaption>다음 인쇄 창에서 「PDF로 저장」을 고르고 「저장」을 누르면 파일이 만들어집니다.</figcaption></figure>
+      </article>
+    </section>
+    <section class="finish"><h2>작성한 내용은 자동으로 저장됩니다</h2><p>화면에 「자동 저장됨」이 보이면 입력한 내용이 이 컴퓨터에 저장된 상태입니다. 다른 컴퓨터에서 이어서 하려면 첫 화면 위쪽의 「전체자료 백업(JSON)」을 눌러 파일도 보관해 두세요.</p></section>
+  </main>
+  <footer>지니의 행정도구 만물상 · 교육공무직 근무계획표 사용 안내</footer>
+</body>
+</html>
+
