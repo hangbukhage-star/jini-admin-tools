@@ -4,8 +4,6 @@
   const filters = [...filterBox.querySelectorAll('[data-category]')];
   const feature = document.querySelector('.jini-feature');
   const empty = document.querySelector('.jini-empty');
-  const title = document.querySelector('#section-title');
-  const caption = document.querySelector('#section-caption');
   const nav = [...document.querySelectorAll('.jini-nav a')];
   const radar = document.querySelector('#contest-radar-panel');
   const radarFrame = document.querySelector('#contest-radar-frame');
@@ -45,18 +43,12 @@
       if (index === active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
-    title.textContent = nav[active].textContent;
-    caption.textContent = living ? '일상에 필요한 도구를 모아 보는 공간입니다.'
-      : contests ? '공모전 소식을 모아 볼 공간입니다.'
-      : '학교 업무에 필요한 프로그램을 업무별로 찾을 수 있어요.';
     document.querySelector('.tool-list').setAttribute('aria-label', living ? '생활도구 목록' : '업무별 행정도구');
     filterBox.hidden = !admin;
     feature.hidden = !admin || selected !== -1;
     empty.hidden = !living;
-    title.parentElement.hidden = contests;
     radar.hidden = !contests;
     if (contests && !radarFrame.hasAttribute('src')) radarFrame.src = radarFrame.dataset.src;
-    empty.textContent = living ? '등록된 생활도구가 없습니다.' : '등록된 공모전 소식이 없습니다.';
     filters.forEach((button, index) => button.setAttribute('aria-pressed', String(index === selected)));
     categories.forEach((category, index) => {
       category.hidden = !admin || (selected !== -1 && selected !== index);
