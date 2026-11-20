@@ -28,7 +28,7 @@
       if(src){const img=el('img');img.src=src;img.alt='';img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';img.addEventListener('error',fallback,{once:true});cover.append(img);}else fallback();
       cover.append(el('span',post.category||'소식','news-card-category'));a.append(cover);
     }
-    a.append(main,el('small',[post.startDate||'일정은 안내 참고',post.region,post.venueGroup||post.venue||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
+    a.append(main,el('small',[post.startDate||'일정은 안내 참고',globalThis.jiniRepresentativeVenue?(post.region==='전주'?'전주':'그 외'):post.region,(globalThis.jiniRepresentativeVenue?globalThis.jiniRepresentativeVenue(post.venueGroup||post.venue):(post.venueGroup||post.venue))||'장소 확인 필요',priceLabel(post.price),`조회 ${(Number(post.views)||0).toLocaleString('ko-KR')}회`].filter(Boolean).join(' · ')));return a;
   }
   function renderListing(container,posts,category,options={}){
     const isCard=p=>['공연','전시'].includes(p.category);

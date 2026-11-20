@@ -63,6 +63,10 @@
 .lavender-news .news-delete{color:#8e2526}
 .lavender-news label,.lavender-news .muted,.lavender-news .news-status{color:#51495d}
 .lavender-news .news-error{color:#a02626}
+.lavender-news .news-toolbar-filters{align-items:center}
+.lavender-news .news-toolbar-filters :is(button,.button,select){min-height:42px;line-height:20px;padding-block:10px}
+.lavender-news .news-category{display:flex;align-items:center;gap:8px}
+.lavender-news .news-category select{width:auto;max-width:100%}
 :is(.lavender-home,.lavender-news) :focus-visible{outline:3px solid #7053a0;outline-offset:3px}
 @media(max-width:640px){
  .jini-categories{margin-top:12px}

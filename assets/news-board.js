@@ -8,7 +8,13 @@
   function syncReactionCounts(id,counts){reactionCounts.set(id,counts);render();}
   let filters={},venueGeneration=0;
   const searchForm=$('#news-search');
-  async function loadVenues(){const run=++venueGeneration;try{const params=new URLSearchParams({archive:archive?1:0,region:$('#region-select').value});const data=await api(`/news/venues?${params}`);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=[...new Set([...data.venues,...(selected?[selected]:[])])];select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=selected;}catch{/* Existing place choices remain available if suggestions fail. */}}
+  async function filteredNews(params) {
+    const response = await fetch('/api/news-filter?' + params);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '게시판을 불러오지 못했습니다.');
+    return data;
+  }
+  async function loadVenues(){const run=++venueGeneration;try{const params=new URLSearchParams({mode:'venues',archive:archive?1:0,region:$('#region-select').value});const data=await filteredNews(params);if(run!==venueGeneration)return;const select=$('#venue-select'),selected=select.value,values=data.venues;select.replaceChildren(el('option','전체 장소'));select.firstElementChild.value='';for(const value of values){const option=el('option',value);option.value=value;select.append(option);}select.value=values.includes(selected)?selected:'';}catch{/* Existing place choices remain available if suggestions fail. */}}
   let detailGeneration=0,visitorId='';
   function visitor(){
     if(visitorId)return visitorId;
@@ -75,7 +81,7 @@
     const run=++generation;
     if(reset){offset=0;posts=[];selected.clear();reactionCounts.clear();render();$('#more').hidden=true;}$('#more').disabled=true;$('#list').setAttribute('aria-busy','true');status('소식을 불러오고 있어요.');
     const params=new URLSearchParams({...filters,archive:archive?1:0,offset,limit:30,category:$('#category').value});
-    try{const data=await api('/news?'+params);if(run!==generation)return false;posts.push(...data.posts);offset+=data.posts.length;render();$('#more').hidden=!data.hasMore;status(`검색 결과 ${data.total.toLocaleString('ko-KR')}건 · ${posts.length}건 표시`);return true;}catch(e){if(run===generation)status(e.message);return false;}finally{if(run===generation){$('#more').disabled=deleteBusy;$('#list').setAttribute('aria-busy','false');}}
+    try{const data=await (params.get('region')==='other'||params.get('venue')?filteredNews(params):api('/news?'+params));if(run!==generation)return false;posts.push(...data.posts);offset+=data.posts.length;render();$('#more').hidden=!data.hasMore;status(`검색 결과 ${data.total.toLocaleString('ko-KR')}건 · ${posts.length}건 표시`);return true;}catch(e){if(run===generation)status(e.message);return false;}finally{if(run===generation){$('#more').disabled=deleteBusy;$('#list').setAttribute('aria-busy','false');}}
   }
   async function detail(id){
     const run=++detailGeneration;
@@ -87,7 +93,7 @@
       const summary=el('div',null,'detail-summary'),info=el('div',null,'detail-info'),posters=el('div',null,'detail-posters');
       info.append(el('p',`${p.category} · 조회 ${p.views.toLocaleString('ko-KR')}회`,'muted'),el('h2',`${p.cancelled?'[취소] ':''}${p.title}`));
       for(const url of (p.images||[])){const src=imageURL(url);if(!src)continue;const img=el('img',null,'detail-poster');img.src=src;img.alt=`${p.title} 포스터`;img.loading='eager';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{img.remove();if(!posters.childElementCount)summary.classList.remove('has-posters');});posters.append(img);}
-      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['지역',p.region],['어디서',p.venue||p.venueGroup],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])info.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
+      for(const [label,value] of [['언제',[p.startDate,p.endDate&&p.endDate!==p.startDate?'~ '+p.endDate:'',p.time].filter(Boolean).join(' ')],['지역',p.region==='전주'?'전주':'그 외'],['어디서',jiniRepresentativeVenue(p.venueGroup||p.venue)],['관람료',priceLabel(p.price)],['관람 대상',p.audience]])info.append(el('div',`${label}  ·  ${value||'공식 안내 확인'}`,'detail-line'));
       summary.append(info);if(posters.childElementCount){summary.classList.add('has-posters');summary.append(posters);}content.replaceChildren(summary);
       if(p.description)content.append(el('p',p.description,'description'));
       content.append(reactions(p.id));
