@@ -1,0 +1,74 @@
+/* Shared lavender theme for the home page and public news board. */
+.lavender-home,.news-page.lavender-news{margin:0;background:#fff;color:#22232a;font-family:Pretendard,"Noto Sans KR","Malgun Gothic",sans-serif}
+.lavender-home *{box-sizing:border-box}
+.lavender-home [hidden]{display:none!important}
+.lavender-home>header,.lavender-news>header{background:#e5e2fa;color:#23232c;text-align:center;padding:44px 16px 18px;border-bottom:1px solid #aaa5bd}
+.lavender-home>header h1,.lavender-news>header h1{font-size:clamp(32px,5vw,60px);margin:0;line-height:1.16;letter-spacing:-.085em;word-break:keep-all}
+.lavender-news>header h1{font-size:clamp(30px,5vw,48px)}
+.lavender-home>header p,.lavender-news>header p{margin:12px 0 0;color:#4b4a58;font-size:15px}
+.jini-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:22px}
+.jini-nav a,.lavender-news .jini-nav a{display:inline-block;text-decoration:none;border:1px solid #817992;border-radius:999px;background:#faf8ff;color:#302850;padding:8px 15px;font-size:14px;font-weight:bold;white-space:nowrap}
+.jini-nav a[aria-current],.lavender-news .jini-nav a[aria-current]{background:#302850;color:#fff}
+.lavender-home>main{max-width:none;display:flex;flex-direction:column;width:100%;margin:0;padding:0 0 32px}
+.jini-intro{text-align:center;background:#e5e2fa;padding:20px 12px;color:#302850}
+.jini-intro h2{margin:0;font-size:26px;letter-spacing:-.04em}
+.jini-intro p{margin:6px 0 0;color:#4b4a58;font-size:14px}
+.jini-categories,.jini-feature,.jini-empty,.lavender-home .tool-list{width:min(1060px,calc(100% - 32px));margin-left:auto;margin-right:auto}
+.jini-categories{margin-top:18px}
+.jini-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.jini-filters button,.jini-reset{font:inherit;color:#302850;cursor:pointer;border:1px solid #817992;background:#fff;border-radius:12px}
+.jini-filters button{background:#f6e9ef;min-height:58px;text-align:left;font-weight:bold;font-size:13px;padding:8px 12px}
+.jini-filters button:nth-child(2){background:#e8eff9}.jini-filters button:nth-child(3){background:#e7f2ea}.jini-filters button:nth-child(4){background:#fcf1d5}
+.jini-filters button span{margin-right:8px;font-size:18px}
+.jini-filters button[aria-pressed=true]{outline:2px solid #302850;outline-offset:-4px}
+.jini-reset{display:block;margin:10px 0 0 auto;padding:5px 12px;border-radius:999px;font-size:13px}
+.jini-feature{position:relative;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:18px;border:1px solid #827991;background:#fff;border-radius:18px;padding:22px;margin-top:36px;margin-bottom:35px;isolation:isolate}
+.jini-feature::before,.jini-feature::after{content:"";position:absolute;height:13px;border:1px solid #827991;border-radius:13px 13px 0 0;z-index:-1;inset:-8px 12px auto;background:#f3e3ec}
+.jini-feature::after{background:#e6f2eb;inset:-15px 25px auto;z-index:-2}
+.jini-feature h3{margin:3px 0;font-size:clamp(20px,3vw,30px);letter-spacing:-.06em;word-break:keep-all}
+.jini-feature p{margin:0 0 12px;font-size:13px}
+.jini-feature small{color:#55477b}
+.jini-feature a{display:inline-block;border:1px solid #817992;background:#eee8fb;color:#302850;border-radius:7px;padding:5px 10px;text-decoration:none;font-size:13px;font-weight:bold}
+.jini-calendar{background:#eeeafa;border:1px solid #8f87a3;border-radius:13px;padding:12px;box-shadow:3px 3px #d9d3e9;color:#403357}
+.jini-calendar strong{display:block;font-size:12px;margin-bottom:7px}
+.jini-calendar div{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.jini-calendar i{height:13px;border-radius:3px;background:white;border:1px solid #d2cbdf}
+.jini-calendar i:nth-child(4n){background:#dbd1f4}
+.lavender-home .tool-list{display:block;margin-top:16px}
+.lavender-home .tool-category{display:block;padding:0;margin:0 0 24px;background:transparent;border:0;box-shadow:none}
+.lavender-home .category-label{display:flex;align-items:center;text-align:left;justify-content:flex-start;gap:7px;color:#302850;background:none;border:0;border-bottom:1px solid #aaa5bd;border-radius:0;padding:0 0 7px;margin-bottom:11px;min-height:0}
+.lavender-home .category-label br,.lavender-home .category-icon{display:none}
+.lavender-home .category-label{flex-direction:row}
+.lavender-home .category-label::after,.lavender-home .tool-card::before{display:none}
+.lavender-home .category-label br::after,.lavender-home .tool-card h2 br::after{content:" "}
+.lavender-home .category-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lavender-home .category-tools{grid-auto-rows:auto}
+.lavender-home .category-tools .tool-card{height:auto;aspect-ratio:auto}
+.lavender-home .category-tools .tool-card{width:auto;max-width:none;min-width:0;min-height:0;display:block;text-align:left;border:1px solid #8d8799;background:#fff;border-radius:15px;box-shadow:none;color:#22232a;padding:15px}
+.lavender-home .tool-card h2{margin:5px 0 9px;color:#23232c;font-size:17px;word-break:keep-all}
+.lavender-home .tool-card h2 br{display:none}
+.lavender-home .tool-icon{height:38px;width:38px;line-height:36px;text-align:center;font-size:20px;background:#f2edfd;border:1px solid #aaa5bd;border-radius:50%;margin:0}
+.lavender-home .tool-icon img{width:100%;height:auto;vertical-align:middle}
+.lavender-home .tool-card .usage-guide{background:#f7f5fc;border-color:#e2dced;color:#494455}
+.lavender-home .tool-card .usage-guide-title,.lavender-home .tool-card .guide-link{color:#493867}
+.lavender-home .tool-card a.button{display:inline-block;background:#e6efeb;border:1px solid #9995aa;color:#302850;border-radius:999px;box-shadow:none;margin:8px 4px 0 0;font-size:13px;padding:6px 10px}
+.lavender-home .site-visitors strong,.lavender-news .site-visitors strong{color:#4c3974}
+.lavender-home>footer{background:#f4f1fc;margin:0;padding:12px}
+.lavender-news .panel,.lavender-news dialog{background:#faf8ff;border-color:#a49bb7;color:#22232a}
+.lavender-news .news-card,.lavender-news .news-board-row,.lavender-news .news-reactions{border-color:#a49bb7;background:#fbf9ff}
+.lavender-news .news-card-cover{background:#efebf7}
+.lavender-news .news-toolbar button,.lavender-news .news-toolbar .button,.lavender-news .panel button,.lavender-news input:not([type=checkbox]),.lavender-news select{border-color:#aaa1ba}
+.lavender-news button.primary,.lavender-news button[aria-pressed=true]{background:#403260;border-color:#403260;color:white}
+.lavender-news a{color:#4c3974}
+.lavender-news .news-delete{color:#8e2526}
+.lavender-news label,.lavender-news .muted,.lavender-news .news-status{color:#51495d}
+.lavender-news .news-error{color:#a02626}
+:is(.lavender-home,.lavender-news) :focus-visible{outline:3px solid #7053a0;outline-offset:3px}
+@media(max-width:640px){
+ .jini-categories{margin-top:12px}
+ .lavender-home>header,.lavender-news>header{padding:26px 8px 13px}.jini-nav{gap:4px;margin-top:16px}.jini-nav a,.lavender-news .jini-nav a{font-size:12px;padding:6px 8px}
+ .jini-intro{padding:12px 9px}.jini-intro h2{font-size:21px}.jini-intro p{font-size:12px}
+ .jini-filters,.lavender-home .category-tools{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.jini-filters button{min-height:42px;padding:5px 7px;font-size:12px}
+ .lavender-home .category-tools{grid-template-columns:1fr;gap:10px}.jini-feature{padding:12px;gap:9px;margin-bottom:20px}.jini-feature p{font-size:12px}.jini-calendar{padding:7px}.jini-calendar div{gap:2px}.jini-calendar i{height:9px}
+}
+

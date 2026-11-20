@@ -906,27 +906,31 @@
     }
   </style>
 
+<link rel="stylesheet" href="./assets/lavender.css">
 </head>
 
-<body>
+<body class="lavender-home">
 
   <header>
-    <h1>🌼 지니의 행정도구 만물상</h1>
+    <h1>지니의 행정도구<br>만물상</h1>
     <p>업무는 가볍게, 일상은 풍성하게</p>
+    <nav class="jini-nav" aria-label="상단 메뉴"><a href="/" aria-current="page">행정도구</a><a href="/#living">생활도구</a><a href="/news/">문화생활</a><a href="/#contests">공모전</a></nav>
   </header>
 
   <main>
-    <section class="news-box" aria-labelledby="home-news-title">
-      <div class="news-heading"><h2 id="home-news-title">🌷 지니가 전하는 소식</h2><a href="./news/">전체 보기 ›</a></div>
-      <p class="news-caption">가까운 공연·전시·세미나·문화강좌 소식을 나눠요.</p>
-      <div id="home-news-list" aria-live="polite"><p class="news-empty">소식을 불러오고 있어요.</p></div>
-    </section>
+    <div class="jini-intro"><h2 id="section-title">행정도구</h2><p id="section-caption">학교 업무에 필요한 프로그램을 업무별로 찾을 수 있어요.</p></div>
+    <div class="jini-categories">
+      <div class="jini-filters" aria-label="업무 분류"><button type="button" aria-pressed="false" data-category="0"><span aria-hidden="true">♧</span>비공무원 인사·급여</button><button type="button" aria-pressed="false" data-category="1"><span aria-hidden="true">▤</span>학교운영위원회</button><button type="button" aria-pressed="false" data-category="2"><span aria-hidden="true">⌂</span>시설·공사</button><button type="button" aria-pressed="false" data-category="3"><span aria-hidden="true">◇</span>기타</button></div>
+      <button type="button" class="jini-reset">전체 도구 보기</button>
+    </div>
+    <aside class="jini-feature"><div><small>비공무원 인사·급여</small><h3>교육공무직 근무계획표</h3><p>근무 일정과 유급일수를 한 번에 정리해요.</p><a href="./교육공무직근무계획표/index.html" data-feature-launch>프로그램 실행 ↗</a></div><div class="jini-calendar" aria-hidden="true"><strong>연간 근무계획</strong><div><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></aside>
+    <p class="jini-empty" hidden>등록된 공모전 소식이 없습니다.</p>
     <section class="tool-list" aria-label="업무별 행정도구">
 
       <section class="tool-category category-personnel" aria-labelledby="category-personnel-title">
         <div class="category-label">
           <span class="category-icon" aria-hidden="true">👥</span>
-          <strong id="category-personnel-title">비공무원<br>인사·급여</strong>
+          <strong id="category-personnel-title">비공무원 <br>인사·급여</strong>
         </div>
 
         <div class="category-tools">
@@ -952,7 +956,7 @@
 
           <div class="tool-card insurance-card" data-tool-id="insurance-summary">
             <div class="tool-icon">🧾</div>
-            <h2>비공무원 4대보험<br>개인별 정리</h2>
+            <h2>비공무원 4대보험 <br>개인별 정리</h2>
             <div class="usage-guide">
               <span class="usage-guide-title">📌 보험료 통합·검증·엑셀 저장</span>
               건강·연금·고용·산재 내역을 모아<br>
@@ -1206,10 +1210,10 @@
 
   <script src="./assets/stats-config.js"></script>
   <script src="./assets/news-common.js"></script>
-  <script src="./assets/news-home.js"></script>
   <script src="./assets/stats.js"></script>
   <script src="./assets/comments.js"></script>
 
 <script src="/assets/site-visitors.js"></script>
+<script src="./assets/home-navigation.js"></script>
 </body>
 </html>
