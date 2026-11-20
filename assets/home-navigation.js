@@ -24,6 +24,14 @@
     fit();
   });
 
+  const heading = document.querySelector('body > header h1');
+  const subtitle = document.querySelector('body > header p');
+  const homeHeading = [...heading.childNodes];
+  const homeSubtitle = subtitle.textContent;
+  const subtitleTail = document.createElement('span');
+  subtitleTail.className = 'radar-subtitle-tail';
+  subtitleTail.textContent = ' 내게 맞는 국내 공모전을 찾아보세요.';
+
   let selected = -1;
 
   function render() {
@@ -31,6 +39,8 @@
     const contests = location.hash === '#contests';
     const admin = !living && !contests;
     const active = living ? 1 : contests ? 3 : 0;
+    heading.replaceChildren(...(contests ? ['지니의 공모전', document.createElement('br'), '레이더'] : homeHeading));
+    subtitle.replaceChildren(...(contests ? ['AI 활용부터 행정업무 개선까지.', subtitleTail] : [homeSubtitle]));
     nav.forEach((link, index) => {
       if (index === active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');

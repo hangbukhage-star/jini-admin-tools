@@ -77,3 +77,5 @@
  .lavender-home .category-tools{grid-template-columns:1fr;gap:10px}.jini-feature{padding:12px;gap:9px;margin-bottom:20px}.jini-feature p{font-size:12px}.jini-calendar{padding:7px}.jini-calendar div{gap:2px}.jini-calendar i{height:9px}
 }
 
+
+@media (max-width: 560px) { .radar-subtitle-tail { display: none; } }

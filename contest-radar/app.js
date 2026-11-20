@@ -1,5 +1,6 @@
 'use strict';
 const main = document.querySelector('main');
+document.body.classList.toggle('radar-in-portal', window.self !== window.top);
 const tags = ['AI 활용','행정업무','국민 누구나 참여'];
 const types = ['사례','아이디어','슬로건','영상','이미지','앱','웹서비스','기타'];
 const statuses = {open:'접수 중',upcoming:'접수 예정',closed:'마감'};

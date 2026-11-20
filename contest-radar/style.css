@@ -128,3 +128,6 @@ footer.shell { display: flex; justify-content: space-between; gap: 12px; margin-
 
 .radar-embedded { display: flow-root; }
 .radar-embedded .hero { border-radius: 14px 14px 0 0; }
+
+.radar-in-portal .hero { display: none; }
+.radar-in-portal .filter-stack { margin-top: 25px; }

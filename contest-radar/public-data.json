@@ -1,5 +1,6 @@
 [
   {
+    "id": 1,
     "title": "AI 미디어 콘텐츠 공모전 2026",
     "host": "경산시",
     "eligibility": "만 13세 이상 개인·팀. 청소년부는 보호자가 접수하며, 지역 우수상에 별도 지역 기준 적용.",
@@ -25,10 +26,10 @@
     ],
     "education": false,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 1,
     "history": []
   },
   {
+    "id": 2,
     "title": "FiPA 3S 아이디어 공모전",
     "host": "한국어촌어항공단",
     "eligibility": "국민 누구나. 개인 또는 3인 이내 팀으로 분야별 1건, 최대 3건.",
@@ -56,10 +57,10 @@
     ],
     "education": true,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 2,
     "history": []
   },
   {
+    "id": 3,
     "title": "2026 내가 소개하는 서울 숏폼 공모전",
     "host": "서울특별시",
     "eligibility": "국내 거주 내외국인 누구나",
@@ -85,10 +86,10 @@
     ],
     "education": false,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 3,
     "history": []
   },
   {
+    "id": 4,
     "title": "화포천습지 생물다양성 사진 공모전",
     "host": "김해시",
     "eligibility": "전 국민 누구나. 개인만 참여 가능.",
@@ -109,60 +110,10 @@
     ],
     "education": false,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 4,
     "history": []
   },
   {
-    "title": "2026년 서민금융진흥원 대국민 혁신 아이디어 공모전",
-    "host": "서민금융진흥원",
-    "eligibility": "국민 누구나 개인 또는 3인 이하 팀. 개인·팀 중복 참여 불가.",
-    "topic": "청년 정책, 공공부문 AI 대전환, 국민 주도 소통과 거버넌스",
-    "format": "제안서, 참가서약서 및 개인정보 동의서를 이메일 제출",
-    "prize": "대상 100만 원, 최우수 각 30만 원, 우수 각 10만 원",
-    "announced": "2026-09-18",
-    "start": "2026-09-17",
-    "end": "2026-10-12",
-    "time": "",
-    "url": "https://www.kinfa.or.kr/notificationPromotion/noticeDetail.do?seq=35397",
-    "attachments": [],
-    "tags": [
-      "AI 활용",
-      "행정업무",
-      "국민 누구나 참여"
-    ],
-    "types": [
-      "아이디어"
-    ],
-    "education": true,
-    "checked": "2026-11-20T09:46:14+09:00",
-    "id": 5,
-    "history": []
-  },
-  {
-    "title": "2026년 국민생각함 정책 아이디어 공모전",
-    "host": "국민권익위원회",
-    "eligibility": "대한민국 성인. 청년부 만 19~34세 및 성인 일반부 만 35세 이상.",
-    "topic": "국민 생활과 경제활동을 개선하는 공공정책 제안",
-    "format": "공식 서식으로 정책 아이디어 제출",
-    "prize": "",
-    "announced": "",
-    "start": "2026-04-13",
-    "end": "2026-06-12",
-    "time": "24:00",
-    "url": "https://modu.go.kr/front/epilogue/epilogueBbsViewPage.do?bbs_id=3e0ce99adf3c42368cf7a6e3413741ce",
-    "attachments": [],
-    "tags": [
-      "행정업무"
-    ],
-    "types": [
-      "아이디어"
-    ],
-    "education": true,
-    "checked": "2026-11-20T09:46:14+09:00",
-    "id": 6,
-    "history": []
-  },
-  {
+    "id": 48,
     "title": "2026 남양주시 규제개선 아이디어 공모전",
     "host": "남양주시",
     "eligibility": "규제개선에 관심 있는 남양주시민",
@@ -183,10 +134,10 @@
     ],
     "education": true,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 48,
     "history": []
   },
   {
+    "id": 49,
     "title": "2026년 AI·디지털 활용 연구·선도학교 우수사례 공모전",
     "host": "교육부·16개 시·도교육청·한국교육학술정보원",
     "eligibility": "2026년 AI·디지털 활용 연구·선도학교 소속 교원",
@@ -207,10 +158,10 @@
     ],
     "education": false,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 49,
     "history": []
   },
   {
+    "id": 50,
     "title": "2026 제2회 대한민국 AI 창조공모대전",
     "host": "한국창조미술협회",
     "eligibility": "대한민국 국민 누구나. 1차 심사 통과 시 전시비 별도.",
@@ -238,7 +189,6 @@
     ],
     "education": false,
     "checked": "2026-11-20T09:46:14+09:00",
-    "id": 50,
     "history": []
   }
 ]
