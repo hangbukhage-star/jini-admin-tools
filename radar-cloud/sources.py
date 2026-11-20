@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from datetime import date
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit, parse_qs
@@ -319,7 +320,8 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
             if not claim.rowcount:
                 return {'status':'오늘 예약 실행 기록 있음'}
     with ThreadPoolExecutor(max_workers=4) as pool:
-        jobs = {key:pool.submit(check_source, config, fetcher) for key,config in configs.items()}
+        jobs = {key:pool.submit(copy_context().run, check_source, config, fetcher)
+                for key,config in configs.items()}
         results = {}
         for key, job in jobs.items():
             result, batch = job.result()
