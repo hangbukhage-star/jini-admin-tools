@@ -125,7 +125,7 @@ const fields = {title:'제목',host:'주최기관',url:'공식 공고 URL',candi
                 eligibility:'참가 자격 및 제한',eligibilityEvidence:'참가 자격의 공식 근거',deadlineEvidence:'마감일의 공식 근거',topic:'공모 주제',format:'제출 형식',
                 prize:'시상·상금',correctionUrl:'정정 공고 URL',reviewReason:'검토 메모',attachments:'공식 첨부파일 (줄마다 이름 | URL)'};
 function admin() {
-  main.innerHTML='<article class="detail"><a href="/">공모전 목록</a><h1>공고 관리</h1><form id="auth" class="editor"><label>관리자 토큰<input type="password" name="token" autocomplete="current-password" required></label><label>관리번호<input type="password" inputmode="numeric" name="pin"></label><button class="btn main">접속</button></form><p id="message" role="status"></p><div id="admin-data"></div></article>';
+  main.innerHTML='<article class="detail"><a href="/contest-radar/">공모전 목록</a><h1>공고 관리</h1><form id="auth" class="editor"><label>관리자 토큰<input type="password" name="token" autocomplete="current-password" required></label><label>관리번호<input type="password" inputmode="numeric" name="pin"></label><button class="btn main">접속</button></form><p id="message" role="status"></p><div id="admin-data"></div></article>';
   const area=document.querySelector('#admin-data');
   const message=document.querySelector('#message');
   let token='';
