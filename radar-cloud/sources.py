@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from contextvars import copy_context
 from datetime import date
 from html.parser import HTMLParser
@@ -61,12 +62,22 @@ class Document(HTMLParser):
     def lines(self):
         return [' '.join(s.split()) for s in ''.join(self.parts).splitlines() if s.strip()]
 
+@lru_cache(maxsize=1)
+def allcon_tls_context():
+    context = ssl.create_default_context()
+    # Sectigo's missing intermediate can complete the chain only to a system trust anchor.
+    context.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
+    context.load_verify_locations(ROOT / 'allcon-intermediate.pem')
+    return context
+
 def fetch(address):
     form = ALLCON_FORM if address == ALLCON_BOARD else ''
     request = Request(address, data=form.encode() if form else None,
                       headers={'User-Agent':'JiniContestRadar/1.0', 'Accept':'application/json' if form else 'text/html'})
     try:
-        with urlopen(request, timeout=10) as response:
+        allcon = urlsplit(address).hostname == 'www.all-con.co.kr'
+        context = allcon_tls_context() if allcon else None
+        with urlopen(request, timeout=10, context=context) as response:
             data = response.read(2_000_001)
             encoding = response.headers.get_content_charset() or 'utf-8'
     except URLError as error:
