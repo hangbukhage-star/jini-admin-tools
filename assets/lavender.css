@@ -4,15 +4,12 @@
 .lavender-home [hidden]{display:none!important}
 .lavender-home>header,.lavender-news>header{background:#e5e2fa;color:#23232c;text-align:center;padding:44px 16px 18px;border-bottom:1px solid #aaa5bd}
 .lavender-home>header h1,.lavender-news>header h1{font-size:clamp(32px,5vw,60px);margin:0;line-height:1.16;letter-spacing:-.085em;word-break:keep-all}
-.lavender-news>header h1{font-size:clamp(30px,5vw,48px)}
-.lavender-home>header p,.lavender-news>header p{margin:12px 0 0;color:#4b4a58;font-size:15px}
+.news-subtitle-short{display:none}
+.lavender-home>header p,.lavender-news>header p{margin:12px 0 0;color:#4b4a58;font-size:15px;line-height:normal}
 .jini-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:22px}
 .jini-nav a,.lavender-news .jini-nav a{display:inline-block;text-decoration:none;border:1px solid #817992;border-radius:999px;background:#faf8ff;color:#302850;padding:8px 15px;font-size:14px;font-weight:bold;white-space:nowrap}
 .jini-nav a[aria-current],.lavender-news .jini-nav a[aria-current]{background:#302850;color:#fff}
 .lavender-home>main{max-width:none;display:flex;flex-direction:column;width:100%;margin:0;padding:0 0 32px}
-.jini-intro{text-align:center;background:#e5e2fa;padding:20px 12px;color:#302850}
-.jini-intro h2{margin:0;font-size:26px;letter-spacing:-.04em}
-.jini-intro p{margin:6px 0 0;color:#4b4a58;font-size:14px}
 .jini-categories,.jini-feature,.jini-empty,.lavender-home .tool-list{width:min(1060px,calc(100% - 32px));margin-left:auto;margin-right:auto}
 .jini-categories{margin-top:18px}
 .jini-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -72,10 +69,9 @@
 @media(max-width:640px){
  .jini-categories{margin-top:12px}
  .lavender-home>header,.lavender-news>header{padding:26px 8px 13px}.jini-nav{gap:4px;margin-top:16px}.jini-nav a,.lavender-news .jini-nav a{font-size:12px;padding:6px 8px}
- .jini-intro{padding:12px 9px}.jini-intro h2{font-size:21px}.jini-intro p{font-size:12px}
  .jini-filters,.lavender-home .category-tools{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.jini-filters button{min-height:42px;padding:5px 7px;font-size:12px}
  .lavender-home .category-tools{grid-template-columns:1fr;gap:10px}.jini-feature{padding:12px;gap:9px;margin-bottom:20px}.jini-feature p{font-size:12px}.jini-calendar{padding:7px}.jini-calendar div{gap:2px}.jini-calendar i{height:9px}
 }
 
 
-@media (max-width: 560px) { .radar-subtitle-tail { display: none; } }
+@media (max-width: 560px) { .radar-subtitle-tail, .news-subtitle-full { display: none; } .news-subtitle-short { display: inline; } }
