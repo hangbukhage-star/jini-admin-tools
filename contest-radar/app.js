@@ -15,19 +15,14 @@ function stamp(value) {
 }
 async function api(path, options={}) {
   const url = new URL(path, location.origin);
-  const id = url.pathname.match(/^\/api\/contests\/(\d+)$/)?.[1];
-  if (id) url.searchParams.set('id', id);
-  let response;
-  try {
-    response = await fetch('/api/contest-radar?'+url.searchParams,options);
-  } catch {
-    return window.radarPublicFallback(path);
+  if (url.pathname.startsWith('/api/admin')) {
+    const action = {'/api/admin':'admin','/api/admin/collect':'admin-collect','/api/admin/remove':'admin-remove'}[url.pathname];
+    const response = await fetch('/api/contest-cloud?action='+action,options);
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '클라우드 관리자 요청에 실패했습니다.');
+    return result;
   }
-  if ([502,503].includes(response.status) || !response.headers.get('content-type')?.includes('application/json'))
-    return window.radarPublicFallback(path);
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error);
-  return result;
+  return window.radarPublicFallback(path);
 }
 function badges(item) {
   return item.tags.map(tag=>'<span class="pill '+(tag===tags[1]?'admin':tag===tags[2]?'public':'')+'">'+escape(tag)+'</span>').join('');
@@ -130,21 +125,31 @@ const fields = {title:'제목',host:'주최기관',url:'공식 공고 URL',candi
                 eligibility:'참가 자격 및 제한',eligibilityEvidence:'참가 자격의 공식 근거',deadlineEvidence:'마감일의 공식 근거',topic:'공모 주제',format:'제출 형식',
                 prize:'시상·상금',correctionUrl:'정정 공고 URL',reviewReason:'검토 메모',attachments:'공식 첨부파일 (줄마다 이름 | URL)'};
 function admin() {
-  main.innerHTML='<article class="detail"><a href="/">공모전 목록</a><h1>공고 관리</h1><form id="auth" class="search"><input type="password" name="token" aria-label="관리자 토큰" placeholder="관리자 토큰" required><button class="btn main">접속</button></form><p id="message" role="status"></p><div id="admin-data"></div></article>';
+  main.innerHTML='<article class="detail"><a href="/">공모전 목록</a><h1>공고 관리</h1><form id="auth" class="editor"><label>관리자 토큰<input type="password" name="token" autocomplete="current-password" required></label><label>관리번호<input type="password" inputmode="numeric" name="pin"></label><button class="btn main">접속</button></form><p id="message" role="status"></p><div id="admin-data"></div></article>';
   const area=document.querySelector('#admin-data');
   const message=document.querySelector('#message');
   let token='';
+  let pin='';
   const request = (path='/api/admin',data) => api(path,{method:data===undefined?'GET':'POST',
-    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
+    headers:{Authorization:'Bearer '+token,'X-Radar-Pin':pin,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
   async function load() {
     const result=await request();
     area.innerHTML='<h2>출처 수집 상태</h2><button type="button" class="btn" id="collect">지금 수집</button>'+
       result.sources.map(s=>'<div class="admin-row"><div><strong>'+escape(s.name)+' · '+escape(s.status)+'</strong><p>'+escape(s.method)+'</p><p class="note">마지막 성공 '+escape(stamp(s.lastSuccess))+'</p><p class="error">'+escape(s.error||'')+'</p></div>'+official(s.url,'출처 보기')+'</div>').join('')+
       '<h2>최근 실행</h2>'+result.runs.map(r=>'<p>'+escape(stamp(r.started))+' · '+escape(r.mode)+' · '+escape(r.status)+'</p>').join('')+
       '<h2>등록 및 검토</h2><button type="button" class="btn" id="new">직접 등록</button><div id="editor"></div>'+
-      result.items.map(i=>'<div class="admin-row"><div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+' · '+escape(i.host)+'</p><p>'+escape(i.reviewReason)+'</p></div><button type="button" class="btn" data-edit="'+i.id+'">편집</button></div>').join('');
+      result.items.map(i=>'<div class="admin-row"><div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+' · '+escape(i.host)+'</p><p>'+escape(i.reviewReason)+'</p></div><div><button type="button" class="btn" data-edit="'+i.id+'">편집</button> <button type="button" class="btn" data-remove="'+i.id+'">삭제</button></div></div>').join('');
     area.querySelector('#new').onclick=()=>editor({});
     area.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>editor(result.items.find(i=>i.id===Number(button.dataset.edit))));
+    area.querySelectorAll('[data-remove]').forEach(button=>button.onclick=async()=>{
+      const item=result.items.find(i=>i.id===Number(button.dataset.remove));
+      if (!window.confirm(item.title+' 공고를 목록에서 삭제하시겠습니까?')) return;
+      try {
+        await request('/api/admin/remove',{id:item.id});
+        await load();
+        message.textContent='공고를 삭제했습니다.';
+      } catch(error) {message.textContent=error.message;}
+    });
     area.querySelector('#collect').onclick=async event=>{
       event.target.disabled=true;
       message.textContent='수집 중…';
@@ -192,11 +197,12 @@ function admin() {
   document.querySelector('#auth').onsubmit=async event=>{
     event.preventDefault();
     token=event.target.elements.token.value;
-    try {await load();event.target.elements.token.value='';message.textContent='관리자 인증이 완료되었습니다.';}
-    catch(error){area.textContent='';token='';message.textContent=error.message;}
+    pin=event.target.elements.pin.value;
+    try {await load();event.target.reset();message.textContent='관리자 인증이 완료되었습니다.';}
+    catch(error){area.textContent='';token='';pin='';message.textContent=error.message;}
   };
 }
-if (location.pathname==='/admin') admin();
+if (new URLSearchParams(location.search).get('admin')==='1') admin();
 else if (/^\d+$/.test(new URLSearchParams(location.search).get('id')||'')) detail().catch(error=>{
   main.textContent=error.message;
   const back=document.createElement('a');back.href='/contest-radar/';back.textContent=' 공모전 목록';main.append(back);
