@@ -20,8 +20,9 @@ def bridge(data=None):
     headers = {'Authorization': 'Bearer ' + os.environ['RADAR_BRIDGE_SECRET'],
                'User-Agent':'JiniContestRadar/1.0', 'Accept':'application/json',
                'Content-Type': 'application/json'}
-    request = Request(origin + '/state', data=json.dumps(data).encode() if data else None,
-                      headers=headers, method='PUT' if data else 'GET')
+    address = 'https://jini-admin-tools.vercel.app/api/contest-radar?bridge=1' if data else origin + '/state'
+    request = Request(address, data=json.dumps(data).encode() if data else None,
+                      headers=headers, method='POST' if data else 'GET')
     with urlopen(request, timeout=15) as response:
         return json.load(response)
 
@@ -79,11 +80,13 @@ class handler(Handler):
                 finally:
                     DB_PATH.reset(token)
         except HTTPError as error:
+            print(f'Radar cloud bridge HTTP {error.code}', file=sys.stderr)
             status = 409 if error.code == 409 else 503
             self.respond(status,{'error':'다른 수집 또는 편집이 진행 중입니다. 다시 시도해 주세요.' if status == 409 else '클라우드 저장소 연결 실패'})
         except (ValueError, TypeError, AttributeError):
             self.respond(400,{'error':'요청 형식을 확인해 주세요.'})
-        except (OSError, KeyError):
+        except (OSError, KeyError) as error:
+            print(f'Radar cloud runtime {type(error).__name__}', file=sys.stderr)
             self.respond(503,{'error':'클라우드 저장소 연결 실패'})
 
     def respond(self, status, body, mime='application/json; charset=utf-8'):

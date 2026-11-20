@@ -1,5 +1,24 @@
+import { timingSafeEqual } from 'node:crypto';
+
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
+  if (req.query.bridge === '1') {
+    if (req.method !== 'POST') return res.status(405).json({error:'POST required'});
+    const secret=process.env.RADAR_BRIDGE_SECRET;
+    const supplied=Buffer.from(req.headers.authorization || '');
+    const expected=Buffer.from('Bearer '+secret);
+    if (!secret || supplied.length!==expected.length || !timingSafeEqual(supplied,expected))
+      return res.status(401).json({error:'Unauthorized'});
+    try {
+      const upstream=await fetch(new URL('/state',process.env.RADAR_BRIDGE_ORIGIN),{
+        method:'PUT',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json'},
+        body:JSON.stringify(req.body),signal:AbortSignal.timeout(10000),redirect:'error'
+      });
+      return res.status(upstream.status).json(await upstream.json());
+    } catch {
+      return res.status(503).json({error:'Storage unavailable'});
+    }
+  }
   if (req.method !== 'GET') return res.status(405).json({error:'GET만 지원합니다.'});
   if (req.query.feed === '1') {
     const origin=process.env.RADAR_BRIDGE_ORIGIN;
