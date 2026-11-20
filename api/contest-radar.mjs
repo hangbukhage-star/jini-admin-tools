@@ -1,6 +1,20 @@
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if (req.method !== 'GET') return res.status(405).json({error:'GET만 지원합니다.'});
+  if (req.query.feed === '1') {
+    const origin=process.env.RADAR_BRIDGE_ORIGIN;
+    if (!origin) return res.status(503).json({error:'Feed pending'});
+    try {
+      const upstream=await fetch(new URL('/feed',origin),{signal:AbortSignal.timeout(5000),redirect:'error'});
+      if (!upstream.ok) throw new Error('Feed unavailable');
+      const feed=await upstream.json();
+      if (!Array.isArray(feed)) throw new Error('Invalid feed');
+      res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=120');
+      return res.status(200).json(feed);
+    } catch {
+      return res.status(503).json({error:'Feed unavailable'});
+    }
+  }
   const id = req.query.id;
   if (id !== undefined && (typeof id !== 'string' || !/^\d{1,12}$/.test(id)))
     return res.status(400).json({error:'공고 번호를 확인해 주세요.'});

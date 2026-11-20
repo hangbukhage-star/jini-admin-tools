@@ -10,11 +10,19 @@
   const tags = ['AI 활용','행정업무','국민 누구나 참여'];
   const compare = (a,b) => a < b ? -1 : a > b ? 1 : 0;
   let snapshot;
+  let feedSource='snapshot';
   window.radarPublicFallback = async path => {
-    snapshot ??= fetch('/contest-radar/public-data.json').then(response => {
+    snapshot ??= fetch('/api/contest-radar?feed=1').then(response => {
+      if (!response.ok) throw new Error('Cloud feed unavailable');
+      return response.json();
+    }).then(data => {
+      if (!Array.isArray(data)) throw new Error('Invalid cloud feed');
+      feedSource='cloud';
+      return data;
+    }).catch(() => fetch('/contest-radar/public-data.json').then(response => {
       if (!response.ok) throw new Error('공모전 목록을 불러올 수 없습니다.');
       return response.json();
-    }).catch(error => {snapshot = undefined; throw error;});
+    })).catch(error => {snapshot = undefined; throw error;});
     const current = kst.format(new Date());
     const rows = (await snapshot).map(item => getItem(item,current)).filter(item=>item.status!=='closed'||item.days>-15);
     const address = new URL(path,location.origin);
@@ -35,6 +43,6 @@
     results.sort((a,b)=>order==='latest' ? compare(b.announced,a.announced)||a.id-b.id :
       (order==='priority' ? tags.indexOf(a.primary)-tags.indexOf(b.primary) : 0) ||
       compare(a.end,b.end)||compare(a.time||'24:00',b.time||'24:00')||a.id-b.id);
-    return {items:results,source:'snapshot'};
+    return {items:results,source:feedSource};
   };
 })();

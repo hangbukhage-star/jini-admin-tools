@@ -7,6 +7,10 @@
     "api/news-collect.mjs": {
       "maxDuration": 300,
       "includeFiles": "node_modules/**"
+    },
+    "api/contest-cloud.py": {
+      "maxDuration": 120,
+      "includeFiles": "radar-cloud/**"
     }
   },
   "outputDirectory": "."
