@@ -17,7 +17,9 @@ from sync_feed import export_feed
 
 def bridge(data=None):
     origin = os.environ['RADAR_BRIDGE_ORIGIN'].rstrip('/')
-    headers = {'Authorization': 'Bearer ' + os.environ['RADAR_BRIDGE_SECRET'], 'Content-Type': 'application/json'}
+    headers = {'Authorization': 'Bearer ' + os.environ['RADAR_BRIDGE_SECRET'],
+               'User-Agent':'JiniContestRadar/1.0', 'Accept':'application/json',
+               'Content-Type': 'application/json'}
     request = Request(origin + '/state', data=json.dumps(data).encode() if data else None,
                       headers=headers, method='PUT' if data else 'GET')
     with urlopen(request, timeout=15) as response:
