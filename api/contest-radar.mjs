@@ -1,0 +1,24 @@
+export default async function handler(req,res) {
+  res.setHeader('Cache-Control','no-store');
+  if (req.method !== 'GET') return res.status(405).json({error:'GET만 지원합니다.'});
+  const id = req.query.id;
+  if (id !== undefined && (typeof id !== 'string' || !/^\d{1,12}$/.test(id)))
+    return res.status(400).json({error:'공고 번호를 확인해 주세요.'});
+  const setting=process.env.CONTEST_RADAR_ORIGIN;
+  if (!setting) return res.status(503).json({error:'실시간 수집 서버 미연결'});
+  try {
+    const origin=new URL(setting);
+    if (origin.protocol!=='https:' || origin.username || origin.password)
+      throw new Error('Invalid origin');
+    const target = new URL('/api/contests'+(id?'/'+id:''),origin);
+    for(const key of ['q','tag','status','type','sort','education']) {
+      const value=req.query[key];
+      if(typeof value==='string') target.searchParams.set(key,value.slice(0,200));
+    }
+    const upstream=await fetch(target,{signal:AbortSignal.timeout(5000),redirect:'error'});
+    if (!upstream.ok && upstream.status!==404) throw new Error('Upstream unavailable');
+    return res.status(upstream.status).json(await upstream.json());
+  } catch {
+    return res.status(502).json({error:'실시간 수집 서버에 연결하지 못했습니다.'});
+  }
+}

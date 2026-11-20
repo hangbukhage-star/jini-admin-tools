@@ -1,0 +1,244 @@
+[
+  {
+    "title": "AI 미디어 콘텐츠 공모전 2026",
+    "host": "경산시",
+    "eligibility": "만 13세 이상 개인·팀. 청소년부는 보호자가 접수하며, 지역 우수상에 별도 지역 기준 적용.",
+    "topic": "AI와 함께하는 당신의 이야기. 경산의 명소와 사람, 미래 경산 등 다섯 주제 중 하나를 영상으로 표현",
+    "format": "AI 제작 필수. 가로형 MP4(H.264), FHD~4K, 최대 90초. AI 활용 내역 첨부.",
+    "prize": "24편에 창작지원금 총 3,200만 원",
+    "announced": "2026-10-28",
+    "start": "2026-11-09",
+    "end": "2026-11-23",
+    "time": "23:59",
+    "url": "https://aiart.gbgs.art/guide",
+    "attachments": [
+      {
+        "label": "경산시 공모전 포스터",
+        "url": "https://www.mokpo.ac.kr/bbs/www/148/133772/download.do"
+      }
+    ],
+    "tags": [
+      "AI 활용"
+    ],
+    "types": [
+      "영상"
+    ],
+    "education": false,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 1,
+    "history": []
+  },
+  {
+    "title": "FiPA 3S 아이디어 공모전",
+    "host": "한국어촌어항공단",
+    "eligibility": "국민 누구나. 개인 또는 3인 이내 팀으로 분야별 1건, 최대 3건.",
+    "topic": "공단 사업·서비스 개선을 위한 ESG, 혁신, 안전 아이디어. 혁신 분야에 AI 활용 주제 포함.",
+    "format": "국민 아이디어 제안서 양식 작성 후 온라인 제출",
+    "prize": "대상 100만 원, 금상 70만 원, 은상 50만 원. 온누리상품권 지급.",
+    "announced": "",
+    "start": "2026-11-18",
+    "end": "2026-12-03",
+    "time": "",
+    "url": "https://modu.go.kr/front/epilogue/epilogueBbsViewPage.do?bbs_id=99280769db2c4b40a332f66dd1a7c0b7",
+    "attachments": [
+      {
+        "label": "공모 안내문",
+        "url": "https://modu.go.kr/commonfile/downloadEpilogueAtchmnfl.do?atchmnfl_id=533a6600fc8f400eb0d91ed76b683916"
+      }
+    ],
+    "tags": [
+      "AI 활용",
+      "행정업무",
+      "국민 누구나 참여"
+    ],
+    "types": [
+      "아이디어"
+    ],
+    "education": true,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 2,
+    "history": []
+  },
+  {
+    "title": "2026 내가 소개하는 서울 숏폼 공모전",
+    "host": "서울특별시",
+    "eligibility": "국내 거주 내외국인 누구나",
+    "topic": "다른 지역이나 외국인 친구에게 소개하고 싶은 서울시 정책을 숏폼으로 표현",
+    "format": "60초 이내 MP4, 가로 또는 세로. AI 활용 가능.",
+    "prize": "총 11명(팀), 총 1,000만 원",
+    "announced": "2026-11-09",
+    "start": "2026-11-09",
+    "end": "2026-11-27",
+    "time": "17:00",
+    "url": "https://modu.go.kr/front/epilogue/epilogueBbsViewPage.do?bbs_id=1e7d47e2ad6b4669b97c94e3550f695d",
+    "attachments": [
+      {
+        "label": "공모전 공고문 PDF",
+        "url": "https://modu.go.kr/commonfile/downloadEpilogueAtchmnfl.do?atchmnfl_id=38d90773fbe04d51a758e146e4f3dfd1"
+      }
+    ],
+    "tags": [
+      "AI 활용"
+    ],
+    "types": [
+      "영상"
+    ],
+    "education": false,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 3,
+    "history": []
+  },
+  {
+    "title": "화포천습지 생물다양성 사진 공모전",
+    "host": "김해시",
+    "eligibility": "전 국민 누구나. 개인만 참여 가능.",
+    "topic": "화포천습지의 생물다양성과 풍경을 사진으로 기록",
+    "format": "사진 작품과 구비서류를 이메일로 제출",
+    "prize": "",
+    "announced": "",
+    "start": "2026-11-05",
+    "end": "2026-12-04",
+    "time": "18:00",
+    "url": "https://modu.go.kr/front/epilogue/epilogueBbsViewPage.do?bbs_id=c7d9657fec8c4697bf31fca832707b1b",
+    "attachments": [],
+    "tags": [
+      "국민 누구나 참여"
+    ],
+    "types": [
+      "이미지"
+    ],
+    "education": false,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 4,
+    "history": []
+  },
+  {
+    "title": "2026년 서민금융진흥원 대국민 혁신 아이디어 공모전",
+    "host": "서민금융진흥원",
+    "eligibility": "국민 누구나 개인 또는 3인 이하 팀. 개인·팀 중복 참여 불가.",
+    "topic": "청년 정책, 공공부문 AI 대전환, 국민 주도 소통과 거버넌스",
+    "format": "제안서, 참가서약서 및 개인정보 동의서를 이메일 제출",
+    "prize": "대상 100만 원, 최우수 각 30만 원, 우수 각 10만 원",
+    "announced": "2026-09-18",
+    "start": "2026-09-17",
+    "end": "2026-10-12",
+    "time": "",
+    "url": "https://www.kinfa.or.kr/notificationPromotion/noticeDetail.do?seq=35397",
+    "attachments": [],
+    "tags": [
+      "AI 활용",
+      "행정업무",
+      "국민 누구나 참여"
+    ],
+    "types": [
+      "아이디어"
+    ],
+    "education": true,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 5,
+    "history": []
+  },
+  {
+    "title": "2026년 국민생각함 정책 아이디어 공모전",
+    "host": "국민권익위원회",
+    "eligibility": "대한민국 성인. 청년부 만 19~34세 및 성인 일반부 만 35세 이상.",
+    "topic": "국민 생활과 경제활동을 개선하는 공공정책 제안",
+    "format": "공식 서식으로 정책 아이디어 제출",
+    "prize": "",
+    "announced": "",
+    "start": "2026-04-13",
+    "end": "2026-06-12",
+    "time": "24:00",
+    "url": "https://modu.go.kr/front/epilogue/epilogueBbsViewPage.do?bbs_id=3e0ce99adf3c42368cf7a6e3413741ce",
+    "attachments": [],
+    "tags": [
+      "행정업무"
+    ],
+    "types": [
+      "아이디어"
+    ],
+    "education": true,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 6,
+    "history": []
+  },
+  {
+    "title": "2026 남양주시 규제개선 아이디어 공모전",
+    "host": "남양주시",
+    "eligibility": "규제개선에 관심 있는 남양주시민",
+    "topic": "시민 생활·기업 활동에 불편이나 부담을 일으키는 행정규제 개선",
+    "format": "제안서를 이메일·QR·우편 등으로 제출",
+    "prize": "",
+    "announced": "2026-10-19",
+    "start": "2026-10-21",
+    "end": "2026-11-20",
+    "time": "",
+    "url": "https://www.nyj.go.kr/www/selectEminwonWebView.do?key=2492&pk=89539",
+    "attachments": [],
+    "tags": [
+      "행정업무"
+    ],
+    "types": [
+      "아이디어"
+    ],
+    "education": true,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 48,
+    "history": []
+  },
+  {
+    "title": "2026년 AI·디지털 활용 연구·선도학교 우수사례 공모전",
+    "host": "교육부·16개 시·도교육청·한국교육학술정보원",
+    "eligibility": "2026년 AI·디지털 활용 연구·선도학교 소속 교원",
+    "topic": "AI·디지털 도구 활용 수업·평가 혁신, 학생 디지털 리터러시, 학교 단위 AI·디지털 교육 확산",
+    "format": "신청서, 개인정보 동의서, 공모전 지원서. 단체 분과는 학교장 직인 필요.",
+    "prize": "총 27점. 분야별 대상 100만 원, 최우수 50만 원, 우수 30만 원, 장려 20만 원.",
+    "announced": "2026-11-04",
+    "start": "2026-11-04",
+    "end": "2026-11-27",
+    "time": "18:00",
+    "url": "https://www.keris.or.kr/main/na/ntt/selectNttInfo.do?mi=1051&nttSn=44014",
+    "attachments": [],
+    "tags": [
+      "AI 활용"
+    ],
+    "types": [
+      "사례"
+    ],
+    "education": false,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 49,
+    "history": []
+  },
+  {
+    "title": "2026 제2회 대한민국 AI 창조공모대전",
+    "host": "한국창조미술협회",
+    "eligibility": "대한민국 국민 누구나. 1차 심사 통과 시 전시비 별도.",
+    "topic": "한국의 멋 또는 내가 꿈꾸는 내일을 AI 이미지·영상으로 표현",
+    "format": "AI 이미지 또는 AI 영상과 출품원서",
+    "prize": "",
+    "announced": "2026-10-23",
+    "start": "2026-11-23",
+    "end": "2026-11-27",
+    "time": "",
+    "url": "https://koreaaiart.com/",
+    "attachments": [
+      {
+        "label": "공식 출품 양식",
+        "url": "https://koreaaiart.com/assets/forms/submission-form.hwpx"
+      }
+    ],
+    "tags": [
+      "AI 활용",
+      "국민 누구나 참여"
+    ],
+    "types": [
+      "영상",
+      "이미지"
+    ],
+    "education": false,
+    "checked": "2026-11-20T09:46:14+09:00",
+    "id": 50,
+    "history": []
+  }
+]

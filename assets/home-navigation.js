@@ -7,6 +7,23 @@
   const title = document.querySelector('#section-title');
   const caption = document.querySelector('#section-caption');
   const nav = [...document.querySelectorAll('.jini-nav a')];
+  const radar = document.querySelector('#contest-radar-panel');
+  const radarFrame = document.querySelector('#contest-radar-frame');
+  let radarObserver;
+
+  radarFrame.addEventListener('load', () => {
+    radarObserver?.disconnect();
+    const body = radarFrame.contentDocument?.body;
+    if (!body) return;
+    const fit = () => {
+      const height = Math.ceil(body.getBoundingClientRect().height);
+      if (height > 0) radarFrame.style.height = height + 'px';
+    };
+    radarObserver = new ResizeObserver(fit);
+    radarObserver.observe(body);
+    fit();
+  });
+
   let selected = -1;
 
   function render() {
@@ -25,7 +42,10 @@
     document.querySelector('.tool-list').setAttribute('aria-label', living ? '생활도구 목록' : '업무별 행정도구');
     filterBox.hidden = !admin;
     feature.hidden = !admin || selected !== -1;
-    empty.hidden = admin;
+    empty.hidden = !living;
+    title.parentElement.hidden = contests;
+    radar.hidden = !contests;
+    if (contests && !radarFrame.hasAttribute('src')) radarFrame.src = radarFrame.dataset.src;
     empty.textContent = living ? '등록된 생활도구가 없습니다.' : '등록된 공모전 소식이 없습니다.';
     filters.forEach((button, index) => button.setAttribute('aria-pressed', String(index === selected)));
     categories.forEach((category, index) => {
