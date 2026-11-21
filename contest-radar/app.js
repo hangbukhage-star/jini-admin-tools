@@ -133,8 +133,9 @@ function admin() {
   const request = (path='/api/admin',data) => api(path,{method:data===undefined?'GET':'POST',
     headers:{Authorization:'Bearer '+token,'X-Radar-Pin':pin,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
   function sourceLinks(item) {
-    return (item.url ? official(item.url) : '') +
-      (item.candidateUrl && item.candidateUrl!==item.url ? official(item.candidateUrl,'수집 페이지 보기') : '');
+    if (item.url) return official(item.url);
+    if (item.officialHint) return official(item.officialHint,'주최 측 게시글 후보');
+    return '<span class="note">공식 공고 링크 미확인</span>';
   }
   async function load(skipped = []) {
     const result=await request();
