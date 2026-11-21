@@ -132,6 +132,10 @@ function admin() {
   let pin='';
   const request = (path='/api/admin',data) => api(path,{method:data===undefined?'GET':'POST',
     headers:{Authorization:'Bearer '+token,'X-Radar-Pin':pin,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
+  function sourceLinks(item) {
+    return (item.url ? official(item.url) : '') +
+      (item.candidateUrl && item.candidateUrl!==item.url ? official(item.candidateUrl,'수집 페이지 보기') : '');
+  }
   async function load(skipped = []) {
     const result=await request();
     const reasons=new Map(skipped.map(item=>[item.id,item.reason]));
@@ -143,7 +147,12 @@ function admin() {
       '<p class="note">게시할 검토 대기 공고를 체크하세요. 공식 근거가 비어 있는 공고는 보완이 필요합니다.</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
       result.items.map(i=>'<div class="admin-row"><div class="admin-record">'+
         (!i.published?'<input type="checkbox" data-publish-id="'+i.id+'" aria-label="'+escape(i.title)+' 게시 선택">':'')+
-        '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+' · '+escape(i.host)+'</p><p>'+escape(i.reviewReason)+'</p>'+
+        '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+
+        (i.host?' · '+escape(i.host):'')+(i.types.length?' · '+escape(i.types.join(', ')):'')+'</p>'+
+        '<p class="note">'+(i.eligibility?'참가 '+escape(i.eligibility):'참가 자격 미확인')+'</p>'+
+        '<p class="note">'+(i.end?dateText(i.end)+' 마감'+(i.time?' '+escape(i.time):''):'마감일 미확인')+'</p>'+
+        (i.tags.length?'<div>'+badges(i)+'</div>':'')+
+        '<div class="admin-source-links">'+sourceLinks(i)+'</div>'+
         (reasons.has(i.id)?'<p class="error">'+escape(reasons.get(i.id))+'</p>':'')+
         '</div></div><div><button type="button" class="btn" data-edit="'+i.id+'">편집</button> <button type="button" class="btn" data-remove="'+i.id+'">삭제</button></div></div>').join('');
     const publishButton=area.querySelector('#publish-selected');
@@ -202,7 +211,7 @@ function admin() {
         '<input name="'+key+'" value="'+escape(value)+'" '+(key==='title'?'required':'')+' '+(['announced','start','end'].includes(key)?'type="date"':'')+'>')+'</label>';
     }).join('');
     const checks=(name,values)=>'<div class="checks">'+values.map(value=>'<label><input type="checkbox" name="'+name+'" value="'+escape(value)+'" '+(item[name]?.includes(value)?'checked':'')+'>'+escape(value)+'</label>').join('')+'</div>';
-    container.innerHTML='<form class="editor panel">'+(item.candidateUrl?official(item.candidateUrl,'후보 출처 열기'):'')+
+    container.innerHTML='<form class="editor panel"><div class="admin-source-links">'+sourceLinks(item)+'</div>'+
       '<div class="grid">'+fieldsHtml+'</div><fieldset><legend>분류</legend>'+checks('tags',tags)+'</fieldset><fieldset><legend>제출 유형</legend>'+checks('types',types)+'</fieldset>'+
       '<label class="switch"><input type="checkbox" name="education" '+(item.education?'checked':'')+'> 교육행정직 맞춤</label>'+
       '<label class="switch"><input type="checkbox" name="published" '+(item.published?'checked':'')+'> 공식 원문에서 참가 자격과 접수기간을 확인했고 공개합니다.</label><button class="btn main">공고 저장</button><p role="status"></p></form>';
