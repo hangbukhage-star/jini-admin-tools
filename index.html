@@ -224,6 +224,27 @@
       font-size: 12px;
     }
 
+    .tool-totals {
+      max-width: 860px;
+      margin: 12px auto 0;
+      padding: 4px 12px;
+      color: #fff;
+      background: #fff;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .tool-totals span {
+      display: inline-block;
+      margin: 2px 6px;
+    }
+
+    .tool-totals::selection,
+    .tool-totals span::selection {
+      color: #fff;
+      background: #382d62;
+    }
+
     .tool-stats[data-state="offline"] {
       display: none;
     }
@@ -1210,6 +1231,7 @@
 
   <footer><div class="site-visitors" aria-label="방문자 현황" aria-live="polite"><span>오늘 방문자 <strong data-visit-today>집계 중</strong></span><span>누적 방문자 <strong data-visit-total>집계 중</strong> <small>(2026.10.19일이후)</small></span></div>
     댓글은 이름과 함께 공개됩니다. 개인정보를 적지 말아 주세요.
+    <div class="tool-totals" aria-label="도구별 누적 집계" hidden></div>
   </footer>
 
   <script src="./assets/stats-config.js"></script>
