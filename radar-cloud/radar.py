@@ -169,8 +169,8 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
     return ident, result
 
 def publish_many(db, ids):
-    if not isinstance(ids, list) or not 1 <= len(ids) <= 100 or any(type(i) is not int or i < 1 or i > 2**63-1 for i in ids):
-        raise ValueError('게시할 공고를 1건 이상, 최대 100건 선택해 주세요.')
+    if not isinstance(ids, list) or not ids or any(type(i) is not int or i < 1 or i > 2**63-1 for i in ids):
+        raise ValueError('게시할 공고를 1건 이상 올바르게 선택해 주세요.')
     db.execute('BEGIN IMMEDIATE')
     published, skipped = [], []
     required = {
