@@ -4,7 +4,7 @@ from contextvars import copy_context
 from datetime import date
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit, parse_qs
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import json
 import os
 import re
@@ -12,14 +12,14 @@ import ssl
 import subprocess
 from urllib.error import URLError
 
-from radar import ROOT, connect, dump, now, save
+from radar import ROOT, connect, dump, normalized, now, reviewable, save
 
 MODU = 'https://modu.go.kr/front/epilogue/epilogueBbsList.do'
 PORTAL = 'https://gcontest.co.kr/front/index'
 ALLCON_BOARD = 'https://www.all-con.co.kr/page/ajax.contest_list.php'
 ALLCON_FORM = 't=1&rows=25&page=1&sortorder=asc'
 DAY = r"(?:(?:20)?([2-9]\d)\s*[.년/-]\s*)?(1[0-2]|0?[1-9])\s*[.월/-]\s*(3[01]|[12]\d|0?[1-9])(?!\d)\s*[.일]?\s*(?:\([월화수목금토일]\))?"
-PERIOD = re.compile(DAY + r'\s*[~∼～–]\s*(?:[’\x27]\s*)?' + DAY)
+PERIOD = re.compile(DAY + r'(?:\s*\d{1,2}:\d{2})?\s*[~∼～–]\s*(?:[’\x27]\s*)?' + DAY)
 CLOCK = re.compile(r'\s*\*?\s*(?:(\d{1,2}):(\d{2})|(\d{1,2})시|(?:까지\s*)?(자정))')
 ELIGIBILITY = re.compile(r'참\s*가\s*(?:자\s*격|대\s*상)|응\s*모\s*자\s*격|지\s*원\s*자\s*격|공\s*모\s*대\s*상|□\s*대상\s*:')
 
@@ -70,14 +70,20 @@ def allcon_tls_context():
     context.load_verify_locations(ROOT / 'allcon-intermediate.pem')
     return context
 
-def fetch(address):
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+def fetch(address, allow_redirect=True):
     form = ALLCON_FORM if address == ALLCON_BOARD else ''
     request = Request(address, data=form.encode() if form else None,
                       headers={'User-Agent':'JiniContestRadar/1.0', 'Accept':'application/json' if form else 'text/html'})
     try:
         allcon = urlsplit(address).hostname == 'www.all-con.co.kr'
         context = allcon_tls_context() if allcon else None
-        with urlopen(request, timeout=10, context=context) as response:
+        opener = urlopen if allow_redirect else build_opener(NoRedirect()).open
+        options = {'context':context} if allow_redirect else {}
+        with opener(request, timeout=10, **options) as response:
             data = response.read(2_000_001)
             encoding = response.headers.get_content_charset() or 'utf-8'
     except URLError as error:
@@ -280,6 +286,53 @@ def extract_eligibility(document):
                 return lines[index + 1]
     raise ValueError('본문에서 참가 자격을 읽지 못했습니다.')
 
+def apply_official_evidence(item, address, doc):
+    start,end,clock,deadline = official_schedule(address,doc)
+    eligibility = extract_eligibility(doc)
+    lines = doc.lines
+    anchor = next(index for index,line in enumerate(lines) if ELIGIBILITY.search(line))
+    body = ' '.join(lines[max(0,anchor-18):anchor+19])
+    tags = []
+    if re.search(r'(?:AI|인공지능)\s*(?:기술\s*)?활용\s*(?:가능|필수|허용|을 요구)|생성형\s*AI\s*(?:콘텐츠|영상|이미지)\s*(?:제작|공모)|바이브\s*코딩\s*(?:대회|공모)',body,re.I):
+        tags.append('AI 활용')
+    if re.search(r'행정\s*(?:업무\s*)?(?:개선|혁신|자동화|효율화)|공공\s*서비스\s*(?:개선|혁신)|정책\s*(?:아이디어|제안)|공공\s*데이터\s*(?:활용|분석)',body):
+        tags.append('행정업무')
+    if (re.search(r'국민\s*누구나|전\s*국민',eligibility) and
+            not re.search(r'만\s*\d|세\s*(?:이상|이하)|재학생|청소년|거주자|팀만|단체만',eligibility) and
+            re.search(r'개인\s*(?:참가|참여|응모|또는|및|·|,)|개인\s*\)',eligibility)):
+        tags.append('국민 누구나 참여')
+    item.update(url=address,start=start,end=end,time=clock,deadlineEvidence=deadline,
+                eligibility=eligibility,eligibilityEvidence=eligibility,tags=tags,
+                reviewReason='공식 게시글에서 접수기간과 참가 자격 확인 · 게시 전 원문 재확인')
+
+def verify_portal_notice(item, fetcher):
+    hint = item.get('officialHint','')
+    p = urlsplit(hint)
+    query = parse_qs(p.query)
+    if p.hostname in ('modu.go.kr','sotong.go.kr') and p.path in (
+            '/front/epilogue/epilogueBbsViewPage.do','/front/epilogue/epilogueNewViewPage.do'):
+        key = query.get('bbs_id',[''])[0]
+        if not re.fullmatch('[a-f0-9]{32}',key):
+            return
+        address = 'https://modu.go.kr'+p.path+'?bbs_id='+key
+    elif p.hostname in ('www.mois.go.kr','mois.go.kr') and re.fullmatch(
+            r'/frt/bbs/type\d+/commonSelectBoardArticle\.do',p.path):
+        board = query.get('bbsId',[''])[0]
+        number = query.get('nttId',[''])[0]
+        if not re.fullmatch(r'BBSMSTR_\d+',board) or not number.isdecimal():
+            return
+        address = 'https://www.mois.go.kr'+p.path+'?bbsId='+board+'&nttId='+number
+    else:
+        return
+    doc = fetch(address,allow_redirect=False) if fetcher is fetch else fetcher(address)
+    title = normalized(item['title'])
+    if len(title)<8 or title not in normalized(' '.join(doc.lines)):
+        return
+    try:
+        apply_official_evidence(item,address,doc)
+    except ValueError:
+        pass
+
 def configured_sources():
     return {
         'modu': ('소통24', '전자정부 공모전 게시판 · 신규 발견 및 공개 공고 재확인', MODU, 'board'),
@@ -306,7 +359,10 @@ def check_source(config, fetcher):
                 raise ValueError('공개 목록에서 공모전 링크를 찾지 못했습니다.')
             with ThreadPoolExecutor(max_workers=3) as details:
                 details_items = candidates[:20] if mode == 'portal' else candidates
-                tasks = [details.submit(enrich_portal,item,fetcher) for item in details_items]
+                def enrich(item):
+                    enrich_portal(item,fetcher)
+                    verify_portal_notice(item,fetcher)
+                tasks = [details.submit(enrich,item) for item in details_items]
                 for item,task in zip(details_items,tasks):
                     try:
                         task.result()
@@ -321,12 +377,9 @@ def check_source(config, fetcher):
                 if mode == 'board':
                     try:
                         detail = fetcher(item['candidateUrl'])
-                        item['url'] = item['candidateUrl']
                         item['attachments'] = [{'label':label, 'url':urljoin(source_url, link)}
                             for link, label in detail.links if label and 'downloadEpilogueAtchmnfl.do?' in link]
-                        start, end, clock, evidence = extract_schedule(detail)
-                        item.update(start=start,end=end,time=clock,deadlineEvidence=evidence)
-                        item['eligibilityEvidence'] = extract_eligibility(detail)
+                        apply_official_evidence(item,item['candidateUrl'],detail)
                     except Exception as error:
                         item['reviewReason'] += ' · ' + str(error)
                 batch.append((item, False))
@@ -362,6 +415,9 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
                 result['lastSuccess'] = result['checked'] if batch or not result['error'] else (
                     json.loads(prior['data']).get('lastSuccess') if prior else None)
                 for item, publish in batch:
+                    if not publish and not reviewable(item,started):
+                        result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
+                        continue
                     try:
                         _, outcome = save(db, item, publish, automatic=True)
                         label = ('public_' if publish else 'candidate_') + outcome

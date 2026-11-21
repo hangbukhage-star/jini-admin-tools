@@ -147,7 +147,7 @@ function admin() {
       '<button type="button" class="btn" id="select-all">전체 선택</button>'+
       '<button type="button" class="btn" id="clear-selection" disabled>선택 취소</button>'+
       '<button type="button" class="btn main" id="publish-selected" disabled>선택 공고 게시 (0건)</button></div>'+
-      '<p class="note">게시할 검토 대기 공고를 체크하세요. 공식 근거가 비어 있는 공고는 보완이 필요합니다.</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
+      '<p class="note">공식 원문을 확인한 접수 중·예정 공고 중 우선 범주에 해당하는 건만 검토 목록에 표시합니다. 검토 대기 '+result.items.filter(i=>!i.published).length+'건</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
       result.items.map(i=>'<div class="admin-row"><div class="admin-record">'+
         (!i.published?'<input type="checkbox" data-publish-id="'+i.id+'" aria-label="'+escape(i.title)+' 게시 선택">':'')+
         '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+
