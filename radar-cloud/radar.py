@@ -63,7 +63,7 @@ def clean(raw):
         raise ValueError('접수기간을 확인해 주세요.')
     if item['time'] and item['time'] != '24:00' and not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', item['time']):
         raise ValueError('시각 형식은 HH:MM입니다.')
-    for key in ('url', 'candidateUrl', 'correctionUrl'):
+    for key in ('url', 'candidateUrl', 'correctionUrl', 'officialHint'):
         item[key] = url(raw.get(key))
     item['attachments'] = [{'label': str(a['label'])[:300], 'url': url(a['url'])}
                            for a in raw.get('attachments', []) if a.get('url')]
@@ -146,8 +146,8 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
             db.executemany('INSERT OR IGNORE INTO alias VALUES (?,?)', [(key, ident) for key in keys])
             return ident, 'unchanged'
         if automatic and not publish:
-            for key in ('title','host','start','end','candidateUrl','url','attachments'):
-                item[key] = old[key] or item[key]
+            for key in ('title','host','start','end','candidateUrl','url','attachments','officialHint'):
+                item[key] = old.get(key) or item[key]
             if old['host'] in ('전체','응모대상') and raw.get('host'):
                 item['host'] = raw['host']
         if automatic and row['published'] and publish:
@@ -157,7 +157,7 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
         if delta and (row['published'] or publish):
             db.execute('INSERT INTO history VALUES (?,?)', (ident, dump({
                 'changes': delta, 'checked': item['checked'], 'url': item['correctionUrl'] or item['url']})))
-        unchanged = all(old[k] == item[k] for k in item if k != 'checked') and row['published'] == publish
+        unchanged = all(old.get(k, '') == item[k] for k in item if k != 'checked') and row['published'] == publish
         db.execute('UPDATE contest SET published=?, data=? WHERE id=?', (publish, dump(item), ident))
         result = 'unchanged' if unchanged else 'updated'
     else:

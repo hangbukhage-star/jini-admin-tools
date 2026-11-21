@@ -143,8 +143,26 @@ def new_portal_candidates(board, fetcher, mode):
         if len(seen) == 25:
             break
 
+def organizer_post_hint(document, candidate_url):
+    for raw, label in document.links:
+        p = urlsplit(urljoin(candidate_url, raw))
+        host = p.hostname or ''
+        if (p.scheme != 'https' or p.username or p.password or
+                not host.endswith(('.go.kr','.ac.kr','.or.kr'))):
+            continue
+        label = re.sub(r'\s+','',label)
+        if label not in ('바로가기','홈페이지','홈페이지바로가기','공식홈페이지','공식공고','공식공고보기','공고문','공고보기','공식사이트'):
+            continue
+        if re.search(r'/(?:board|bbs|epilogue|notice)(?:[/.]|$)',p.path,re.I) and (
+            p.query or re.search(r'/(?:view|detail)/[^/]+',p.path,re.I)
+        ) and not re.search(r'download|fileDown|login',p.path,re.I):
+            return p.geturl()
+    return ''
+
 def enrich_portal(item, fetcher):
     doc = fetcher(item['candidateUrl'])
+    if hint := organizer_post_hint(doc,item['candidateUrl']):
+        item['officialHint'] = hint
     match = re.search(r'<div class="tit">주최</div>\s*<div class="txt">(.*?)</div>|'
                       r'<span class="tit">주최/주관</span>(.*?)</li>',doc.raw,re.S)
     if match:
@@ -265,7 +283,7 @@ def extract_eligibility(document):
 def configured_sources():
     return {
         'modu': ('소통24', '전자정부 공모전 게시판 · 신규 발견 및 공개 공고 재확인', MODU, 'board'),
-        'portal': ('지콘테스트', '공개 포털 목록 · 후보 발견', PORTAL, 'portal'),
+        'portal': ('지콘테스트', '공개 포털 목록과 상세 · 후보 발견', PORTAL, 'portal'),
         'thinkgood': ('씽굿', '공개 목록의 구조화 데이터와 상세 · 후보 발견', 'https://www.thinkcontest.com/thinkgood/index.do', 'thinkgood'),
         'wevity': ('위비티', '공개 공모전 목록과 상세 · 후보 발견', 'https://www.wevity.com/?c=find', 'wevity'),
         'allcon': ('올콘', '공개 공모전 목록의 JSON과 상세 · 후보 발견', ALLCON_BOARD, 'allcon'),
@@ -280,19 +298,21 @@ def check_source(config, fetcher):
     name, method, source_url, mode = config
     result = dict(name=name,method=method,url=source_url,checked=now().isoformat(),counts={})
     batch, errors = [], []
-    if mode in ('thinkgood','wevity','allcon'):
+    if mode in ('portal','thinkgood','wevity','allcon'):
         try:
-            candidates = list(new_portal_candidates(source_url,fetcher,mode))
+            candidates = (discovered(source_url,fetcher,True) if mode == 'portal'
+                          else list(new_portal_candidates(source_url,fetcher,mode)))
             if not candidates:
                 raise ValueError('공개 목록에서 공모전 링크를 찾지 못했습니다.')
             with ThreadPoolExecutor(max_workers=3) as details:
-                tasks = [details.submit(enrich_portal,item,fetcher) for item in candidates]
-                for item,task in zip(candidates,tasks):
+                details_items = candidates[:20] if mode == 'portal' else candidates
+                tasks = [details.submit(enrich_portal,item,fetcher) for item in details_items]
+                for item,task in zip(details_items,tasks):
                     try:
                         task.result()
                     except Exception as error:
                         errors.append(item['title']+' · 상세 읽기 실패 '+str(error))
-                    batch.append((item,False))
+            batch.extend((item,False) for item in candidates)
         except Exception as error:
             errors.append(str(error))
     elif mode != 'tracked':
