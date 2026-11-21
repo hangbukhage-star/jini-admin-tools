@@ -2,6 +2,8 @@
   "use strict";
 
   const cards = [...document.querySelectorAll(".tool-card[data-tool-id]")];
+  const totals = document.querySelector(".tool-totals");
+  const totalLabels = new Map();
   const apiBase = String(window.JINI_STATS_CONFIG?.apiBase || "").replace(/\/$/, "");
   const numberFormat = new Intl.NumberFormat("ko-KR");
 
@@ -16,6 +18,8 @@
     element.textContent = `👁 실행 ${numberFormat.format(count)}회 (2026.10.14. 이후)`;
     element.dataset.state = "ready";
     card.dataset.toolCount = String(count);
+    const label = totalLabels.get(card);
+    if (label) label.textContent = `${card.querySelector("h2").textContent.trim()} ${numberFormat.format(count)}회`;
   }
 
   function hideCounters() {
@@ -45,6 +49,7 @@
     try {
       const data = await request("/counts", { cache: "no-store" });
       cards.forEach((card) => showCount(card, data.counts?.[card.dataset.toolId] || 0));
+      if (totals) totals.hidden = false;
     } catch {
       hideCounters();
     }
@@ -73,6 +78,11 @@
   }
 
   cards.forEach((card) => {
+    if (totals) {
+      const label = document.createElement("span");
+      totalLabels.set(card, label);
+      totals.append(label);
+    }
     card.querySelector("[data-track-tool]")?.addEventListener("click", () => track(card));
   });
 
