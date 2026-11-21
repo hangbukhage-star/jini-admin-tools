@@ -111,6 +111,12 @@ legend { margin-bottom: 6px; font-size: .875rem; font-weight: 750; }
 .editor .checks label, .editor .switch { display: flex; align-items: center; gap: 6px; }
 .admin-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .admin-row > div { min-width: 0; overflow-wrap: anywhere; }
+.publish-tools, .admin-record { display: flex; align-items: center; gap: 8px; }
+.publish-tools { flex-wrap: wrap; }
+.admin-source-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-source-links:empty { display: none; }
+.admin-record input { flex: 0 0 auto; min-height: auto; width: 19px; height: 19px; accent-color: #61508a; }
+.btn:disabled { opacity: .5; cursor: default; }
 footer.shell { display: grid; gap: 8px; margin-top: 30px; padding-block: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: .875rem; text-align: center; }
 footer.shell a { text-underline-offset: 3px; }
 

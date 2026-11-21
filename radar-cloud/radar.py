@@ -168,6 +168,34 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
     db.executemany('INSERT OR IGNORE INTO alias VALUES (?,?)', [(key, ident) for key in keys])
     return ident, result
 
+def publish_many(db, ids):
+    if not isinstance(ids, list) or not 1 <= len(ids) <= 100 or any(type(i) is not int or i < 1 or i > 2**63-1 for i in ids):
+        raise ValueError('게시할 공고를 1건 이상, 최대 100건 선택해 주세요.')
+    db.execute('BEGIN IMMEDIATE')
+    published, skipped = [], []
+    required = {
+        'host':'주최기관','url':'공식 공고 URL','eligibility':'참가 자격',
+        'start':'접수 시작일','end':'접수 마감일','eligibilityEvidence':'참가 자격 근거',
+        'deadlineEvidence':'마감일 근거','tags':'공모전 범주',
+    }
+    for ident in dict.fromkeys(ids):
+        row = db.execute('SELECT * FROM contest WHERE id=? AND id NOT IN (SELECT id FROM removed)', (ident,)).fetchone()
+        if not row or row['published']:
+            skipped.append({'id':ident,'reason':'게시할 수 있는 검토 대기 공고가 아닙니다.'})
+            continue
+        record = json.loads(row['data'])
+        missing = [label for key,label in required.items() if not record.get(key)]
+        if missing:
+            skipped.append({'id':ident,'reason':'보완 필요 · ' + ', '.join(missing)})
+            continue
+        try:
+            save(db, dict(record,id=ident), publish=True)
+        except ValueError as error:
+            skipped.append({'id':ident,'reason':str(error)})
+            continue
+        published.append(ident)
+    return {'published':published,'skipped':skipped}
+
 def public_item(row, current):
     item = json.loads(row['data'])
     days = (date.fromisoformat(item['end']) - current.date()).days
@@ -280,7 +308,7 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(404, {'error':'찾을 수 없습니다.'})
 
     def do_POST(self):
-        if self.path not in ('/api/admin', '/api/admin/collect', '/api/admin/remove'):
+        if self.path not in ('/api/admin', '/api/admin/collect', '/api/admin/remove', '/api/admin/publish'):
             self.respond(404, {'error':'찾을 수 없습니다.'})
             return
         if not self.admin():
@@ -295,15 +323,20 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('등록 데이터 크기를 확인해 주세요.')
             body = json.loads(self.rfile.read(length))
             with connect() as db:
-                if self.path.endswith('/remove'):
+                if self.path.endswith('/publish'):
+                    if body.get('confirmed') is not True:
+                        raise ValueError('선택한 공고의 공식 원문 확인이 필요합니다.')
+                    result = publish_many(db, body.get('ids'))
+                elif self.path.endswith('/remove'):
                     ident = int(body['id'])
                     if not db.execute('SELECT 1 FROM contest WHERE id=?', (ident,)).fetchone():
                         raise ValueError('삭제할 공고를 찾을 수 없습니다.')
                     db.execute('INSERT OR IGNORE INTO removed VALUES (?,?)', (ident,now().isoformat()))
-                    outcome = 'removed'
+                    result = {'id':ident,'result':'removed'}
                 else:
                     ident, outcome = save(db, body, body.get('published') is True)
-            self.respond(200, {'id':ident,'result':outcome})
+                    result = {'id':ident,'result':outcome}
+            self.respond(200, result)
         except (ValueError, KeyError, TypeError, AttributeError) as error:
             self.respond(400, {'error': str(error)})
 
