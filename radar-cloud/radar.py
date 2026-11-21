@@ -146,7 +146,7 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
             db.executemany('INSERT OR IGNORE INTO alias VALUES (?,?)', [(key, ident) for key in keys])
             return ident, 'unchanged'
         if automatic and not publish:
-            for key in ('title','host','start','end','candidateUrl','url','attachments','officialHint'):
+            for key in ('title','host','candidateUrl','url','attachments','officialHint'):
                 item[key] = old.get(key) or item[key]
             if old['host'] in ('전체','응모대상') and raw.get('host'):
                 item['host'] = raw['host']
@@ -188,6 +188,9 @@ def publish_many(db, ids):
         if missing:
             skipped.append({'id':ident,'reason':'보완 필요 · ' + ', '.join(missing)})
             continue
+        if not reviewable(record, now()):
+            skipped.append({'id':ident,'reason':'접수 중·예정이며 공식 원문이 확인된 공고만 게시할 수 있습니다.'})
+            continue
         try:
             save(db, dict(record,id=ident), publish=True)
         except ValueError as error:
@@ -195,6 +198,16 @@ def publish_many(db, ids):
             continue
         published.append(ident)
     return {'published':published,'skipped':skipped}
+
+def reviewable(item, current):
+    if not all(item.get(key) for key in ('url','host','eligibility','eligibilityEvidence','start','end','deadlineEvidence','tags')):
+        return False
+    host = (urlsplit(item['url']).hostname or '').removeprefix('www.')
+    if not host or host in ('gcontest.co.kr','thinkcontest.com','wevity.com','all-con.co.kr','forms.gle'):
+        return False
+    day = current.date().isoformat()
+    return item['end'] > day or (item['end'] == day and
+        (not item.get('time') or current.strftime('%H:%M') <= item['time']))
 
 def public_item(row, current):
     item = json.loads(row['data'])
@@ -299,9 +312,17 @@ class Handler(BaseHTTPRequestHandler):
                         return
             if path == '/api/admin':
                 if self.admin():
+                    current = now()
+                    items = []
+                    excluded = 0
+                    for r in db.execute('SELECT * FROM contest WHERE id NOT IN (SELECT id FROM removed) ORDER BY published, id DESC'):
+                        item = dict(json.loads(r['data']), id=r['id'], published=bool(r['published']))
+                        if item['published'] or reviewable(item,current):
+                            items.append(item)
+                        else:
+                            excluded += 1
                     self.respond(200, {
-                        'items': [dict(json.loads(r['data']), id=r['id'], published=bool(r['published']))
-                                  for r in db.execute('SELECT * FROM contest WHERE id NOT IN (SELECT id FROM removed) ORDER BY published, id DESC')],
+                        'items': items, 'excluded': excluded,
                         'sources': [json.loads(r['data']) for r in db.execute('SELECT data FROM source')],
                         'runs': [json.loads(r['data']) for r in db.execute('SELECT data FROM runs ORDER BY day DESC LIMIT 20')]})
                 return
