@@ -61,14 +61,15 @@ test("모든 도구의 초기 조회수를 0으로 반환한다", async () => {
   const response = await worker.fetch(request("/counts"), environment());
   const body = await response.json();
   assert.equal(response.status, 200);
-  assert.equal(Object.keys(body.counts).length, 7);
+  assert.equal(Object.keys(body.counts).length, 9);
+  assert.equal(body.counts["messenger-converter"], 0);
   assert.equal(body.counts["work-plan"], 0);
 });
 
 test("등록된 도구의 실행 횟수를 누적한다", async () => {
   const env = environment();
-  const first = await worker.fetch(request("/count/work-plan", { method: "POST" }), env);
-  const second = await worker.fetch(request("/count/work-plan", { method: "POST" }), env);
+  const first = await worker.fetch(request("/count/messenger-converter", { method: "POST" }), env);
+  const second = await worker.fetch(request("/count/messenger-converter", { method: "POST" }), env);
   assert.equal((await first.json()).count, 1);
   assert.equal((await second.json()).count, 2);
 });

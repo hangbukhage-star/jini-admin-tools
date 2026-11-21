@@ -9,7 +9,8 @@ const TOOL_IDS = Object.freeze([
   "construction-photos",
   "pdf-editor",
   "file-compressor",
-  "poll-app"
+  "poll-app",
+  "messenger-converter"
 ]);
 
 const TOOL_ID_SET = new Set(TOOL_IDS);
