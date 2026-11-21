@@ -16,7 +16,7 @@ function stamp(value) {
 async function api(path, options={}) {
   const url = new URL(path, location.origin);
   if (url.pathname.startsWith('/api/admin')) {
-    const action = {'/api/admin':'admin','/api/admin/collect':'admin-collect','/api/admin/remove':'admin-remove'}[url.pathname];
+    const action = {'/api/admin':'admin','/api/admin/collect':'admin-collect','/api/admin/remove':'admin-remove','/api/admin/publish':'admin-publish'}[url.pathname];
     const response = await fetch('/api/contest-cloud?action='+action,options);
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || '클라우드 관리자 요청에 실패했습니다.');
@@ -132,13 +132,48 @@ function admin() {
   let pin='';
   const request = (path='/api/admin',data) => api(path,{method:data===undefined?'GET':'POST',
     headers:{Authorization:'Bearer '+token,'X-Radar-Pin':pin,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
-  async function load() {
+  async function load(skipped = []) {
     const result=await request();
+    const reasons=new Map(skipped.map(item=>[item.id,item.reason]));
     area.innerHTML='<h2>출처 수집 상태</h2><button type="button" class="btn" id="collect">지금 수집</button>'+
       result.sources.map(s=>'<div class="admin-row"><div><strong>'+escape(s.name)+' · '+escape(s.status)+'</strong><p>'+escape(s.method)+'</p><p class="note">마지막 성공 '+escape(stamp(s.lastSuccess))+'</p><p class="error">'+escape(s.error||'')+'</p></div>'+official(s.url,'출처 보기')+'</div>').join('')+
       '<h2>최근 실행</h2>'+result.runs.map(r=>'<p>'+escape(stamp(r.started))+' · '+escape(r.mode)+' · '+escape(r.status)+'</p>').join('')+
-      '<h2>등록 및 검토</h2><button type="button" class="btn" id="new">직접 등록</button><div id="editor"></div>'+
-      result.items.map(i=>'<div class="admin-row"><div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+' · '+escape(i.host)+'</p><p>'+escape(i.reviewReason)+'</p></div><div><button type="button" class="btn" data-edit="'+i.id+'">편집</button> <button type="button" class="btn" data-remove="'+i.id+'">삭제</button></div></div>').join('');
+      '<h2>등록 및 검토</h2><div class="publish-tools"><button type="button" class="btn" id="new">직접 등록</button>'+
+      '<button type="button" class="btn main" id="publish-selected" disabled>선택 공고 게시 (0건)</button></div>'+
+      '<p class="note">게시할 검토 대기 공고를 체크하세요. 공식 근거가 비어 있는 공고는 보완이 필요합니다.</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
+      result.items.map(i=>'<div class="admin-row"><div class="admin-record">'+
+        (!i.published?'<input type="checkbox" data-publish-id="'+i.id+'" aria-label="'+escape(i.title)+' 게시 선택">':'')+
+        '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+' · '+escape(i.host)+'</p><p>'+escape(i.reviewReason)+'</p>'+
+        (reasons.has(i.id)?'<p class="error">'+escape(reasons.get(i.id))+'</p>':'')+
+        '</div></div><div><button type="button" class="btn" data-edit="'+i.id+'">편집</button> <button type="button" class="btn" data-remove="'+i.id+'">삭제</button></div></div>').join('');
+    const publishButton=area.querySelector('#publish-selected');
+    const selections=()=>[...area.querySelectorAll('[data-publish-id]:checked')].map(box=>Number(box.dataset.publishId));
+    const updateSelection=()=>{
+      const count=selections().length;
+      publishButton.disabled=count===0||count>100;
+      publishButton.textContent='선택 공고 게시 ('+count+'건)';
+      area.querySelector('#publish-status').textContent=count>100?'한 번에 최대 100건까지 게시할 수 있습니다.':'';
+    };
+    area.querySelectorAll('[data-publish-id]').forEach(box=>box.addEventListener('change',updateSelection));
+    publishButton.onclick=async()=>{
+      const ids=selections();
+      if (!window.confirm('선택한 '+ids.length+'건의 공식 원문에서 참가 자격과 접수기간을 확인했으며, 게시할까요?')) return;
+      publishButton.disabled=true;
+      const boxes=[...area.querySelectorAll('[data-publish-id]')];
+      boxes.forEach(box=>box.disabled=true);
+      const currentStatus=area.querySelector('#publish-status');
+      currentStatus.textContent='선택 공고를 게시하는 중입니다.';
+      try {
+        const response=await request('/api/admin/publish',{ids,confirmed:true});
+        await load(response.skipped);
+        const summary='게시 '+response.published.length+'건 · 보완 또는 건너뜀 '+response.skipped.length+'건';
+        area.querySelector('#publish-status').textContent=summary;
+      } catch(error) {
+        boxes.forEach(box=>box.disabled=false);
+        updateSelection();
+        currentStatus.textContent=error.message;
+      }
+    };
     area.querySelector('#new').onclick=()=>editor({});
     area.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>editor(result.items.find(i=>i.id===Number(button.dataset.edit))));
     area.querySelectorAll('[data-remove]').forEach(button=>button.onclick=async()=>{

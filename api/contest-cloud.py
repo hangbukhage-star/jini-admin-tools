@@ -45,7 +45,7 @@ class handler(Handler):
             if not write or not self.verified_bridge():
                 self.respond(401,{'error':'수집기 인증이 필요합니다.'})
                 return
-        elif action not in ('admin','admin-collect','admin-remove'):
+        elif action not in ('admin','admin-collect','admin-remove','admin-publish'):
             self.respond(404,{'error':'찾을 수 없습니다.'})
             return
         elif not self.admin():
@@ -70,7 +70,7 @@ class handler(Handler):
                         args = json.loads(self.rfile.read(length)) if length else {}
                         self.respond(200,collect(scheduled=args.get('scheduled') is True))
                     else:
-                        self.path = '/api/admin' + {'admin':'','admin-collect':'/collect','admin-remove':'/remove'}[action]
+                        self.path = '/api/admin' + {'admin':'','admin-collect':'/collect','admin-remove':'/remove','admin-publish':'/publish'}[action]
                         if write:
                             super().do_POST()
                         elif action == 'admin':
