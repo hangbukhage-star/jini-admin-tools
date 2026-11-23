@@ -402,7 +402,20 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
             claim = db.execute('INSERT OR IGNORE INTO runs VALUES (?,?)', (day, dump({
                 'started':started.isoformat(),'mode':'예약','status':'실행 중'})))
             if not claim.rowcount:
-                return {'status':'오늘 예약 실행 기록 있음'}
+                previous = db.execute('SELECT data FROM runs WHERE day=?', (day,)).fetchone()
+                record = json.loads(previous['data']) if previous else {}
+                if record.get('status') == '완료':
+                    return {'status':'오늘 예약 실행 완료'}
+                try:
+                    previous_start = __import__('datetime').datetime.fromisoformat(record['started'])
+                    stale = (started - previous_start).total_seconds() > 1800
+                except (KeyError, ValueError, TypeError):
+                    stale = True
+                if not stale:
+                    return {'status':'예약 수집 진행 중'}
+                db.execute('UPDATE runs SET data=? WHERE day=?', (dump({
+                    'started':started.isoformat(),'mode':'예약','status':'실행 중',
+                    'retryOf':record.get('started')}),day))
     with ThreadPoolExecutor(max_workers=4) as pool:
         jobs = {key:pool.submit(copy_context().run, check_source, config, fetcher)
                 for key,config in configs.items()}
@@ -416,8 +429,12 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
                     json.loads(prior['data']).get('lastSuccess') if prior else None)
                 for item, publish in batch:
                     if not publish and not reviewable(item,started):
-                        result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
-                        continue
+                        # Keep incomplete portal discoveries in the private review queue.
+                        # Never publish them until the official evidence is verified.
+                        if not item.get('candidateUrl') or not item.get('title'):
+                            result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
+                            continue
+                        result['counts']['candidate_pending_verification'] = result['counts'].get('candidate_pending_verification',0)+1
                     try:
                         _, outcome = save(db, item, publish, automatic=True)
                         label = ('public_' if publish else 'candidate_') + outcome
