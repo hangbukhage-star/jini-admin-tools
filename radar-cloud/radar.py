@@ -317,7 +317,7 @@ class Handler(BaseHTTPRequestHandler):
                     excluded = 0
                     for r in db.execute('SELECT * FROM contest WHERE id NOT IN (SELECT id FROM removed) ORDER BY published, id DESC'):
                         item = dict(json.loads(r['data']), id=r['id'], published=bool(r['published']))
-                        if item['published'] or reviewable(item,current):
+                        if item['published'] or item.get('candidateUrl') or reviewable(item,current):
                             items.append(item)
                         else:
                             excluded += 1
