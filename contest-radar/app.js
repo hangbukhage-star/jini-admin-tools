@@ -133,12 +133,17 @@ function admin() {
   const request = (path='/api/admin',data) => api(path,{method:data===undefined?'GET':'POST',
     headers:{Authorization:'Bearer '+token,'X-Radar-Pin':pin,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
   function sourceLinks(item) {
-    if (item.url) return official(item.url);
-    if (item.officialHint) return official(item.officialHint,'주최 측 게시글 후보');
-    return '<span class="note">공식 공고 링크 미확인</span>';
+    const original = item.url ? official(item.url) : item.officialHint
+      ? official(item.officialHint,'주최 측 게시글 후보') : '<span class="note">공식 원문 연결 필요</span>';
+    const discovery = item.candidateUrl && item.candidateUrl !== item.url
+      ? official(item.candidateUrl,'수집 출처 보기') : '';
+    return original + discovery;
   }
   async function load(skipped = []) {
     const result=await request();
+    const ready=result.items.filter(i=>!i.published && i.ready).length;
+    const drafts=result.items.filter(i=>!i.published && !i.ready).length;
+    const records=[...result.items].sort((a,b)=>Number(a.published)-Number(b.published) || Number(b.ready)-Number(a.ready));
     const reasons=new Map(skipped.map(item=>[item.id,item.reason]));
     area.innerHTML='<h2>출처 수집 상태</h2><button type="button" class="btn" id="collect">지금 수집</button>'+
       result.sources.map(s=>'<div class="admin-row"><div><strong>'+escape(s.name)+' · '+escape(s.status)+'</strong><p>'+escape(s.method)+'</p><p class="note">마지막 성공 '+escape(stamp(s.lastSuccess))+'</p><p class="error">'+escape(s.error||'')+'</p></div>'+official(s.url,'출처 보기')+'</div>').join('')+
@@ -147,10 +152,10 @@ function admin() {
       '<button type="button" class="btn" id="select-all">전체 선택</button>'+
       '<button type="button" class="btn" id="clear-selection" disabled>선택 취소</button>'+
       '<button type="button" class="btn main" id="publish-selected" disabled>선택 공고 게시 (0건)</button></div>'+
-      '<p class="note">공식 원문을 확인한 접수 중·예정 공고 중 우선 범주에 해당하는 건만 검토 목록에 표시합니다. 검토 대기 '+result.items.filter(i=>!i.published).length+'건</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
-      result.items.map(i=>'<div class="admin-row"><div class="admin-record">'+
-        (!i.published?'<input type="checkbox" data-publish-id="'+i.id+'" aria-label="'+escape(i.title)+' 게시 선택">':'')+
-        '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':'검토 대기')+
+      '<p class="note">게시 가능 '+ready+'건 · 원문·정보 확인 필요 '+drafts+'건</p><p class="note">확인이 필요한 후보는 편집에서 공식 공고 URL을 붙여넣고 참가 자격과 날짜를 확인한 뒤 공개할 수 있습니다.</p><p id="publish-status" role="status"></p><div id="editor"></div>'+
+      records.map(i=>'<div class="admin-row"><div class="admin-record">'+
+        (!i.published&&i.ready?'<input type="checkbox" data-publish-id="'+i.id+'" aria-label="'+escape(i.title)+' 게시 선택">':'')+
+        '<div><strong>'+escape(i.title)+'</strong><p class="note">'+(i.published?'공개':i.ready?'게시 가능':'원문·정보 확인 필요')+
         (i.host?' · '+escape(i.host):'')+(i.types.length?' · '+escape(i.types.join(', ')):'')+'</p>'+
         '<p class="note">'+(i.eligibility?'참가 '+escape(i.eligibility):'참가 자격 미확인')+'</p>'+
         '<p class="note">'+(i.end?dateText(i.end)+' 마감'+(i.time?' '+escape(i.time):''):'마감일 미확인')+'</p>'+
@@ -227,10 +232,11 @@ function admin() {
     }).join('');
     const checks=(name,values)=>'<div class="checks">'+values.map(value=>'<label><input type="checkbox" name="'+name+'" value="'+escape(value)+'" '+(item[name]?.includes(value)?'checked':'')+'>'+escape(value)+'</label>').join('')+'</div>';
     container.innerHTML='<form class="editor panel"><div class="admin-source-links">'+sourceLinks(item)+'</div>'+
+      (item.id&&!item.published&&!item.ready?'<p class="note">수집 정보가 채워져 있습니다. 공식 공고 URL을 입력하고 원문과 다른 값만 수정해 주세요.</p>':'')+
       '<div class="grid">'+fieldsHtml+'</div><fieldset><legend>분류</legend>'+checks('tags',tags)+'</fieldset><fieldset><legend>제출 유형</legend>'+checks('types',types)+'</fieldset>'+
       '<label class="switch"><input type="checkbox" name="education" '+(item.education?'checked':'')+'> 교육행정직 맞춤</label>'+
       '<label class="switch"><input type="checkbox" name="published" '+(item.published?'checked':'')+'> 공식 원문에서 참가 자격과 접수기간을 확인했고 공개합니다.</label><button class="btn main">공고 저장</button><p role="status"></p></form>';
-    container.querySelector('input[name=title]').focus();
+    container.querySelector(item.id&&!item.url?'input[name=url]':'input[name=title]').focus();
     container.querySelector('form').onsubmit=async event=>{
       event.preventDefault();
       const form=new FormData(event.target);
@@ -242,13 +248,14 @@ function admin() {
         record.types=form.getAll('types');
         record.education=form.has('education');
         record.published=form.has('published');
+        record.confirmed=record.published;
         record.attachments=record.attachments.split('\n').filter(line=>line.trim()).map(line=>{
           const [label,url]=line.split('|').map(value=>value.trim());
           if (!label||!url) throw new Error('첨부파일은 이름 | URL 형식으로 입력해 주세요.');
           return {label,url};
         });
         await request('/api/admin',record);
-        message.textContent='공고를 저장했습니다.';
+        message.textContent=record.published?'공고를 게시했습니다.':'공고를 저장했습니다.';
         await load();
       } catch(error) {status.textContent=error.message;}
     };

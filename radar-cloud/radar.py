@@ -70,6 +70,7 @@ def clean(raw):
     item['tags'] = [tag for tag in TAGS if tag in raw.get('tags', [])]
     item['types'] = [kind for kind in TYPES if kind in raw.get('types', [])]
     item['education'] = bool(raw.get('education')) and TAGS[1] in item['tags']
+    item['manual'] = bool(raw.get('manual'))
     item['checked'] = now().isoformat(timespec='seconds')
     if not item['title']:
         raise ValueError('제목을 입력해 주세요.')
@@ -110,9 +111,11 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
     item = clean(raw)
     if initialize and raw.get('checked'):
         item['checked'] = datetime.fromisoformat(raw['checked']).astimezone(KST).isoformat(timespec='seconds')
-    if publish and (not all(item[k] for k in ('host','eligibility','start','end','url',
-            'eligibilityEvidence','deadlineEvidence')) or not item['tags']):
-        raise ValueError('공개하려면 주최, 공식 URL, 참가 자격·접수기간의 근거와 범주가 필요합니다.')
+    if publish and raw.get('confirmed') is True and item['url']:
+        item['eligibilityEvidence'] = item['eligibilityEvidence'] or '관리자가 공식 원문의 참가 자격을 확인함'
+        item['deadlineEvidence'] = item['deadlineEvidence'] or '관리자가 공식 원문의 접수기간을 확인함'
+    if publish and not initialize and not official_evidence(item):
+        raise ValueError('공개하려면 주최기관 공식 공고 URL, 참가 자격, 접수 시작일·마감일과 분류가 필요합니다.')
     if not db.in_transaction:
         db.execute('BEGIN IMMEDIATE')
     keys = aliases(item)
@@ -142,9 +145,12 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
         old = json.loads(row['data'])
         if automatic and raw.get('_expectedChecked', old['checked']) != old['checked']:
             return ident, 'unchanged'
-        if automatic and not publish and old['checked'] and reviewable(old, now()):
+        if automatic and not publish and (old.get('manual') or reviewable(old, now())):
             db.executemany('INSERT OR IGNORE INTO alias VALUES (?,?)', [(key, ident) for key in keys])
             return ident, 'unchanged'
+        if automatic and not publish and not item['url']:
+            for key in ('host','eligibility','start','end','time','topic','format','prize','types','tags'):
+                item[key] = item[key] or old.get(key) or item[key]
         if automatic and not publish:
             for key in ('candidateUrl','attachments','officialHint'):
                 item[key] = item[key] or old.get(key)
@@ -197,11 +203,21 @@ def publish_many(db, ids):
         published.append(ident)
     return {'published':published,'skipped':skipped}
 
-def reviewable(item, current):
+def official_evidence(item):
     if not all(item.get(key) for key in ('url','host','eligibility','eligibilityEvidence','start','end','deadlineEvidence','tags')):
         return False
-    host = (urlsplit(item['url']).hostname or '').removeprefix('www.')
-    if not host or host in ('gcontest.co.kr','thinkcontest.com','wevity.com','all-con.co.kr','forms.gle'):
+    host = urlsplit(item['url']).hostname or ''
+    blocked = ('gcontest.co.kr','thinkcontest.com','wevity.com','all-con.co.kr','forms.gle')
+    return bool(host) and not any(host == domain or host.endswith('.' + domain) for domain in blocked)
+
+
+def provisional(item, current):
+    return bool(item.get('candidateUrl') and item.get('tags') and
+                (not item.get('end') or item['end'] >= current.date().isoformat()))
+
+
+def reviewable(item, current):
+    if not official_evidence(item):
         return False
     day = current.date().isoformat()
     return item['end'] > day or (item['end'] == day and
@@ -209,6 +225,7 @@ def reviewable(item, current):
 
 def public_item(row, current):
     item = json.loads(row['data'])
+    item.pop('manual', None)
     days = (date.fromisoformat(item['end']) - current.date()).days
     before = current.date().isoformat() < item['start']
     closed = days < 0 or (days == 0 and item['time'] and current.strftime('%H:%M') > item['time'])
@@ -315,8 +332,8 @@ class Handler(BaseHTTPRequestHandler):
                     excluded = 0
                     for r in db.execute('SELECT * FROM contest WHERE id NOT IN (SELECT id FROM removed) ORDER BY published, id DESC'):
                         item = dict(json.loads(r['data']), id=r['id'], published=bool(r['published']))
-                        if item['published'] or reviewable(item,current):
-                            items.append(item)
+                        if item['published'] or reviewable(item,current) or provisional(item,current) or (item.get('manual') and not item.get('end')):
+                            items.append(dict(item,ready=reviewable(item,current)))
                         else:
                             excluded += 1
                     self.respond(200, {
@@ -353,7 +370,7 @@ class Handler(BaseHTTPRequestHandler):
                     db.execute('INSERT OR IGNORE INTO removed VALUES (?,?)', (ident,now().isoformat()))
                     result = {'id':ident,'result':'removed'}
                 else:
-                    ident, outcome = save(db, body, body.get('published') is True)
+                    ident, outcome = save(db, dict(body,manual=True), body.get('published') is True)
                     result = {'id':ident,'result':outcome}
             self.respond(200, result)
         except (ValueError, KeyError, TypeError, AttributeError) as error:
