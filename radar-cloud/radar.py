@@ -142,14 +142,12 @@ def save(db, raw, publish=False, automatic=False, initialize=False):
         old = json.loads(row['data'])
         if automatic and raw.get('_expectedChecked', old['checked']) != old['checked']:
             return ident, 'unchanged'
-        if automatic and not publish and old['checked'] and old['eligibility']:
+        if automatic and not publish and old['checked'] and reviewable(old, now()):
             db.executemany('INSERT OR IGNORE INTO alias VALUES (?,?)', [(key, ident) for key in keys])
             return ident, 'unchanged'
         if automatic and not publish:
-            for key in ('title','host','candidateUrl','url','attachments','officialHint'):
-                item[key] = old.get(key) or item[key]
-            if old['host'] in ('전체','응모대상') and raw.get('host'):
-                item['host'] = raw['host']
+            for key in ('candidateUrl','attachments','officialHint'):
+                item[key] = item[key] or old.get(key)
         if automatic and row['published'] and publish:
             for key in ('tags','types','education','number','edition','announced','attachments','candidateUrl'):
                 item[key] = old[key] or item[key]
@@ -317,7 +315,7 @@ class Handler(BaseHTTPRequestHandler):
                     excluded = 0
                     for r in db.execute('SELECT * FROM contest WHERE id NOT IN (SELECT id FROM removed) ORDER BY published, id DESC'):
                         item = dict(json.loads(r['data']), id=r['id'], published=bool(r['published']))
-                        if item['published'] or item.get('candidateUrl') or reviewable(item,current):
+                        if item['published'] or reviewable(item,current):
                             items.append(item)
                         else:
                             excluded += 1

@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from contextvars import copy_context
-from datetime import date
+from datetime import date, datetime
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit, parse_qs
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
@@ -15,13 +15,14 @@ from urllib.error import URLError
 from radar import ROOT, connect, dump, normalized, now, reviewable, save
 
 MODU = 'https://modu.go.kr/front/epilogue/epilogueBbsList.do'
+SJCU = 'https://graduate.sjcu.ac.kr/ko/index.do'
 PORTAL = 'https://gcontest.co.kr/front/index'
 ALLCON_BOARD = 'https://www.all-con.co.kr/page/ajax.contest_list.php'
 ALLCON_FORM = 't=1&rows=25&page=1&sortorder=asc'
 DAY = r"(?:(?:20)?([2-9]\d)\s*[.년/-]\s*)?(1[0-2]|0?[1-9])\s*[.월/-]\s*(3[01]|[12]\d|0?[1-9])(?!\d)\s*[.일]?\s*(?:\([월화수목금토일]\))?"
 PERIOD = re.compile(DAY + r'(?:\s*\d{1,2}:\d{2})?\s*[~∼～–]\s*(?:[’\x27]\s*)?' + DAY)
 CLOCK = re.compile(r'\s*\*?\s*(?:(\d{1,2}):(\d{2})|(\d{1,2})시|(?:까지\s*)?(자정))')
-ELIGIBILITY = re.compile(r'참\s*가\s*(?:자\s*격|대\s*상)|응\s*모\s*자\s*격|지\s*원\s*자\s*격|공\s*모\s*대\s*상|□\s*대상\s*:')
+ELIGIBILITY = re.compile(r'참\s*가\s*(?:자\s*격|대\s*상)|응\s*모\s*자\s*격|지\s*원\s*자\s*격|공\s*모\s*(?:대\s*상|자\s*격)|참\s*여\s*대\s*상|□\s*대상\s*:')
 
 class Document(HTMLParser):
     blocks = {'p','div','li','dd','dt','h1','h2','h3','h4','br','tr','section','article'}
@@ -214,7 +215,7 @@ def discovered(board, fetcher, portal=False):
 def extract_schedule(document):
     lines = document.lines
     for index, line in enumerate(lines):
-        if not re.search(r'접\s*수\s*기\s*간|공\s*모\s*기\s*간|□\s*접수\s*:', line):
+        if not re.search(r'(?:접\s*수|공\s*모|응\s*모|신\s*청)\s*기\s*간|□\s*접수\s*:', line):
             continue
         if ('~' in line or '∼' in line or '～' in line) and not PERIOD.search(line):
             continue
@@ -283,7 +284,13 @@ def extract_eligibility(document):
             if value:
                 return value
             if index + 1 < len(lines):
-                return lines[index + 1]
+                values = [lines[index + 1]]
+                if values[0].startswith(('-', '•', '○')):
+                    for following in lines[index + 2:index + 5]:
+                        if not following.startswith(('-', '•', '○')):
+                            break
+                        values.append(following)
+                return ' '.join(values).lstrip('-•○ ')
     raise ValueError('본문에서 참가 자격을 읽지 못했습니다.')
 
 def apply_official_evidence(item, address, doc):
@@ -293,17 +300,22 @@ def apply_official_evidence(item, address, doc):
     anchor = next(index for index,line in enumerate(lines) if ELIGIBILITY.search(line))
     body = ' '.join(lines[max(0,anchor-18):anchor+19])
     tags = []
-    if re.search(r'(?:AI|인공지능)\s*(?:기술\s*)?활용\s*(?:가능|필수|허용|을 요구)|생성형\s*AI\s*(?:콘텐츠|영상|이미지)\s*(?:제작|공모)|바이브\s*코딩\s*(?:대회|공모)',body,re.I):
+    if re.search(r'(?:AI|인공지능)\s*(?:기술\s*)?활용\s*(?:가능|필수|허용|을 요구)|생성형\s*AI\s*(?:콘텐츠|영상|이미지)\s*(?:제작|공모)|바이브\s*코딩\s*(?:대회|공모)|AI\s*(?:기반\s*)?도구\s*활용\s*필수|AI와\s*함께\s*만든',body,re.I):
         tags.append('AI 활용')
     if re.search(r'행정\s*(?:업무\s*)?(?:개선|혁신|자동화|효율화)|공공\s*서비스\s*(?:개선|혁신)|정책\s*(?:아이디어|제안)|공공\s*데이터\s*(?:활용|분석)',body):
         tags.append('행정업무')
-    if (re.search(r'국민\s*누구나|전\s*국민',eligibility) and
+    if (re.search(r'국민\s*누구나|전\s*국민|^누구나\s*참여\s*가능',eligibility) and
             not re.search(r'만\s*\d|세\s*(?:이상|이하)|재학생|청소년|거주자|팀만|단체만',eligibility) and
             re.search(r'개인\s*(?:참가|참여|응모|또는|및|·|,)|개인\s*\)',eligibility)):
         tags.append('국민 누구나 참여')
     item.update(url=address,start=start,end=end,time=clock,deadlineEvidence=deadline,
                 eligibility=eligibility,eligibilityEvidence=eligibility,tags=tags,
                 reviewReason='공식 게시글에서 접수기간과 참가 자격 확인 · 게시 전 원문 재확인')
+    if '웹앱' in body and re.search(r'실행 가능한 (?:결과물|서비스)', body):
+        item['types'] = ['앱', '웹서비스']
+        item['format'] = '실행 가능한 서비스 URL과 사용설명서, 실행 영상, 발표자료' if (
+            '서비스 사용설명서' in body and '발표자료' in body) else '실행 가능한 웹앱 또는 서비스'
+
 
 def verify_portal_notice(item, fetcher):
     hint = item.get('officialHint','')
@@ -333,8 +345,27 @@ def verify_portal_notice(item, fetcher):
     except ValueError:
         pass
 
+def sjcu_notices(fetcher):
+    seen = set()
+    for href, label in fetcher(SJCU).links:
+        target = urlsplit(urljoin(SJCU, href))
+        if target.hostname != 'graduate.sjcu.ac.kr' or target.path != '/ko/support/notice-all.do':
+            continue
+        query = parse_qs(target.query)
+        number = query.get('articleNo', [''])[0]
+        if not re.fullmatch(r'[0-9]+', number) or number in seen or '공모전' not in label:
+            continue
+        if query.get('mode') != ['view'] or re.search(r'결과\s*(?:안내|발표)|수상작', label):
+            continue
+        seen.add(number)
+        address = urljoin(SJCU, target.path + '?articleNo=' + number + '&mode=view')
+        title = re.sub(r'\s*20\d{2}\.\d{2}\.\d{2}$', '', label).strip('📢 ')
+        yield dict(title=title, host='세종사이버대학교', candidateUrl=address), address
+
+
 def configured_sources():
     return {
+        'sjcu': ('세종사이버대학교', '대학 공지 목록과 공식 공모 요강', SJCU, 'sjcu'),
         'modu': ('소통24', '전자정부 공모전 게시판 · 신규 발견 및 공개 공고 재확인', MODU, 'board'),
         'portal': ('지콘테스트', '공개 포털 목록과 상세 · 후보 발견', PORTAL, 'portal'),
         'thinkgood': ('씽굿', '공개 목록의 구조화 데이터와 상세 · 후보 발견', 'https://www.thinkcontest.com/thinkgood/index.do', 'thinkgood'),
@@ -371,6 +402,21 @@ def check_source(config, fetcher):
             batch.extend((item,False) for item in candidates)
         except Exception as error:
             errors.append(str(error))
+    elif mode == 'sjcu':
+        try:
+            for item, address in sjcu_notices(fetcher):
+                try:
+                    doc = fetch(address, allow_redirect=False) if fetcher is fetch else fetcher(address)
+                    if normalized(item['title']) not in normalized(' '.join(doc.lines)):
+                        raise ValueError('공식 게시글 제목 불일치')
+                    apply_official_evidence(item, address, doc)
+                    batch.append((item, False))
+                except ValueError:
+                    result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded', 0) + 1
+                except OSError as error:
+                    errors.append(item['title'] + ' · ' + str(error))
+        except (OSError, ValueError) as error:
+            errors.append(str(error))
     elif mode != 'tracked':
         try:
             for item in discovered(source_url, fetcher, mode == 'portal'):
@@ -385,7 +431,7 @@ def check_source(config, fetcher):
                 batch.append((item, False))
         except Exception as error:
             errors.append(str(error))
-    if mode in ('board','tracked'):
+    if mode in ('board','tracked','sjcu'):
         updates, problems = tracked(source_url, fetcher)
         batch.extend(updates)
         errors.extend(problems)
@@ -407,7 +453,7 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
                 if record.get('status') == '완료':
                     return {'status':'오늘 예약 실행 완료'}
                 try:
-                    previous_start = __import__('datetime').datetime.fromisoformat(record['started'])
+                    previous_start = datetime.fromisoformat(record['started'])
                     stale = (started - previous_start).total_seconds() > 1800
                 except (KeyError, ValueError, TypeError):
                     stale = True
@@ -429,12 +475,8 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
                     json.loads(prior['data']).get('lastSuccess') if prior else None)
                 for item, publish in batch:
                     if not publish and not reviewable(item,started):
-                        # Keep incomplete portal discoveries in the private review queue.
-                        # Never publish them until the official evidence is verified.
-                        if not item.get('candidateUrl') or not item.get('title'):
-                            result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
-                            continue
-                        result['counts']['candidate_pending_verification'] = result['counts'].get('candidate_pending_verification',0)+1
+                        result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
+                        continue
                     try:
                         _, outcome = save(db, item, publish, automatic=True)
                         label = ('public_' if publish else 'candidate_') + outcome
