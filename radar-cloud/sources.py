@@ -12,7 +12,7 @@ import ssl
 import subprocess
 from urllib.error import URLError
 
-from radar import ROOT, connect, dump, normalized, now, reviewable, save
+from radar import ROOT, connect, dump, normalized, now, provisional, reviewable, save
 
 MODU = 'https://modu.go.kr/front/epilogue/epilogueBbsList.do'
 SJCU = 'https://graduate.sjcu.ac.kr/ko/index.do'
@@ -25,7 +25,7 @@ CLOCK = re.compile(r'\s*\*?\s*(?:(\d{1,2}):(\d{2})|(\d{1,2})시|(?:까지\s*)?(�
 ELIGIBILITY = re.compile(r'참\s*가\s*(?:자\s*격|대\s*상)|응\s*모\s*자\s*격|지\s*원\s*자\s*격|공\s*모\s*(?:대\s*상|자\s*격)|참\s*여\s*대\s*상|□\s*대상\s*:')
 
 class Document(HTMLParser):
-    blocks = {'p','div','li','dd','dt','h1','h2','h3','h4','br','tr','section','article'}
+    blocks = {'p','div','li','dd','dt','h1','h2','h3','h4','br','tr','th','td','section','article'}
 
     def __init__(self, html):
         super().__init__(convert_charrefs=True)
@@ -176,11 +176,41 @@ def enrich_portal(item, fetcher):
         organizer = ' '.join(Document(match[1] or match[2]).lines).split(' / ',1)[0]
         if organizer:
             item['host'] = organizer
+    labels = {
+        'host': r'주최(?:기관|사)?|주최/주관',
+        'eligibility': r'(?:참가|응모|공모|지원|참여)\s*(?:자격|대상)',
+        'topic': r'(?:공모|제출)\s*(?:주제|내용)|공모\s*분야',
+        'format': r'제출\s*(?:형식|규격|자료|서류)',
+        'prize': r'시상\s*(?:내역|규모)|총\s*상금',
+    }
+    for field, label in labels.items():
+        for index, line in enumerate(doc.lines):
+            match = re.match(r'^\s*(?:[●○□■◆▶※-]\s*)?(?:' + label + r')(?:\s*[:：]\s*(.+)|\s*)$', line)
+            if match:
+                value = match[1] or (doc.lines[index + 1] if index + 1 < len(doc.lines) else '')
+                if value and not any(re.fullmatch(pattern, value) for pattern in labels.values()):
+                    item[field] = value[:500]
+                    break
     try:
-        start, end, _, _ = extract_schedule(doc)
+        start, end, clock, _ = extract_schedule(doc)
+        item.update(start=start,end=end,time=clock)
     except ValueError:
-        return
-    item['start'],item['end'] = start,end
+        pass
+    subject = ' '.join(item.get(key,'') for key in ('title','topic','format'))
+    eligibility = item.get('eligibility','')
+    tags = []
+    if re.search(r'생성형\s*AI|(?:AI|인공지능)\s*(?:활용|기반|창작|영상|콘텐츠|광고|서비스|공모)|바이브\s*코딩',subject,re.I):
+        tags.append('AI 활용')
+    if re.search(r'행정\s*(?:업무|개선|혁신|자동화)|정책\s*(?:아이디어|제안)|규제\s*개선|공공\s*(?:서비스|데이터)|업무\s*(?:개선|자동화)',subject):
+        tags.append('행정업무')
+    if (re.search(r'(?:전\s*)?국민\s*누구나|전\s*국민|누구나\s*(?:참여|응모|참가)',eligibility or item['title']) and
+            not re.search(r'만\s*\d|세\s*(?:이상|이하)|거주자|재학생|팀만|단체만',eligibility)):
+        tags.append('국민 누구나 참여')
+    item['tags'] = tags
+    item['types'] = [kind for kind in ('사례','아이디어','슬로건','영상','이미지','앱','웹서비스')
+                     if kind in subject or (kind == '영상' and '숏폼' in subject)]
+    item['reviewReason'] = '포털에서 가져온 임시 정보입니다. 공식 원문 링크를 연결하고 참가 자격과 일정을 대조해 주세요.'
+
 
 def discovered(board, fetcher, portal=False):
     source = fetcher(board)
@@ -474,7 +504,7 @@ def collect(fetcher=fetch, sources=None, scheduled=False):
                 result['lastSuccess'] = result['checked'] if batch or not result['error'] else (
                     json.loads(prior['data']).get('lastSuccess') if prior else None)
                 for item, publish in batch:
-                    if not publish and not reviewable(item,started):
+                    if not publish and not (reviewable(item,started) or provisional(item,started)):
                         result['counts']['candidate_excluded'] = result['counts'].get('candidate_excluded',0)+1
                         continue
                     try:
